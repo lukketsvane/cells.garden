@@ -1,0 +1,10 @@
+{
+  "id": "garden-cells",
+  "name": "Garden Cells",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "A kanban-style project garden where tasks grow into plants.",
+  "author": "Your Name",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}
