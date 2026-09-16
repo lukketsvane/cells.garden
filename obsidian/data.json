@@ -1,0 +1,32 @@
+{
+  "dataFolderPath": "Garden-Cells/",
+  "enableAnt": true,
+  "enableWorm": true,
+  "enableFireflies": true,
+  "fireflyCount": 9,
+  "skyKeyframes": [
+    {
+      "time": 0,
+      "color": "#3C3250"
+    },
+    {
+      "time": 6,
+      "color": "#FF8246"
+    },
+    {
+      "time": 12,
+      "color": "#87CEEB"
+    },
+    {
+      "time": 18,
+      "color": "#FF8246"
+    }
+  ],
+  "viewState": {
+    "zoom": 1.8631982393184707,
+    "translateX": -1271.5054121102069,
+    "translateY": -1785.526557402064,
+    "kanbanScrollLeft": 0,
+    "kanbanScrollTop": 0
+  }
+}
