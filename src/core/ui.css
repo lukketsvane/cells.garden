@@ -1,0 +1,121 @@
+/* Modal + Setting — mirrors the Obsidian class names the garden modals use. */
+
+.modal-container {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.modal-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal {
+    position: relative;
+    width: min(100%, 480px);
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 12px;
+    padding: 24px 24px 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.modal-close-button {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: var(--text-faint);
+    cursor: pointer;
+    font-size: 18px;
+}
+.modal-close-button::before { content: "×"; }
+.modal-close-button:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+
+.modal-content h2 {
+    margin: 0 0 12px;
+    font-size: 18px;
+}
+.modal-content p {
+    margin: 0 0 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--background-modifier-border);
+}
+.setting-item:first-of-type { border-top: none; }
+.setting-item-info { flex: 1 1 auto; min-width: 0; }
+.setting-item-info:empty { display: none; }
+.setting-item-name { font-size: 14px; font-weight: 500; }
+.setting-item-name:empty { display: none; }
+.setting-item-description { font-size: 12px; color: var(--text-muted); }
+.setting-item-description:empty { display: none; }
+.setting-item-control {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex: 1 1 auto;
+}
+
+.setting-item-control input[type="text"],
+.setting-item-control textarea {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    font: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary-alt);
+    color: var(--text-normal);
+}
+.setting-item-control textarea { min-height: 72px; resize: vertical; }
+.setting-item-control input:focus,
+.setting-item-control textarea:focus {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 0;
+    border-color: transparent;
+}
+
+.setting-item-control button {
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary-alt);
+    color: var(--text-normal);
+    cursor: pointer;
+}
+.setting-item-control button:hover { background: var(--background-modifier-hover); }
+.setting-item-control button.mod-cta {
+    background: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+.setting-item-control button.mod-warning {
+    background: #E91E63;
+    border-color: #E91E63;
+    color: #fff;
+}
