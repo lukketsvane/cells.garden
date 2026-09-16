@@ -1,0 +1,707 @@
+
+
+.garden-container {
+    height: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.garden-split-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+
+.garden-stem-part {
+    image-rendering: pixelated;
+}
+
+.garden-flower-container {
+    image-rendering: pixelated;
+}
+
+.garden-flower-part {
+    image-rendering: pixelated;
+}
+
+
+
+/* ========================================
+   TOP HALF — Interactive Canvas
+   ======================================== */
+
+.garden-canvas-viewport {
+    height: 50%;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    background-color: #87CEEB; /* Fallback sky color */
+    flex-shrink: 0;
+    user-select: none; /* Prevent text selection while dragging */
+}
+
+.garden-world {
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.garden-bg-layer {
+    width: 100%;
+    background-position: bottom left;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+.garden-ground-layer {
+    width: 100%;
+    background-position: top left;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+.garden-plants-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.garden-plant-wrapper {
+    position: absolute;
+    bottom: 35%; /* Exactly on the horizon line */
+    transform: translateX(-50%); 
+    width: 0; 
+    height: 0; /* Acts as an anchor point, so children can grow upwards */
+}
+
+.garden-stem-container {
+    position: absolute;
+    bottom: 0;      /* Anchors the stem base directly to the wrapper (the horizon) */
+    left: 0;
+    image-rendering: pixelated;
+
+}
+/* ========================================
+   Animation
+   ======================================== */
+   
+.garden-flower-part,
+.garden-root-part,
+.garden-mineral-part,
+.garden-seed-part {
+    transition: filter 0.3s ease;
+}
+
+.garden-part-highlighted {
+    filter: brightness(1.4);
+}
+
+.garden-part-bounce {
+    animation: garden-bounce 0.4s ease;
+}
+/* The Kanban cell hover Plant bounce */
+@keyframes garden-bounce {
+    0%   { transform: var(--original-transform, scaleX(1)) scale(1); }
+    30%  { transform: var(--original-transform, scaleX(1)) scale(1.25); }
+    100% { transform: var(--original-transform, scaleX(1)) scale(1); }
+}
+
+/* ========================================
+   BOTTOM HALF — Kanban Strip
+   ======================================== */
+
+.garden-bottom-half {
+    height: 50%;
+    display: flex;
+    flex-direction: column;
+    background: var(--background-primary);
+    overflow: hidden;
+}
+
+/* --- The Scrolling Container --- */
+.kanban-scroll-container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start; /* CRITICAL: Allows columns to grow to full content height */
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    padding: 0;
+    gap: 0;
+}
+
+.add-column-btn {
+    width: 44px;
+    min-width: 44px;
+    height: 0; /* CRITICAL: Zero height so it never affects scroll calculations! */
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* Empty garden: no seed row to align to, so let the button span the strip and center the + */
+.kanban-scroll-container.is-empty .add-column-btn {
+    height: 100%;
+}
+
+.add-column-btn-inner {
+    position: absolute;
+    top: 50%; /* Fallback, overridden by JS */
+    left: 0;
+    right: 0;
+    height: 44px; /* Fixed click area */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-50%);
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--text-faint);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.add-column-btn:hover .add-column-btn-inner {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+    font-weight: 400;
+}
+
+.kanban-empty-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 40px;
+}
+
+.kanban-empty-message h3 {
+    margin: 0 0 8px 0;
+    color: var(--text-normal);
+}
+
+.kanban-empty-message p {
+    margin: 0;
+}
+
+/* --- The Column --- */
+.project-column {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    max-width: 240px;
+    min-height: 100%; /* Allows short columns to fill the screen */
+    border-right: 1px solid var(--background-modifier-border);
+    background: transparent; 
+    flex-shrink: 0;
+}
+
+/* --- The visible card (background hugs content) --- */
+.column-card {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    background: var(--background-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* --- The Splitter --- */
+.column-body {
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* --- Draggable Resizer --- */
+.garden-resizer {
+    flex: 0 0 4px;
+    width: 100%;
+    background: var(--background-modifier-border);
+    cursor: row-resize;
+    position: relative;
+    z-index: 15;
+    transition: background 0.2s ease;
+}
+
+.garden-resizer:hover,
+.garden-resizer.is-dragging {
+    background: var(--interactive-accent);
+}
+
+
+/* --- TOP HALF (Flowers, Stem) --- */
+.column-top-half {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+/* --- BOTTOM HALF (Roots, Minerals) --- */
+.column-bottom-half {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+
+
+/* --- THE GROUND LAYER (Top Half) --- */
+.column-top-half {
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Eats all remaining space (The infinite sky) */
+    justify-content: flex-end; /* Glues the seed/stems to the ground */
+    background: var(--background-secondary);
+    border-radius: 4px 4px 0 0;
+}
+
+/* --- THE UNDERGROUND (Bottom Half) --- */
+.column-bottom-half {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; /* CRITICAL: Takes ONLY the space it needs, no more */
+    justify-content: flex-start; /* Grows DOWN into the earth */
+    background: var(--background-secondary);
+    border-radius: 0 0 4px 4px;
+}
+
+/* --- The Zones --- */
+.garden-zone {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    flex-shrink: 0; /* Prevents zones from squishing */
+}
+
+
+.garden-zone:last-child {
+    border-bottom: none;
+}
+
+/* Seed styling (Now acts as the Header) */
+.seed-cell {
+    display: flex;
+    flex-direction: row; /* <--- ADD THIS to override garden-zone's column layout */
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    font-weight: 600;
+    font-size: 13px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background: color-mix(in srgb, var(--background-primary-alt) 77%, transparent);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+
+/* --- The Garden Ant --- */
+
+.garden-ant {
+    position: absolute;
+    bottom: 35%;
+    background-size: contain;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    pointer-events: none;
+    z-index: 10; /* High z-index to guarantee it's on top */
+    transform: scaleX(1); /* Default direction */
+
+}
+
+.zone-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-faint);
+    margin-bottom: 3px;
+    flex-shrink: 0;
+}
+
+
+.seed-content {
+    flex-grow: 1;
+    font-size: 13px; /* Matches header */
+    font-weight: 600;
+    padding: 2px 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.4;
+    cursor: text;
+}
+
+/* Seed Content Editable styles */
+.seed-content.draggable-cell {
+    text-align: left;
+    padding: 6px 4px;
+    cursor: default; /* Not grabbable */
+}
+
+/* 3-Dot Context Menu Button */
+.seed-context-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-faint);
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 18px;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    opacity: 0;
+    flex-shrink: 0;
+}
+
+.seed-cell:hover .seed-context-btn {
+    opacity: 1;
+}
+
+.seed-context-btn:hover {
+    color: var(--interactive-accent);
+    background: var(--background-modifier-hover);
+}
+
+.kanban-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.garden-item.draggable-cell {
+    padding: 5px 8px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text-normal);
+    cursor: grab;
+    user-select: none;
+    word-break: break-word;
+    line-height: 1.3;
+    transition: border-color 0.15s ease;
+}
+
+.garden-item.draggable-cell:hover {
+    border-color: var(--interactive-accent);
+}
+
+.garden-item.draggable-cell:active {
+    cursor: grabbing;
+}
+
+.sortable-ghost {
+    opacity: 0.4;
+    background: var(--interactive-accent) !important;
+}
+
+.sortable-chosen {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+.zone-add-btn {
+    align-self: center;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    padding: 0;
+    font-size: 15px;
+    line-height: 1;
+    border-radius: 50%;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-faint);
+    cursor: pointer;
+    margin-top: 3px;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.zone-add-btn:hover {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+/* Scrollbars */
+.kanban-scroll-container::-webkit-scrollbar { height: 8px; }
+.kanban-scroll-container::-webkit-scrollbar-track { background: var(--background-primary); }
+.kanban-scroll-container::-webkit-scrollbar-thumb { background: var(--background-modifier-border); border-radius: 4px; }
+.kanban-scroll-container::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.kanban-list::-webkit-scrollbar { width: 4px; }
+.kanban-list::-webkit-scrollbar-track { background: transparent; }
+.kanban-list::-webkit-scrollbar-thumb { background: var(--background-modifier-border); border-radius: 2px; }
+
+.seed-content::-webkit-scrollbar { width: 3px; }
+.seed-content::-webkit-scrollbar-track { background: transparent; }
+.seed-content::-webkit-scrollbar-thumb { background: var(--background-modifier-border); border-radius: 2px; }
+
+/* --- Column Header & Controls --- */
+
+/* --- Column Header & Controls --- */
+
+.column-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 6px 8px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-normal);
+    border-bottom: 1px solid var(--background-modifier-border);
+    background: color-mix(in srgb, var(--background-primary-alt) 88%, transparent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* ... keep your drag handle, title, and button styles ... */
+
+
+.column-drag-handle {
+    cursor: grab;
+    color: var(--text-faint);
+    font-size: 14px;
+    line-height: 1;
+    padding: 2px;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    user-select: none;
+}
+
+.column-drag-handle:hover {
+    opacity: 1;
+    color: var(--text-muted);
+}
+
+.column-drag-handle:active {
+    cursor: grabbing;
+}
+
+.column-title {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+}
+
+
+
+/* Only show the recycle button when hovering over the seed cell */
+.seed-cell:hover .column-delete-btn {
+    opacity: 1;
+}
+
+.column-delete-btn:hover {
+    color: #E91E63; /* Red/Pink recycle color */
+    background: rgba(233, 30, 99, 0.1);
+}
+
+/* Modal Warning Text */
+.modal-warning-text {
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+/* Sortable Column Ghost (when dragging a whole column) */
+.sortable-column-ghost {
+    opacity: 0.5;
+}
+
+
+/* --- Cell Interaction States --- */
+
+/* Default: Cursor is grab for dragging */
+.garden-item.draggable-cell {
+    cursor: grab;
+    outline: 2px solid transparent; /* Prevents layout shift when outline appears */
+}
+
+.garden-item.draggable-cell:active {
+    cursor: grabbing;
+}
+
+/* Single Click: Selected state */
+.garden-item.draggable-cell.is-selected {
+    outline: 2px solid var(--text-muted);
+    background: var(--background-modifier-hover);
+}
+
+/* Double Click: Editing state */
+.garden-item.draggable-cell.is-editing {
+    outline: 2px solid var(--interactive-accent);
+    background: var(--background-primary-alt);
+    cursor: text;
+}
+
+
+
+.seed-cell:hover .column-open-btn {
+    opacity: 1;
+}
+
+.column-open-btn:hover {
+    color: var(--interactive-accent);
+    background: var(--background-modifier-hover);
+}
+
+.column-open-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* --- Plant Part to Kanban Interactions --- */
+.garden-stem-part,
+.garden-flower-part,
+.garden-root-part,
+.garden-mineral-part,
+.garden-seed-part {
+    pointer-events: auto;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+}
+
+.garden-stem-part:hover,
+.garden-flower-part:hover,
+.garden-root-part:hover,
+.garden-mineral-part:hover,
+.garden-seed-part:hover {
+    filter: brightness(1.4);
+}
+
+/* Highlight when hovering plant part */
+.garden-item.is-hover-highlighted,
+.seed-content.is-hover-highlighted {
+    background: var(--background-modifier-hover) !important;
+    outline: 2px solid var(--interactive-accent);
+    border-radius: 4px;
+}
+
+/* Flash when clicking plant part to center it */
+@keyframes garden-cell-click-flash {
+    0% { transform: scale(1); background: var(--background-modifier-hover); }
+    50% { transform: scale(1.08); background: var(--interactive-accent); color: var(--text-on-accent); }
+    100% { transform: scale(1); background: var(--background-modifier-hover); }
+}
+
+.garden-item.is-click-flash,
+.seed-content.is-click-flash {
+    animation: garden-cell-click-flash 0.8s ease;
+}
+
+/* --- Worm Hover Glow --- */
+.garden-worm-pulsing {
+    animation: garden-worm-pulse 2s ease-in-out infinite;
+}
+
+@keyframes garden-worm-pulse {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(229, 255, 167, 0.482)); }
+    50% { filter: drop-shadow(0 0 6px  rgb(206, 250, 161)); }
+}
+
+/* --- Persistent Highlight Pulse --- */
+.garden-part-slow-pulse {
+    animation: garden-highlight-pulse 3s ease-in-out infinite;
+}
+
+@keyframes garden-highlight-pulse {
+    0%, 100% { filter: brightness(1.1); }
+    50% { filter: brightness(1.6); }
+}
+
+/* --- Standby Mode (Canvas) --- */
+.garden-stem-container.is-standby-plant .garden-seed-part,
+.garden-stem-container.is-standby-plant .garden-root-part {
+    /* 1. brightness(0) turns the image solid black. 
+       2. The rest of the filter recolors the black to your exact dark seed color! */
+    filter: brightness(0) invert(4%) sepia(10%) saturate(708%) hue-rotate(2deg) brightness(92%) contrast(98%);
+}
+
+.garden-stem-container.is-standby-plant .garden-stem-part,
+.garden-stem-container.is-standby-plant .garden-flower-part {
+    /* 1. brightness(0) turns the image solid black. 
+       2. The rest of the filter recolors the black to your exact teal! */
+    filter: brightness(0) invert(19%) sepia(19%) saturate(984%) hue-rotate(127deg) brightness(95%) contrast(90%);
+}
+
+/* --- Standby Mode (Kanban) --- */
+/* Hide Flowers, Stems, Roots, and Minerals completely */
+.project-column.is-standby .flowers-zone,
+.project-column.is-standby .stem-zone,
+.project-column.is-standby .roots-zone,
+.project-column.is-standby .minerals-zone {
+    display: none;
+}
+
+/* Hide Add Buttons and Category Titles */
+.project-column.is-standby .zone-add-btn,
+.project-column.is-standby .zone-label {
+    display: none;
+}
+
+/* Clean up seed cell borders when it's the only thing left */
+.project-column.is-standby .seed-cell {
+    border-bottom: none;
+}
+
+/* --- Eye Icon Styling --- */
+.seed-context-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.seed-context-btn.is-standby-eye {
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.seed-context-btn.is-standby-eye:hover {
+    opacity: 1;
+    color: var(--interactive-accent);
+}
+
+/* Pencil cursor for drawing mode (Data URI directly in CSS) */
+.garden-canvas-viewport.is-drawing,
+.garden-canvas-viewport.is-drawing * {
+    cursor: url("data:image/svg+xml,%3C?xml version='1.0' encoding='UTF-8'?%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' width='27.02' height='27.01' viewBox='0 0 27.02 27.01'%3E%3Cpath d='M25.76,18.45l-6.32-6.32s0,0,0,0c-3.26-3.25-8.07-8.05-9.52-9.49h.02c-.58-.58-1.23-.66-1.98-.9C6.27,1.22,3.18.3,2.59.11,2.37.04,2.15,0,1.94,0,.73,0-.28,1.15.07,2.43c.25.87,1.48,4.92,1.98,6.53.08.34.48.89.76,1.15.66.66,7.55,7.54,11.3,11.29l4.35,4.35c1.68,1.68,4.43,1.68,6.11,0l1.19-1.19c1.68-1.68,1.68-4.43,0-6.11Z' fill='%23707070'/%3E%3Cpath d='M18.03,21.97c-.16,0-.32,0-.48.02-.07,0-.14,0-.21,0-.2,0-.37,0-.53.02-.09,0-.17.01-.25.01-.07,0-.12,0-.18-.02-.14-.07-.27-.15-.3-.18L7.84,13.59l-3.39-3.38c.07,0,.15,0,.23,0,.15-.02.29-.02.44-.02.35,0,.7.03,1.04.03.13,0,.24-.02.37-.03,1.08,1.08,8.36,8.35,11.81,11.79-.11,0-.21,0-.32,0Z'/%3E%3Cpath d='M21.83,19.71s.02.02.02.03c-.03.04-.08.09-.17.18l-.15.16c-.23.22-.48.48-.74.75-.35.37-.73.76-1.03,1,0,0-.02-.02-.03-.02l-8.24-8.23-3.87-3.86c.58-.49,1.26-1.27,1.77-1.74.15-.15.25-.25.34-.35l3.86,3.85,8.24,8.23Z'/%3E%3Cpath d='M21.75,16l.03.04.04.03c.23.2.22.64.19,1.35,0,.19-.02.37-.02.56-.01.12-.01.23-.01.33-3.47-3.46-10.76-10.75-11.8-11.79.03-.44-.04-.86.01-1.38,0-.21,0-.43.02-.65'/%3E%3Cpath d='M4.47,4.47c.7-.7.88-1.73.82-2.39-1.35-.41-2.68-.8-3.04-.92-.13-.05-.23-.06-.32-.06-.26,0-.51.13-.68.35-.11.14-.22.38-.13.69.13.45.53,1.77.95,3.16.66.06,1.69-.12,2.39-.82Z'/%3E%3C/svg%3E") 0 0, crosshair !important;
+}
+
+/* Eraser cursor for right-click erasing in drawing mode */
+.garden-canvas-viewport.is-erasing,
+.garden-canvas-viewport.is-erasing * {
+    cursor: url("data:image/svg+xml,%3C?xml version='1.0' encoding='UTF-8'?%3E%3Csvg id='a' xmlns='http://www.w3.org/2000/svg' width='35.9' height='36.06' viewBox='0 0 35.9 36.06'%3E%3Ccircle cx='12.23' cy='12.23' r='11.73' fill='none' stroke='%23707070' stroke-dasharray='1.02 8.19' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M10.14,17.62l6.32,6.32s0,0,0,0c3.26,3.25,8.07,8.05,9.52,9.49h-.02c.58.58,1.23.66,1.98.9,1.67.5,4.77,1.43,5.35,1.61.22.08.44.11.65.11,1.21,0,2.22-1.15,1.87-2.43-.25-.87-1.48-4.92-1.98-6.53-.08-.34-.48-.89-.76-1.15-.66-.66-7.55-7.54-11.3-11.29l-4.35-4.35c-1.68-1.68-4.43-1.68-6.11,0l-1.19,1.19c-1.68,1.68-1.68,4.43,0,6.11Z' fill='%23707070'/%3E%3Cpath d='M17.88,14.09c.16,0,.32,0,.48-.02.07,0,.14,0,.21,0,.2,0,.37,0,.53-.02.09,0,.17-.01.25-.01.07,0,.12,0,.18.02.14.07.27.15.3.18l8.24,8.23,3.39,3.38c-.07,0-.15,0-.23,0-.15.02-.29.02-.44.02-.35,0-.7-.03-1.04-.03-.13,0-.24.02-.37.03-1.08-1.08-8.36-8.35-11.81-11.79.11,0,.21,0,.32,0Z'/%3E%3Cpath d='M14.07,16.36s-.02-.02-.02-.03c.03-.04.08-.09.17-.18l.15-.16c.23-.22.48-.48.74-.75.35-.37.73-.76,1.03-1,0,0,.02.02.03.02l8.24,8.23,3.87,3.86c-.58.49-1.26,1.27-1.77,1.74-.15.15-.25.25-.34.35l-3.86-3.85-8.24-8.23Z'/%3E%3Cpath d='M14.15,20.06l-.03-.04-.04-.03c-.23-.2-.22-.64-.19-1.35,0-.19.02-.37.02-.56.01-.12.01-.23.01-.33,3.47,3.46,10.76,10.75,11.8,11.79-.03.44.04.86-.01,1.38,0,.21,0,.43-.02.65'/%3E%3Cpath d='M31.43,31.6c-.7.7-.88,1.73-.82,2.39,1.35.41,2.68.8,3.04.92.13.05.23.06.32.06.26,0,.51-.13.68-.35.11-.14.22-.38.13-.69-.13-.45-.53-1.77-.95-3.16-.66-.06-1.69.12-2.39.82Z'/%3E%3C/svg%3E") 12 12, crosshair !important;
+}
+
+/* Grabbing cursor for panning */
+.garden-canvas-viewport.is-panning,
+.garden-canvas-viewport.is-panning * {
+    cursor: grabbing !important;
+}
+
+/* Default grab cursor */
+.garden-canvas-viewport {
+    cursor: grab;
+}
