@@ -1938,12 +1938,31 @@ export class GardenView extends View {
                 if (items.length > 6) zone.createDiv({ cls: 'garden-peek-more', text: `${items.length - 6} more` });
             }
         }
-        // Above the plant when there is room, otherwise below its top; always inside the pane.
+        // Beside the plant, never over it: clear of its drawn right edge, or its left
+        // edge when the pane would cut it off, with the card's top level with the top
+        // of the plant. It stays put while the plant is hovered and glides to the next.
+        const rect = viewport.getBoundingClientRect();
         const vw = viewport.offsetWidth, vh = viewport.offsetHeight;
         const w = card.offsetWidth || 230, h = card.offsetHeight || 120;
-        const left = Math.max(8, Math.min(vw - w - 8, hit.x - w / 2));
-        const above = hit.top - h - 8;
-        const top = Math.max(8, Math.min(vh - h - 8, above >= 8 ? above : hit.top + 16));
+        let plantLeft = hit.x, plantRight = hit.x, plantTop = hit.top;
+        const wrapper = this.contentEl.querySelector(`.garden-plant-wrapper[data-project-id="${hit.project.id}"]`);
+        if (wrapper) {
+            let found = false;
+            for (const part of Array.from(wrapper.querySelectorAll('*'))) {
+                const r = part.getBoundingClientRect();
+                if (r.width === 0 || r.height === 0 || r.top - rect.top > this.currentTranslateY + this._dynamicGroundLineY * this.zoom) continue;
+                plantLeft = found ? Math.min(plantLeft, r.left - rect.left) : r.left - rect.left;
+                plantRight = found ? Math.max(plantRight, r.right - rect.left) : r.right - rect.left;
+                plantTop = found ? Math.min(plantTop, r.top - rect.top) : r.top - rect.top;
+                found = true;
+            }
+        }
+        const gap = 12;
+        const left = plantRight + gap + w <= vw - 8 ? plantRight + gap : Math.max(8, plantLeft - gap - w);
+        const top = Math.max(8, Math.min(vh - h - 8, plantTop));
+        // Appearing: jump straight to the spot. Already shown: glide there.
+        const wasVisible = card.hasClass('is-visible');
+        card.toggleClass('is-gliding', wasVisible);
         card.style.left = `${left}px`;
         card.style.top = `${top}px`;
         card.addClass('is-visible');
