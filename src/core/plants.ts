@@ -103,6 +103,13 @@ export class PlantSync {
         this.tracked.set(row.id, t);
         remember(row.id, row.rev, t.base);
         this.listen(row.id, t);
+        this.reportOwners();
+    }
+
+    /** The shared plants someone else owns, for the garden's arrangement. */
+    private reportOwners() {
+        if (this.stopped) return;
+        this.app.setFriendPlants([...this.tracked].filter(([, t]) => t.ownerId && t.ownerId !== this.userId).map(([id]) => id));
     }
 
     /** Stop following a plant (left, stopped sharing, or removed from the garden). */
@@ -154,6 +161,7 @@ export class PlantSync {
             const t: Tracked = { rev: row.rev, base: snapshot(remote), ownerId: row.owner_id ?? '', channel: null, queue: Promise.resolve() };
             this.tracked.set(plantId, t);
             this.listen(plantId, t);
+            this.reportOwners();
 
             // Edits made on this device while away are merged over the last synced version.
             const prior = remembered(plantId);

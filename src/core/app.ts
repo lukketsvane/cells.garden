@@ -34,6 +34,8 @@ export interface UseStoreOptions {
  * The app shell, what `GardenPlugin` was in Obsidian. Owns the data, the
  * settings, the asset manager and the store; mounts the GardenView.
  */
+const FRIEND_PLANTS_KEY = 'cells.garden/friend-plants';
+
 export class GardenApp {
     gardenData: ProjectData[] = [];
     settings: GardenSettings = { ...DEFAULT_SETTINGS };
@@ -61,7 +63,57 @@ export class GardenApp {
     private _persistQueue: Promise<void> = Promise.resolve();
     private _retryOnline: (() => void) | null = null;
 
-    constructor(public store: GardenStore) {}
+    constructor(public store: GardenStore) {
+        try {
+            const raw = localStorage.getItem(FRIEND_PLANTS_KEY);
+            if (raw) this.friendPlants = new Set(JSON.parse(raw) as string[]);
+        } catch {
+            // Unknown until the plants sync says whose they are.
+        }
+    }
+
+    /**
+     * Shared plants someone else owns, by their plants row id. They stand to
+     * either side of the user's own plants, so the garden reads as yours in the
+     * middle with your friends' plants at its borders. Remembered on the device,
+     * so the garden opens already arranged.
+     */
+    friendPlants = new Set<string>();
+
+    isFriendPlant(project: ProjectData): boolean {
+        return !!project.sharedPlantId && this.friendPlants.has(project.sharedPlantId);
+    }
+
+    /** Which part of the garden a plant stands in. */
+    sectionOf(project: ProjectData): 'left' | 'own' | 'right' {
+        if (!this.isFriendPlant(project)) return 'own';
+        const own = this.gardenData.findIndex(p => !this.isFriendPlant(p));
+        const index = this.gardenData.indexOf(project);
+        return own === -1 || index < own ? 'left' : 'right';
+    }
+
+    setFriendPlants(ids: Iterable<string>) {
+        const next = new Set(ids);
+        if (next.size === this.friendPlants.size && [...next].every(id => this.friendPlants.has(id))) return;
+        this.friendPlants = next;
+        try {
+            localStorage.setItem(FRIEND_PLANTS_KEY, JSON.stringify([...next]));
+        } catch {
+            // The arrangement is worked out again next time.
+        }
+        this.arrange();
+        this.view?.scheduleRender();
+    }
+
+    /** Own plants in the middle in their order; friends' plants alternate left and right of them. */
+    private arrange() {
+        const own = this.gardenData.filter(p => !this.isFriendPlant(p));
+        const friends = this.gardenData.filter(p => this.isFriendPlant(p));
+        if (friends.length === 0) return;
+        const left = friends.filter((_, i) => i % 2 === 0).reverse();
+        const right = friends.filter((_, i) => i % 2 === 1);
+        this.gardenData = [...left, ...own, ...right];
+    }
 
     async mount(host: HTMLElement) {
         await this.loadGardenData();
@@ -198,6 +250,7 @@ export class GardenApp {
         this.gardenData = garden.projects.filter(p => p && p.stem && p.flowers && p.roots && p.minerals);
         // SORT BY ORDER: Ensure columns appear in the arrangement the user chose!
         this.gardenData.sort((a, b) => (a.order || 0) - (b.order || 0));
+        this.arrange();
         this.settings = { ...DEFAULT_SETTINGS, ...garden.settings };
         this.updatedAt = garden.updatedAt;
         this.onGardenApplied?.();
@@ -219,6 +272,7 @@ export class GardenApp {
     /** Add a plant at the right end of the row and save. */
     async addProject(project: ProjectData): Promise<void> {
         this.gardenData.push({ ...project, order: this.gardenData.length });
+        this.arrange();
         this.view?.scheduleRender();
         await this.saveGardenData();
     }
