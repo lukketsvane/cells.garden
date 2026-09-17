@@ -313,24 +313,66 @@ function message(e: unknown): string {
     return e instanceof Error ? e.message : String(e);
 }
 
-// --- The button ------------------------------------------------------------
+// --- Opening it, and the corner button ------------------------------------
+
+/** Export or import, opened from a row in the pill menu. */
+export function openGardenFiles(app: GardenApp) {
+    new GardenFilesModal(app).open();
+}
 
 /**
- * The corner button that opens the modal. Mounted on the boot host, so it
- * survives the view's re-renders and is there on every surface.
+ * The corner button that shows or hides the board under the garden. Mounted on
+ * the boot host, so it survives the view's re-renders. The choice stays on this
+ * device.
  */
+export class BoardToggleButton {
+    el: HTMLElement;
+    private static readonly KEY = 'cells.garden/board';
+
+    constructor(host: HTMLElement) {
+        this.el = host.createEl('button', { cls: 'garden-board-toggle', attr: { type: 'button' } });
+        this.el.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.3"/></svg>';
+        let hidden = false;
+        try {
+            hidden = localStorage.getItem(BoardToggleButton.KEY) === 'hidden';
+        } catch {
+            // Blocked storage: the board starts shown.
+        }
+        this.apply(hidden);
+        this.el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const next = document.documentElement.dataset.board !== 'hidden';
+            try {
+                localStorage.setItem(BoardToggleButton.KEY, next ? 'hidden' : 'shown');
+            } catch {
+                // The board still toggles for this visit.
+            }
+            this.apply(next);
+        });
+    }
+
+    private apply(hidden: boolean) {
+        document.documentElement.dataset.board = hidden ? 'hidden' : 'shown';
+        const label = hidden ? 'Show the board' : 'Hide the board';
+        this.el.title = label;
+        this.el.setAttribute('aria-label', label);
+        this.el.toggleClass('is-active', !hidden);
+    }
+}
+
+/** Without an account there is no pill menu, so export and import keep a button. */
 export class GardenFilesButton {
     el: HTMLElement;
 
     constructor(app: GardenApp, host: HTMLElement) {
         this.el = host.createEl('button', {
             cls: 'garden-files-button',
-            text: '⇅',
-            attr: { type: 'button', title: 'Export or import your garden', 'aria-label': 'Garden files' },
+            text: 'Files',
+            attr: { type: 'button', title: 'Export or import your garden' },
         });
         this.el.addEventListener('click', (e) => {
             e.stopPropagation();
-            new GardenFilesModal(app).open();
+            openGardenFiles(app);
         });
     }
 }

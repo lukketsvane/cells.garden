@@ -198,8 +198,8 @@ try {
     assert(await newtab.textContent('.seed-content') === SEED, 'the seed text did not land in the column');
 
     await newtab.click('.stem-zone .zone-add-btn');
-    await newtab.waitForSelector('.modal input[type=text]');
-    await newtab.fill('.modal input[type=text]', STEM);
+    await newtab.waitForSelector('.garden-item.is-draft');
+    await newtab.fill('.garden-item.is-draft', STEM);
     await newtab.keyboard.press('Enter');
     await newtab.waitForFunction((t) => [...document.querySelectorAll('.garden-item')].some((el) => el.textContent === t), STEM);
     assert((await newtab.$$('.garden-stem-container > div')).length > 0, 'the plant did not grow a stem part');
@@ -233,11 +233,10 @@ try {
 
     // Writes from the panel reach the shared storage too.
     await panel.click('.flowers-zone .zone-add-btn');
-    await panel.waitForSelector('.modal input[type=text]');
-    const modal = await panel.$('.modal');
-    const modalBox = await modal.boundingBox();
-    assert(modalBox.x >= 0 && modalBox.x + modalBox.width <= 360, `the modal does not fit the panel: ${JSON.stringify(modalBox)}`);
-    await panel.fill('.modal input[type=text]', FLOWER);
+    await panel.waitForSelector('.garden-item.is-draft');
+    const draftBox = await (await panel.$('.garden-item.is-draft')).boundingBox();
+    assert(draftBox.x >= 0 && draftBox.x + draftBox.width <= 360, `the new cell does not fit the panel: ${JSON.stringify(draftBox)}`);
+    await panel.fill('.garden-item.is-draft', FLOWER);
     await panel.keyboard.press('Enter');
     await panel.waitForFunction((t) => (localStorage.getItem('cells.garden/v1') ?? '').includes(t), FLOWER);
     await screenshot(panel, 'sidepanel');
@@ -263,7 +262,7 @@ try {
         const rect = (sel) => document.querySelector(sel)?.getBoundingClientRect();
         const world = document.querySelector('.garden-world');
         return {
-            kanbanHidden: hidden('.garden-bottom-half') && hidden('.garden-resizer') && hidden('.garden-files-button'),
+            kanbanHidden: hidden('.garden-bottom-half') && hidden('.garden-resizer') && hidden('.garden-board-toggle'),
             canvas: rect('.garden-canvas-viewport'),
             footer: rect('.popup-footer'),
             transform: world ? world.style.transform : '',
@@ -272,7 +271,7 @@ try {
             scrollHeight: document.documentElement.scrollHeight,
         };
     });
-    assert(popupLayout.kanbanHidden, 'the popup must hide the kanban, the resizer and the files button');
+    assert(popupLayout.kanbanHidden, 'the popup must hide the kanban, the resizer and the board toggle');
     assert(popupLayout.canvas.height >= 200, `the popup canvas is too small: ${JSON.stringify(popupLayout.canvas)}`);
     assert(popupLayout.footer.y + popupLayout.footer.height <= 440 && popupLayout.scrollWidth <= 320 && popupLayout.scrollHeight <= 440, `the popup overflows its window: ${JSON.stringify(popupLayout)}`);
     assert(/scale\(/.test(popupLayout.transform), `the popup camera was not aimed: transform "${popupLayout.transform}"`);

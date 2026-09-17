@@ -2,7 +2,7 @@ import './shim';
 import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
 import { PLANT_TYPES } from './assets';
-import { AddItemModal, ConfirmDeleteModal, CreateProjectModal } from './modals';
+import { ConfirmDeleteModal, CreateProjectModal } from './modals';
 import { View } from './ui';
 import type { LayerItem, ProjectData, ViewState } from './model';
 import {
@@ -34,6 +34,12 @@ import stem8Url from '../assets/pack/plant_1/stem/stem8.png';
 
 /** Empty world on each side of the plants, in world px. Also where the first plant stands. */
 const WORLD_PADDING = 320;
+// Sky and ground are painted this far past the garden on every side. The camera
+// never zooms out past the garden filling the pane's height, but a garden of a
+// few plants is narrower than a wide pane, and this covers the sides of it.
+const WORLD_BLEED = 6000;
+// How far past an edge a drag can stretch, in screen pixels, before it stops.
+const RUBBER_REACH = 120;
 
 const stemParts: string[] = [
     stem1Url, stem2Url, stem3Url, stem4Url,
@@ -90,6 +96,7 @@ export class GardenView extends View {
 
         const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
         if (!viewport) return;
+        this.cancelSettle();
 
         if (e.touches.length === 1) {
             // 1 Finger: Start Panning
@@ -132,8 +139,9 @@ export class GardenView extends View {
             // 1 Finger Move: Pan
             const dx = e.touches[0].clientX - this.touchStartX;
             const dy = e.touches[0].clientY - this.touchStartY;
-            this.currentTranslateX = this.touchStartTranslateX + dx;
-            this.currentTranslateY = this.touchStartTranslateY + dy;
+            const b = this.cameraBounds(world, viewport);
+            this.currentTranslateX = this.softAxis(this.rawAxis(this.touchStartTranslateX, b.x) + dx, b.x);
+            this.currentTranslateY = this.softAxis(this.rawAxis(this.touchStartTranslateY, b.y) + dy, b.y);
             this.applyWorldTransform(world, viewport);
         } else if (this.isPinching && e.touches.length === 2) {
             // 2 Fingers Move: Pinch Zoom
@@ -143,7 +151,7 @@ export class GardenView extends View {
             
             if (this.initialPinchDistance > 0) {
                 let newZoom = this.initialPinchZoom * (currentDist / this.initialPinchDistance);
-                newZoom = Math.max(this.zoomMin, Math.min(this.zoomMax, newZoom));
+                newZoom = Math.max(this.minZoomFor(world, viewport), Math.min(this.zoomMax, newZoom));
                 
                 // Adjust translate to keep the pinch center stationary (just like scroll wheel zoom)
                 this.currentTranslateX = this.pinchCenterX - (this.pinchWorldX * newZoom);
@@ -160,6 +168,7 @@ export class GardenView extends View {
         if (e.touches.length === 0) {
             this.isTouchPanning = false;
             this.isPinching = false;
+            this.settleCamera();
             this.scheduleViewStateSave();
         } else if (e.touches.length === 1 && this.isPinching) {
             // Transitioned from 2 fingers to 1 finger: start panning from the remaining finger
@@ -1176,6 +1185,7 @@ export class GardenView extends View {
                                 this.currentTranslateX = (vpWidth / 2) - (middlePlantWorldX * this.zoom);
                                 this.currentTranslateY = (vpHeight * 0.65) - (this._dynamicGroundLineY * this.zoom);
                                 this.applyWorldTransform(world, viewport);
+                                this.settleCamera(false);
                             }
 
                             const scrollContainer = this.contentEl.querySelector('.kanban-scroll-container') as HTMLElement;
@@ -1489,7 +1499,12 @@ export class GardenView extends View {
         }
     }
 
+    private _viewportObserver: ResizeObserver | null = null;
+
     async onClose() {
+        this._viewportObserver?.disconnect();
+        this._viewportObserver = null;
+        this.cancelSettle();
         if (this._viewStateSaveTimeout) clearTimeout(this._viewStateSaveTimeout); // Clear pending timer
         this.saveViewState(); // Save immediately
 
@@ -1595,8 +1610,12 @@ export class GardenView extends View {
         if (isMiddle || (e.button === 0 && !isInteractable)) {
             e.preventDefault();
             this.isDragging = true;
-            this.startX = e.clientX - this.currentTranslateX;
-            this.startY = e.clientY - this.currentTranslateY;
+            this.cancelSettle();
+            const world = this.containerEl.querySelector('.garden-world') as HTMLElement | null;
+            const vp = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+            const b = world && vp ? this.cameraBounds(world, vp) : null;
+            this.startX = e.clientX - (b ? this.rawAxis(this.currentTranslateX, b.x) : this.currentTranslateX);
+            this.startY = e.clientY - (b ? this.rawAxis(this.currentTranslateY, b.y) : this.currentTranslateY);
             const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
             if (viewport) viewport.addClass('is-panning'); // ADD CLASS
         }
@@ -1615,8 +1634,9 @@ export class GardenView extends View {
         const world = this.containerEl.querySelector('.garden-world') as HTMLElement | null;
         if (!viewport || !world) return;
 
-        this.currentTranslateX = e.clientX - this.startX;
-        this.currentTranslateY = e.clientY - this.startY;
+        const b = this.cameraBounds(world, viewport);
+        this.currentTranslateX = this.softAxis(e.clientX - this.startX, b.x);
+        this.currentTranslateY = this.softAxis(e.clientY - this.startY, b.y);
         this.applyWorldTransform(world, viewport);
     };
 
@@ -1627,6 +1647,7 @@ export class GardenView extends View {
         if (this.isDragging) {
             this.isDragging = false;
             if (viewport) viewport.removeClass('is-panning');
+            this.settleCamera();
         }
         
         if (this.isDrawingMode && this.isCurrentlyDrawing) {
@@ -1646,12 +1667,15 @@ export class GardenView extends View {
         const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
         const world = this.containerEl.querySelector('.garden-world') as HTMLElement | null;
         if (!viewport || !world) return;
+        // A wheel has no release, so the camera settles once it goes quiet.
+        this.cancelSettle();
+        this._settleTimeout = window.setTimeout(() => this.settleCamera(), 140);
 
         if (e.ctrlKey || e.metaKey) {
             // --- ZOOM ---
             e.preventDefault();
             const delta = -e.deltaY * 0.005;
-            const newZoom = Math.max(this.zoomMin, Math.min(this.zoomMax, this.zoom + delta));
+            const newZoom = Math.max(this.minZoomFor(world, viewport), Math.min(this.zoomMax, this.zoom + delta));
 
             // Zoom toward cursor position (Standard 2D camera math)
             const rect = viewport.getBoundingClientRect();
@@ -1672,8 +1696,9 @@ export class GardenView extends View {
         } else {
             // --- PAN VERTICALLY (and horizontally if no horizontal scrollbar) ---
             e.preventDefault();
-            this.currentTranslateX -= e.deltaX;
-            this.currentTranslateY -= e.deltaY;
+            const b = this.cameraBounds(world, viewport);
+            this.currentTranslateX = this.softAxis(this.rawAxis(this.currentTranslateX, b.x) - e.deltaX, b.x);
+            this.currentTranslateY = this.softAxis(this.rawAxis(this.currentTranslateY, b.y) - e.deltaY, b.y);
             this.applyWorldTransform(world, viewport);
         }
     };
@@ -1711,8 +1736,92 @@ export class GardenView extends View {
         this.currentTranslateX = vw / 2 - plantX * this.zoom;
         this.currentTranslateY = vh / 2 - centreY * this.zoom;
         this.applyWorldTransform(world, viewport);
+        this.settleCamera(false);
         this.scheduleViewStateSave();
         return true;
+    }
+
+    /** The furthest out the camera goes: the garden fills the pane's height. */
+    private minZoomFor(world: HTMLElement, viewport: HTMLElement): number {
+        const fill = viewport.offsetHeight / (world.offsetHeight || 1);
+        return Math.min(this.zoomMax, Math.max(this.zoomMin, fill));
+    }
+
+    /** The translate range that keeps the garden filling the pane, per axis. */
+    private cameraBounds(world: HTMLElement, viewport: HTMLElement, zoom = this.zoom) {
+        const axis = (view: number, size: number) => {
+            const min = view - size * zoom;
+            // Zoomed out past the garden: hold it centred.
+            return min > 0 ? { min: min / 2, max: min / 2 } : { min, max: 0 };
+        };
+        return {
+            x: axis(viewport.offsetWidth, world.offsetWidth),
+            y: axis(viewport.offsetHeight, world.offsetHeight),
+        };
+    }
+
+    /** A raw position past an edge, stretched: it gives less the further it goes. */
+    private softAxis(raw: number, b: { min: number; max: number }): number {
+        const stretch = (o: number) => RUBBER_REACH * (1 - 1 / (o / RUBBER_REACH + 1));
+        if (raw < b.min) return b.min - stretch(b.min - raw);
+        if (raw > b.max) return b.max + stretch(raw - b.max);
+        return raw;
+    }
+
+    /** The inverse of softAxis: where the finger would be for a stretched position. */
+    private rawAxis(shown: number, b: { min: number; max: number }): number {
+        const unstretch = (r: number) => RUBBER_REACH * (1 / (1 - Math.min(r, RUBBER_REACH - 1) / RUBBER_REACH) - 1);
+        if (shown < b.min) return b.min - unstretch(b.min - shown);
+        if (shown > b.max) return b.max + unstretch(shown - b.max);
+        return shown;
+    }
+
+    private _settleFrame = 0;
+    private _settleTimeout: number | null = null;
+
+    private cancelSettle() {
+        if (this._settleFrame) cancelAnimationFrame(this._settleFrame);
+        this._settleFrame = 0;
+        if (this._settleTimeout) clearTimeout(this._settleTimeout);
+        this._settleTimeout = null;
+    }
+
+    /** Bring the camera back inside the garden: eased after a gesture, at once otherwise. */
+    private settleCamera(animate = true) {
+        const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        const world = this.contentEl.querySelector('.garden-world') as HTMLElement | null;
+        if (!viewport || !world || !viewport.offsetWidth) return;
+        this.cancelSettle();
+        const floor = this.minZoomFor(world, viewport);
+        if (this.zoom < floor) {
+            const cx = viewport.offsetWidth / 2, cy = viewport.offsetHeight / 2;
+            this.currentTranslateX = cx - ((cx - this.currentTranslateX) / this.zoom) * floor;
+            this.currentTranslateY = cy - ((cy - this.currentTranslateY) / this.zoom) * floor;
+            this.zoom = floor;
+            this.applyWorldTransform(world, viewport);
+        }
+        const b = this.cameraBounds(world, viewport);
+        const toX = Math.min(b.x.max, Math.max(b.x.min, this.currentTranslateX));
+        const toY = Math.min(b.y.max, Math.max(b.y.min, this.currentTranslateY));
+        if (toX === this.currentTranslateX && toY === this.currentTranslateY) return;
+        if (!animate) {
+            this.currentTranslateX = toX;
+            this.currentTranslateY = toY;
+            this.applyWorldTransform(world, viewport);
+            return;
+        }
+        const fromX = this.currentTranslateX, fromY = this.currentTranslateY;
+        const start = performance.now();
+        const step = (now: number) => {
+            const t = Math.min(1, (now - start) / 260);
+            const e = 1 - Math.pow(1 - t, 3);
+            this.currentTranslateX = fromX + (toX - fromX) * e;
+            this.currentTranslateY = fromY + (toY - fromY) * e;
+            this.applyWorldTransform(world, viewport);
+            this._settleFrame = t < 1 ? requestAnimationFrame(step) : 0;
+            if (t === 1) this.scheduleViewStateSave();
+        };
+        this._settleFrame = requestAnimationFrame(step);
     }
 
     private applyWorldTransform(world: HTMLElement, viewport: HTMLElement) {
@@ -1857,6 +1966,9 @@ export class GardenView extends View {
 
     
     private async renderGardenCanvas(parent: HTMLElement) {
+        // The old pane's watcher would fire as it leaves, against this world half built.
+        this._viewportObserver?.disconnect();
+        this._viewportObserver = null;
         const viewport = parent.createDiv("garden-canvas-viewport");
         viewport.style.cssText = 'width: 100%; height: 100%; overflow: hidden; position: relative; cursor: grab; background-color: var(--background-primary);';
         const world = viewport.createDiv("garden-world");
@@ -1911,8 +2023,8 @@ export class GardenView extends View {
         const { skyColor, starOpacity } = this.getDayNightState();
         const skyColorLayer = world.createDiv("garden-sky-color-layer");
         skyColorLayer.style.cssText = `
-            position: absolute; top: 0; left: 0; right: 0;
-            height: ${skyHeight}px; z-index: 0;
+            position: absolute; top: -${WORLD_BLEED}px; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
+            height: ${skyHeight + WORLD_BLEED}px; z-index: 0;
             background-color: ${skyColor};
             transition: background-color 30s ease;
         `;
@@ -1939,8 +2051,8 @@ export class GardenView extends View {
         // --- Stars layer (visible at night) ---
         const starsLayer = world.createDiv("garden-stars-layer");
         starsLayer.style.cssText = `
-            position: absolute; top: 0; left: 0; right: 0;
-            height: ${skyHeight}px; z-index: 1.4;
+            position: absolute; top: -${WORLD_BLEED}px; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
+            height: ${skyHeight + WORLD_BLEED}px; z-index: 1.4;
             opacity: ${starOpacity};
             transition: opacity 30s ease;
             pointer-events: none;
@@ -1981,12 +2093,12 @@ export class GardenView extends View {
         
         const mountainsLayer = world.createDiv("garden-mountains-layer");
         mountainsLayer.style.cssText = `
-            position: absolute; top: 0; left: 0; right: 0;
+            position: absolute; top: 0; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
             height: ${skyHeight}px; z-index: 1.6;
             background-image: url(${mountainsUrl});
             background-size: auto ${mountainsScaledH}px;
             background-repeat: repeat-x;
-            background-position: bottom left;
+            background-position: ${WORLD_BLEED}px bottom;
             image-rendering: pixelated;
             pointer-events: none;
         `;
@@ -1994,7 +2106,7 @@ export class GardenView extends View {
         // --- Cloud layer (behind bg image, slowly scrolling right) ---
         const cloudLayer = world.createDiv("garden-cloud-layer");
         cloudLayer.style.cssText = `
-            position: absolute; top: 0; left: 0; right: 0;
+            position: absolute; top: 0; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
             height: ${skyHeight}px; z-index: 2;
             background-image: url(${cloudUrl});
             background-size: ${cloudScaledW}px ${cloudScaledH}px;
@@ -2021,20 +2133,21 @@ export class GardenView extends View {
         // --- Bg image layer (trees/mountains, pixel-scaled, in front of clouds) ---
         const bgLayer = world.createDiv("garden-bg-layer");
         bgLayer.style.cssText = `
-            position: absolute; top: 0; left: 0; right: 0;
-            height: ${skyHeight}px; z-index: 2;
+            position: absolute; top: 0; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
+            width: auto; height: ${skyHeight}px; z-index: 2;
             background-image: url(${bgImageUrl});
             background-size: auto ${bgScaledH}px;
             background-repeat: repeat-x;
-            background-position: bottom left;
+            background-position: ${WORLD_BLEED}px bottom;
             image-rendering: pixelated;
         `;
 
         // --- Ground layer (bottom portion, sized to fit deepest roots) ---
         const groundLayer = world.createDiv("garden-ground-layer");
         groundLayer.style.cssText = `
-            position: absolute; bottom: 0; left: 0; right: 0;
-            height: ${groundHeight}px; z-index: 2;
+            position: absolute; bottom: -${WORLD_BLEED}px; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
+            width: auto; height: ${groundHeight + WORLD_BLEED}px; z-index: 2;
+            background-position: ${WORLD_BLEED}px 0;
             background-image: url(${groundUrl});
             background-size: ${Math.round(STEM_ORIGIN_WIDTH * PIXEL_SCALE / 3)}px ${Math.round(STEM_ORIGIN_WIDTH * PIXEL_SCALE / 3)}px;
             background-repeat: repeat;
@@ -2117,6 +2230,12 @@ export class GardenView extends View {
 
         // Apply the restored pan/zoom transform
         this.applyWorldTransform(world, viewport);
+        this.settleCamera(false);
+        // A pane that changes size (the divider, a rotated phone) keeps the garden filling it.
+        this._viewportObserver = new ResizeObserver(() => {
+            if (viewport.isConnected && !this.isDragging) this.settleCamera(false);
+        });
+        this._viewportObserver.observe(viewport);
 
 
         viewport.addEventListener('mousedown', this.handleMouseDown);
@@ -2747,7 +2866,6 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         flowerSpacer.style.flex = '1';
         const addFlowerBtn = flowerLabel.createEl('button', { cls: 'zone-add-btn' });
         addFlowerBtn.setText('+');
-        addFlowerBtn.style.cssText = 'position: absolute; left: 50%; transform: translateX(-50%);';
         addFlowerBtn.onclick = () => this.addNewItem(project, 'flowers');
         this.createSortableList(flowerZone, project, 'flowers');
 
@@ -2759,7 +2877,6 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         stemSpacer.style.flex = '1';
         const addStemBtn = stemLabel.createEl('button', { cls: 'zone-add-btn' });
         addStemBtn.setText('+');
-        addStemBtn.style.cssText = 'position: absolute; left: 50%; transform: translateX(-50%);';
         addStemBtn.onclick = () => this.addNewItem(project, 'stem');
         this.createSortableList(stemZone, project, 'stem');
 
@@ -2885,7 +3002,6 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
         const addRootBtn = rootLabel.createEl('button', { cls: 'zone-add-btn' });
         addRootBtn.setText('+');
         addRootBtn.onclick = () => this.addNewItem(project, 'roots');
-        addRootBtn.style.cssText = 'position: absolute; left: 50%; transform: translateX(-50%);';
         this.createSortableList(rootZone, project, 'roots');
 
         const mineralZone = bottomHalf.createDiv("garden-zone minerals-zone");
@@ -2897,7 +3013,6 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
         const addMineralBtn = mineralLabel.createEl('button', { cls: 'zone-add-btn' });
         addMineralBtn.setText('+');
         addMineralBtn.onclick = () => this.addNewItem(project, 'minerals');
-        addMineralBtn.style.cssText = 'position: absolute; left: 50%; transform: translateX(-50%);';
         this.createSortableList(mineralZone, project, 'minerals');
     }
 
@@ -3299,17 +3414,12 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
         }).open();
     }
 
+    /**
+     * The + on a zone opens an empty cell right there at the top of the zone,
+     * ready to type into. Enter or clicking away keeps it; Escape, or leaving it
+     * empty, drops it. Only planting a seed still goes through a dialog.
+     */
     async addNewItem(project: ProjectData, arrayName: 'flowers' | 'minerals' | 'roots' | 'stem') {
-        
-        
-        
-        const titles: Record<string, string> = {
-            'flowers': '✽ Add flower ✽',
-            'stem': '𖣂 Add stem 𖣂',
-            'roots': '⫛ Add root ⫛',
-            'minerals': '₊⊹˖ Add mineral ₊⊹˖'
-        };
-
         const placeholders: Record<string, string> = {
             'flowers': 'Result, takeaway',
             'stem': 'Completed task',
@@ -3317,23 +3427,56 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
             'minerals': 'Idea, task'
         };
 
-        const title = titles[arrayName] ?? 'Add Item';
-        const placeholder = placeholders[arrayName] ?? '';
+        const list = this.contentEl.querySelector(
+            `.project-column[data-project-id="${project.id}"] .${arrayName}-zone .kanban-list`
+        ) as HTMLElement | null;
+        if (!list) return;
+        list.querySelector('.garden-item.is-draft')?.remove();
 
-        new AddItemModal(title, placeholder, async (content) => {
+        const draft = document.createElement('div');
+        draft.className = 'garden-item draggable-cell is-editing is-draft';
+        draft.dataset.placeholder = placeholders[arrayName] ?? '';
+        draft.contentEditable = 'true';
+        list.prepend(draft);
+        draft.focus();
+        draft.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
+        let done = false;
+        const finish = async (keep: boolean) => {
+            if (done) return;
+            done = true;
+            const content = (draft.textContent ?? '').trim();
+            if (!keep || !content) {
+                draft.remove();
+                return;
+            }
             // Ask the manager for a random image from the matching vault folder
             const randomImagePath = this.app.assetManager.assignRandomImage(arrayName, project.plantType);
-
             const newItem: LayerItem = {
                 id: 'item_' + Date.now(),
-                content: content,
+                content,
                 isComplete: arrayName === 'flowers',
-                imagePath: randomImagePath || undefined 
+                imagePath: randomImagePath || undefined
             };
             this.live(project)[arrayName].unshift(newItem);
             await this.app.saveGardenData();
             this.onOpen();
-        }).open();
+        };
+
+        draft.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                void finish(true);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                void finish(false);
+            }
+        });
+        draft.addEventListener('blur', () => { void finish(true); });
+        // A tap inside the draft must not start a drag or select a cell.
+        for (const type of ['mousedown', 'pointerdown', 'touchstart', 'click', 'dblclick']) {
+            draft.addEventListener(type, (e) => e.stopPropagation());
+        }
     }
 }

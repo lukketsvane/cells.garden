@@ -20,7 +20,7 @@ html[data-context="sidepanel"] .auth-pill {
     font-size: 11px;
 }
 
-html[data-context="sidepanel"] .garden-files-button {
+html[data-context="sidepanel"] .garden-board-toggle {
     top: 6px;
     right: 6px;
     width: 24px;
@@ -64,7 +64,7 @@ html[data-context="popup"] .garden-canvas-area {
 
 html[data-context="popup"] .garden-resizer,
 html[data-context="popup"] .garden-bottom-half,
-html[data-context="popup"] .garden-files-button {
+html[data-context="popup"] .garden-board-toggle {
     display: none !important;
 }
 

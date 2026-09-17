@@ -139,8 +139,8 @@ async function scenario(browser, errors) {
     ];
     for (const [zone, text] of zones) {
         await page.click(`.${zone} .zone-add-btn`);
-        await page.waitForSelector('.modal input[type=text]');
-        await page.fill('.modal input[type=text]', text);
+        await page.waitForSelector('.garden-item.is-draft');
+        await page.fill('.garden-item.is-draft', text);
         await page.keyboard.press('Enter');
         await page.waitForFunction((t) => [...document.querySelectorAll('.garden-item')].some((el) => el.textContent === t), text);
     }
@@ -339,13 +339,13 @@ async function scenario(browser, errors) {
     // The page never scrolls sideways; controls sit inside the screen.
     const shell = await mpage.evaluate(() => ({
         scrollW: document.documentElement.scrollWidth,
-        files: document.querySelector('.garden-files-button').getBoundingClientRect().toJSON(),
+        files: document.querySelector('.garden-board-toggle').getBoundingClientRect().toJSON(),
         touchIcon: document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href'),
         viewport: document.querySelector('meta[name="viewport"]').content,
     }));
     console.log('mobile shell:', shell);
     assert(shell.scrollW <= 390, `the page scrolls sideways on a phone: ${shell.scrollW}`);
-    assert(shell.files.right <= 390 && shell.files.top >= 0, 'the files button is off screen');
+    assert(shell.files.right <= 390 && shell.files.top >= 0, 'the board toggle is off screen');
     assert(/icon-180\.png$/.test(shell.touchIcon), `iOS needs a PNG touch icon: ${shell.touchIcon}`);
     assert(/viewport-fit=cover/.test(shell.viewport), 'viewport-fit=cover is missing');
     assert((await fetch(new URL('icon-180.png', BASE))).ok, 'icon-180.png is not served');
@@ -360,8 +360,8 @@ async function scenario(browser, errors) {
     await mpage.waitForSelector('.project-column');
     for (const text of ['First stem', 'Second stem']) {
         await tapAt('.stem-zone .zone-add-btn');
-        await mpage.waitForSelector('.modal input[type=text]');
-        await mpage.fill('.modal input[type=text]', text);
+        await mpage.waitForSelector('.garden-item.is-draft');
+        await mpage.fill('.garden-item.is-draft', text);
         await mpage.keyboard.press('Enter');
         await mpage.waitForFunction((t) => [...document.querySelectorAll('.garden-item')].some((el) => el.textContent === t), text);
     }
