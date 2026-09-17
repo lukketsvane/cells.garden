@@ -41,6 +41,8 @@ export class GardenApp {
     view: GardenView | null = null;
     /** Called when a save starts/finishes; the auth pill shows it. */
     onSyncState: ((state: SyncState) => void) | null = null;
+    /** Set when sharing is possible: opens sharing for one plant. */
+    onSharePlant: ((projectId: string) => void) | null = null;
     /** Called when the open garden is no longer reachable (a shared garden left or revoked). */
     onGone: (() => void) | null = null;
     /** Called whenever a garden is put on screen: loaded, switched, synced in or merged. */

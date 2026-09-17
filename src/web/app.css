@@ -107,10 +107,7 @@ button {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    font-weight: 600;
-    font-size: 11px;
+    overflow: hidden;
     flex-shrink: 0;
 }
 .auth-pill-label {

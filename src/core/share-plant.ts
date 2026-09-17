@@ -8,12 +8,16 @@ import type { GardenApp } from './app';
 import { plantData } from './merge';
 import type { ProjectData } from './model';
 import type { PlantSync } from './plants';
+import { avatarEl } from './avatar';
 import {
     clearPlantInvite,
     createSharedPlant,
     deleteSharedPlant,
     getPlantInvite,
+    listFriends,
     listPlantMembers,
+    offerPlant,
+    pendingOffersFor,
     plantInviteUrl,
     plantOwner,
     removePlantMember,
@@ -38,13 +42,35 @@ export class SharePlantModal extends Modal {
         private readonly userId: string,
         private readonly app: GardenApp,
         private readonly sync: PlantSync,
+        /** Opened from a plant's card: straight to that plant, sharing it first if need be. */
+        private readonly projectId: string | null = null,
     ) {
         super();
     }
 
     onOpen() {
         this.modalEl.addClass('share-modal');
-        this.showList();
+        if (this.projectId) void this.openOne(this.projectId);
+        else this.showList();
+    }
+
+    private async openOne(projectId: string) {
+        const project = this.live(projectId);
+        if (!project) return this.close();
+        if (project.sharedPlantId) return this.showPlant(projectId);
+        this.contentEl.empty();
+        this.contentEl.createEl('h2', { text: project.seed || project.name });
+        const status = this.contentEl.createDiv({ cls: 'auth-status', text: 'Sharing…' });
+        try {
+            const created = await createSharedPlant(this.client, this.userId, plantData(project));
+            project.sharedPlantId = created.id;
+            this.sync.adopt(created);
+            await this.app.saveGardenData();
+            await renewPlantInvite(this.client, created.id);
+            await this.showPlant(projectId, 'Link ready.');
+        } catch (e) {
+            status.setText(`Could not share: ${(e as Error).message}`);
+        }
     }
 
     private live(projectId: string): ProjectData | undefined {
@@ -166,11 +192,14 @@ export class SharePlantModal extends Modal {
 
         const people = contentEl.createDiv('share-people');
         people.createDiv({ cls: 'setting-item-name', text: 'People' });
+        let memberIds = new Set<string>([owner]);
         try {
             const members = await listPlantMembers(this.client, plantId);
+            memberIds = new Set([owner, ...members.map(m => m.userId)]);
             if (members.length === 0) people.createDiv({ cls: 'setting-item-description', text: 'No one yet.' });
             for (const member of members) {
                 const row = new Setting(people).setName(member.userId === this.userId ? `${member.name} (you)` : member.name);
+                row.nameEl.prepend(avatarEl(member.avatar, 20));
                 if (isOwner) {
                     row.addButton((b) => b.setButtonText('Remove').onClick(() => void attempt('remove', async () => {
                         await removePlantMember(this.client, plantId, member.userId);
@@ -182,8 +211,32 @@ export class SharePlantModal extends Modal {
             say(`Could not load people: ${(e as Error).message}`);
         }
 
-        const footer = new Setting(contentEl)
-            .addButton((b) => b.setButtonText('Back').onClick(() => this.showList()));
+        // Friends who do not have it yet: send it straight to them.
+        try {
+            const friends = (await listFriends(this.client)).filter(f => !memberIds.has(f.userId));
+            if (friends.length > 0) {
+                const sent = await pendingOffersFor(this.client, plantId).catch(() => new Set<string>());
+                const box = contentEl.createDiv('share-people');
+                box.createDiv({ cls: 'setting-item-name', text: 'Friends' });
+                for (const friend of friends) {
+                    const row = new Setting(box).setName(friend.name);
+                    row.nameEl.prepend(avatarEl(friend.avatar, 20));
+                    if (sent.has(friend.userId)) {
+                        row.setDesc('Sent');
+                    } else {
+                        row.addButton((b) => b.setButtonText('Send').onClick(() => void attempt('send it', async () => {
+                            await offerPlant(this.client, plantId, friend.userId);
+                            await this.showPlant(projectId, `Sent to ${friend.name}.`);
+                        })));
+                    }
+                }
+            }
+        } catch {
+            // Before migration 0009 there are no friends to list; the link still works.
+        }
+
+        const footer = new Setting(contentEl);
+        if (!this.projectId) footer.addButton((b) => b.setButtonText('Back').onClick(() => this.showList()));
         if (isOwner) {
             footer.addButton((b) => b.setButtonText('Stop sharing').setWarning().onClick(() => void attempt('stop sharing', async () => {
                 await deleteSharedPlant(this.client, plantId);

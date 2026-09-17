@@ -30,6 +30,8 @@ export interface SharedGarden {
 export interface GardenMember {
     userId: string;
     name: string;
+    /** The generated picture's seed; the user id before migration 0009. */
+    avatar: string;
 }
 
 interface PgError { code?: string; message?: string }
@@ -135,12 +137,12 @@ export async function clearInvite(client: SupabaseClient, gardenId: string): Pro
 export async function listMembers(client: SupabaseClient, gardenId: string): Promise<GardenMember[]> {
     const { data, error } = await client
         .from('garden_members')
-        .select('user_id, created_at, profiles(display_name)')
+        .select('user_id, created_at, profiles(*)')
         .eq('garden_id', gardenId)
         .order('created_at');
     if (error) fail(error);
-    return ((data ?? []) as unknown as { user_id: string; profiles: { display_name: string | null } | null }[])
-        .map(m => ({ userId: m.user_id, name: m.profiles?.display_name || 'someone' }));
+    return ((data ?? []) as unknown as { user_id: string; profiles: { display_name: string | null; avatar_seed?: string | null } | null }[])
+        .map(m => ({ userId: m.user_id, name: m.profiles?.display_name || 'someone', avatar: m.profiles?.avatar_seed || m.user_id }));
 }
 
 /** The owner removing someone, or a member leaving: the same delete. */
@@ -227,12 +229,12 @@ export async function clearPlantInvite(client: SupabaseClient, plantId: string):
 export async function listPlantMembers(client: SupabaseClient, plantId: string): Promise<GardenMember[]> {
     const { data, error } = await client
         .from('plant_members')
-        .select('user_id, created_at, profiles(display_name)')
+        .select('user_id, created_at, profiles(*)')
         .eq('plant_id', plantId)
         .order('created_at');
     if (error) fail(error);
-    return ((data ?? []) as unknown as { user_id: string; profiles: { display_name: string | null } | null }[])
-        .map(m => ({ userId: m.user_id, name: m.profiles?.display_name || 'someone' }));
+    return ((data ?? []) as unknown as { user_id: string; profiles: { display_name: string | null; avatar_seed?: string | null } | null }[])
+        .map(m => ({ userId: m.user_id, name: m.profiles?.display_name || 'someone', avatar: m.profiles?.avatar_seed || m.user_id }));
 }
 
 export async function removePlantMember(client: SupabaseClient, plantId: string, userId: string): Promise<void> {
@@ -243,5 +245,91 @@ export async function removePlantMember(client: SupabaseClient, plantId: string,
 /** The owner stops sharing: the row goes, everyone keeps their own copy. */
 export async function deleteSharedPlant(client: SupabaseClient, plantId: string): Promise<void> {
     const { error } = await client.from('plants').delete().eq('id', plantId);
+    if (error) fail(error);
+}
+
+// --- Friends and plant offers (migration 0009) --------------------------------
+
+export interface Friend {
+    userId: string;
+    name: string;
+    avatar: string;
+    gardens: number;
+    plants: number;
+}
+
+export interface PlantOffer {
+    plantId: string;
+    fromId: string;
+    fromName: string;
+    fromAvatar: string;
+    seed: string;
+}
+
+/** Everyone who shares a garden or a plant with the signed-in user. */
+export async function listFriends(client: SupabaseClient): Promise<Friend[]> {
+    const { data, error } = await client.rpc('friends');
+    if (error) fail(error);
+    return ((data ?? []) as { user_id: string; display_name: string; avatar_seed: string; gardens: number; plants: number }[])
+        .map(f => ({ userId: f.user_id, name: f.display_name || 'someone', avatar: f.avatar_seed || f.user_id, gardens: Number(f.gardens), plants: Number(f.plants) }));
+}
+
+/** Offer a plant to a friend. They take it into their garden or turn it down. */
+export async function offerPlant(client: SupabaseClient, plantId: string, friendId: string): Promise<void> {
+    const { error } = await client.rpc('offer_plant', { pid: plantId, friend: friendId });
+    if (error) fail(error);
+}
+
+/** Offers this plant is waiting on: who it was sent to and has not taken it yet. */
+export async function pendingOffersFor(client: SupabaseClient, plantId: string): Promise<Set<string>> {
+    const { data, error } = await client.from('plant_offers').select('to_id').eq('plant_id', plantId);
+    if (error) fail(error);
+    return new Set(((data ?? []) as { to_id: string }[]).map(r => r.to_id));
+}
+
+export async function listPlantOffers(client: SupabaseClient): Promise<PlantOffer[]> {
+    const { data, error } = await client.rpc('plant_offers_for_me');
+    if (error) fail(error);
+    return ((data ?? []) as { plant_id: string; from_id: string; from_name: string; from_avatar: string; seed: string }[])
+        .map(o => ({ plantId: o.plant_id, fromId: o.from_id, fromName: o.from_name, fromAvatar: o.from_avatar || o.from_id, seed: o.seed }));
+}
+
+/** Take an offered plant: the user becomes a member and gets the row back. */
+export async function acceptPlantOffer(client: SupabaseClient, plantId: string): Promise<SharedPlantRow> {
+    const { data, error } = await client.rpc('accept_plant_offer', { pid: plantId });
+    if (error) {
+        if (error.code === 'P0002') throw new InvalidInviteError();
+        if (error.code === '53400') throw new GardenFullError();
+        fail(error);
+    }
+    const row = ((data ?? []) as { plant_id: string; owner_id: string; data: import('./merge').PlantData; rev: number }[])[0];
+    if (!row) throw new InvalidInviteError();
+    return { id: row.plant_id, owner_id: row.owner_id, data: row.data, rev: row.rev };
+}
+
+export async function declinePlantOffer(client: SupabaseClient, plantId: string, userId: string): Promise<void> {
+    const { error } = await client.from('plant_offers').delete().eq('plant_id', plantId).eq('to_id', userId);
+    if (error) fail(error);
+}
+
+// --- The signed-in user's own profile -----------------------------------------
+
+export interface Profile {
+    name: string;
+    avatar: string;
+}
+
+export async function getProfile(client: SupabaseClient, userId: string): Promise<Profile> {
+    const { data, error } = await client.from('profiles').select('*').eq('id', userId).limit(1);
+    if (error) fail(error);
+    const row = ((data ?? []) as { display_name: string | null; avatar_seed?: string | null }[])[0];
+    return { name: row?.display_name ?? '', avatar: row?.avatar_seed || userId };
+}
+
+export async function updateProfile(client: SupabaseClient, userId: string, changes: { name?: string; avatar?: string }): Promise<void> {
+    const patch: Record<string, string> = {};
+    if (changes.name !== undefined) patch.display_name = changes.name;
+    if (changes.avatar !== undefined) patch.avatar_seed = changes.avatar;
+    const { error } = await client.from('profiles').update(patch).eq('id', userId);
     if (error) fail(error);
 }
