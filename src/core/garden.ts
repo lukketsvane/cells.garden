@@ -43,6 +43,9 @@ const STAR_LIFE = 25;
 // The smallest sky and ground the world ever has, whatever the plants do.
 const BASE_SKY = 520;
 const BASE_GROUND = 400;
+// Squares in the worm, and fireflies over the garden.
+const WORM_LENGTH = 7;
+const FIREFLY_COUNT = 8;
 
 /** Cancel a timer or interval and hand back null, so `x = stop(x)` clears it. */
 function stop(handle: number | null): null {
@@ -334,17 +337,7 @@ export class GardenView extends View {
 
         const spawnSatellite = () => {
             if (!this.satelliteLayer) return;
-            const satEl = this.satelliteLayer.createDiv();
-            const satSize = 1 * PIXEL_SCALE;
-            satEl.style.cssText = `
-                position: absolute;
-                width: ${satSize}px;
-                height: ${satSize}px;
-                background-color: rgba(255, 255, 255, 0.65);
-                pointer-events: none;
-                z-index: 6;
-                image-rendering: pixelated;
-            `;
+            const satEl = this.satelliteLayer.createDiv('garden-satellite');
 
             const worldW = this.satelliteLayer.offsetWidth;
             const worldH = this.satelliteLayer.offsetHeight;
@@ -681,7 +674,7 @@ export class GardenView extends View {
         const seg = this.wormPixelSize;
 
         // Restore saved worm state if available (preserves position across re-renders)
-        if (this._savedWormSegments && this._savedWormSegments.length === 7) {
+        if (this._savedWormSegments?.length === WORM_LENGTH) {
             this.wormSegments = this._savedWormSegments.map(s => ({ ...s }));
             this.wormDir = this._savedWormDir ? { ...this._savedWormDir } : { x: 1, y: 0 };
             this.wormNextDir = this._savedWormNextDir ? { ...this._savedWormNextDir } : { x: 1, y: 0 };
@@ -705,7 +698,7 @@ export class GardenView extends View {
             this.wormSegments = [];
             this.wormDir = { x: 1, y: 0 };
             this.wormNextDir = { x: 1, y: 0 };
-            for (let i = 0; i < 7; i++) {
+            for (let i = 0; i < WORM_LENGTH; i++) {
                 this.wormSegments.push({ x: startX - i * seg, y: startY });
             }
         }
@@ -844,35 +837,23 @@ export class GardenView extends View {
         const seg = this.wormPixelSize;
         this.wormElRefs = [];
 
-        // --- Single hitbox for unified hover and click ---
+        // One box around the whole worm, so hovering or clicking any part of it counts.
         const hitbox = parent.createDiv("garden-worm-hitbox");
-        hitbox.style.cssText = `
-            position: absolute; z-index: 2; pointer-events: auto; cursor: pointer;
-        `;
         hitbox.addEventListener('click', (e) => {
             e.stopPropagation();
             this.enterDrawingMode();
         });
-        hitbox.addEventListener('mouseenter', () => {
-            parent.classList.add('garden-worm-pulsing');
-        });
-        hitbox.addEventListener('mouseleave', () => {
-            parent.classList.remove('garden-worm-pulsing');
-        });
+        hitbox.addEventListener('mouseenter', () => parent.addClass('garden-worm-pulsing'));
+        hitbox.addEventListener('mouseleave', () => parent.removeClass('garden-worm-pulsing'));
         this.wormHitboxEl = hitbox;
 
-
-        // --- Worm body segments (visual only, no interactions) ---
+        // The body: seven squares that follow each other, and nothing else.
         const colors = ['#382c38', '#312b31'];
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < WORM_LENGTH; i++) {
             const el = parent.createDiv("garden-worm-segment");
-            el.style.position = 'absolute';
             el.style.width = `${seg}px`;
             el.style.height = `${seg}px`;
-            el.style.imageRendering = 'pixelated';
-            el.style.zIndex = '1';
             el.style.backgroundColor = colors[i % 2];
-            el.style.pointerEvents = 'none';
             this.wormElRefs.push(el);
         }
     }
@@ -897,23 +878,8 @@ export class GardenView extends View {
             document.head.appendChild(styleEl);
         }
 
-        const count = 8;
-        const fireflySize = 1 * PIXEL_SCALE;
-
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < FIREFLY_COUNT; i++) {
             const el = parent.createDiv("garden-firefly");
-            el.style.cssText = `
-                position: absolute;
-                width: ${fireflySize}px;
-                height: ${fireflySize}px;
-                background-color: var(--firefly-color, #5e7e50);
-                pointer-events: none;
-                z-index: 6;
-                image-rendering: pixelated;
-                transition: background-color 30s ease, opacity 2s ease-in;
-                opacity: 0;
-                will-change: transform, opacity;
-            `;
 
             const cx = Math.random() * parent.offsetWidth;
             const minStartY = Math.max(10, skyHeight - 100);
