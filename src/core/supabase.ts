@@ -18,7 +18,7 @@ import type { Garden } from './model';
 import { emptyGarden } from './model';
 import { GardenGoneError, snapshot, LOCAL_KEY, type GardenStore } from './store';
 
-export function supabaseConfig(): { url: string; key: string } | null {
+function supabaseConfig(): { url: string; key: string } | null {
     const url = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
     const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '').trim();
     if (!url || !key) return null;

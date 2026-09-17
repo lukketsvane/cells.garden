@@ -6,7 +6,7 @@
 import { Setting } from './ui';
 
 /** Copy to the clipboard, or fall back to selecting the text so ⌘C works. */
-export async function copyText(text: string, fallback: HTMLInputElement): Promise<boolean> {
+async function copyText(text: string, fallback: HTMLInputElement): Promise<boolean> {
     try {
         await navigator.clipboard.writeText(text);
         return true;
