@@ -706,102 +706,47 @@
     cursor: grab;
 }
 /* ========================================
-   ONE SURFACE: the kanban strip as a single canvas
-   Layered on top of the rules above so Max's styles stay as written. The
-   columns lose their cards and borders; the page itself is the surface, and
-   the seed row runs across every plant as one band, like the horizon above.
-   ======================================== */
-
-.kanban-scroll-container {
-    background: var(--background-secondary);
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-}
-
-.kanban-scroll-container .project-column,
-.kanban-scroll-container .column-card,
-.kanban-scroll-container .column-top-half,
-.kanban-scroll-container .column-bottom-half {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-}
-
-.kanban-scroll-container .column-card {
-    overflow: visible;
-}
-
-/* Zones read as open space, not boxed sections. */
-.kanban-scroll-container .garden-zone {
-    border-bottom: none;
-}
-
-/* The seed row is the horizon of the board: one continuous band. The border image
-   is painted past the row (the scroll container clips it), so the band and its two
-   lines run across every plant and the empty board around them.
-
-   It bleeds to the right, not the left. Every seed cell is sticky, so each one is
-   its own stacking context and paints whole — band and all — after the one before
-   it. A bleed to the left therefore paints over the previous plant's name, which
-   left every plant but the last one nameless. A bleed to the right lands under the
-   next plant's name, which paints after it, so it costs nothing. The 12px on the
-   left is the gap between columns (set on the container in garden.ts), enough to
-   join the band up and too little to reach a neighbour. */
-.kanban-scroll-container .seed-cell {
-    border: none;
-    background: transparent;
-    border-image: linear-gradient(to bottom,
-        var(--background-modifier-border) 0 1px,
-        var(--background-primary-alt) 1px calc(100% - 1px),
-        var(--background-modifier-border) calc(100% - 1px)) fill 0 / 0 / 0 100vw 0 12px;
-    margin: 0;
-}
-
-/* Nothing has painted yet to the left of the first plant, so it keeps the full
-   bleed and the band still runs out to the edge of the board. */
-.kanban-scroll-container .project-column:first-child .seed-cell {
-    border-image-outset: 0 100vw;
-}
-
-.kanban-scroll-container .add-column-btn {
-    align-self: stretch;
-}
-
-/* ========================================
-   THE BOARD IS ONE CANVAS
-   Every plant used to be its own little board: its own flowers box, its own
-   stem box, its own seed. The bands only looked like bands because a pass of
-   JavaScript padded each column until the seeds happened to line up, and the
-   labels above them staggered anyway.
-   Here the board is one grid and its rows ARE the bands — flowers, stem, the
-   seed horizon, roots, minerals. A plant is a column of that one grid, not a
-   board of its own, and it hands the five rows straight down to its zones, so
-   a band is as tall as the fullest plant in it and every plant shares it.
+   THE BOARD: one grid, a card per plant
+   The board is one grid and its rows are the bands: flowers, stem, the seed
+   row, roots, minerals. A plant is a column of that grid and hands the rows
+   down to its zones through subgrid, so a band is as tall as its fullest plant
+   and every card lines up with its neighbours. The zones paint the card
+   themselves, since the wrappers between them and the column are flattened.
+   A sixth row takes up what is left of the board, so the line between two
+   plants runs to the bottom of it.
    ======================================== */
 
 .kanban-scroll-container {
     display: grid;
     grid-auto-flow: column;
-    /* Each track is as wide as what stands in it: a plant is a column, the two
-       add-a-plant buttons are only as wide as themselves. */
+    /* A plant is exactly its column width, the add-a-plant buttons only as
+       wide as themselves. */
     grid-auto-columns: min-content;
-    /* Flowers, stem, the seed horizon, roots, minerals. */
-    grid-template-rows: auto auto auto auto auto;
+    grid-template-rows: auto auto auto auto auto 1fr;
     align-items: start;
-    column-gap: 12px;
-    row-gap: 0;
+    gap: 0;
+    background: var(--background-primary);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .kanban-scroll-container .project-column {
     display: grid;
     grid-row: 1 / -1;
     grid-template-rows: subgrid;
-    width: var(--garden-column-width, 230px);
-    /* Max's own min and max would fight the width above. */
+    /* One track as wide as the column. Left implicit, the track grows to the
+       longest word in it and a long name spills over the next plant. */
+    grid-template-columns: minmax(0, 1fr);
+    align-self: stretch;
+    /* The card is 230px; the padding and the line make up the rest. */
+    width: var(--garden-column-width, 255px);
     min-width: 0;
     max-width: none;
     min-height: 0;
+    padding: 8px 12px;
+    background: transparent;
+    border-right: 1px solid var(--background-modifier-border);
+    box-shadow: none;
 }
 
 /* The wrappers are bookkeeping, not boxes. Flattening them puts the zones
@@ -813,15 +758,27 @@
     display: contents;
 }
 
-/* A band is as tall as its fullest plant, so a plant with fewer cells has room
-   to spare in it. Above the horizon that room goes above the cells, which grow
-   up from the ground: the label keeps the top of the band, where it lines up
-   with the other plants' labels, and the cells hang from the bottom against the
-   seed row. Below the horizon the default is already right, because roots and
-   minerals grow down from it. */
+/* Every zone fills its band, so the card has no gaps where a neighbour's band
+   is taller. Placed by row and column, because the seed row spans to the
+   bottom. */
+.kanban-scroll-container .garden-zone {
+    /* Explicit, or the seed row's long area pushes roots and minerals into a
+       column of their own. */
+    grid-column: 1;
+    align-self: stretch;
+    background: var(--background-secondary);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.kanban-scroll-container .flowers-zone { grid-row: 1; border-radius: 4px 4px 0 0; }
+.kanban-scroll-container .stem-zone { grid-row: 2; }
+.kanban-scroll-container .roots-zone { grid-row: 4; }
+.kanban-scroll-container .minerals-zone { grid-row: 5; border-bottom: none; border-radius: 0 0 4px 4px; }
+
+/* Above the seed row the cells grow up from it: the label keeps the top of the
+   band, lined up with the other plants, and the cells sit against the seed. */
 .kanban-scroll-container .flowers-zone,
 .kanban-scroll-container .stem-zone {
-    align-self: stretch;
     display: flex;
     flex-direction: column;
 }
@@ -831,10 +788,27 @@
     margin-top: auto;
 }
 
-/* The + for a new plant sits on the horizon because the horizon is its row,
-   rather than because a measuring pass moved it there. */
+/* The plant names stay at the top of the board while you scroll. A sticky grid
+   item can only move inside its own area, so the seed row's area runs from its
+   band to the bottom of the column, and the row itself stays one line tall. */
+.kanban-scroll-container .seed-cell {
+    grid-row: 3 / -1;
+    align-self: start;
+    min-height: 44px;
+    margin: 0;
+    background: var(--background-primary-alt);
+    border-image: none;
+}
+
+.kanban-scroll-container .project-column.is-standby .seed-cell {
+    border-radius: 4px;
+    border-bottom: none;
+}
+
+/* The + for a new plant sits on the seed row. */
 .kanban-scroll-container .add-column-btn {
     grid-row: 3;
+    align-self: stretch;
     height: auto;
     min-height: 44px;
 }
