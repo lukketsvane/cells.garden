@@ -2,7 +2,7 @@
 
 A kanban-style project garden where tasks grow into pixel-art plants. Web port of Max's Obsidian plugin **Garden Cells**.
 
-The original code is ~4,200 lines of vanilla TypeScript in one file: DOM + CSS transforms, no canvas engine, touch and pinch already in place. The Obsidian coupling was thin, so the port is a port, not a rewrite: Max's code lives on in `src/core/garden.ts` with the same structure as before.
+The original code is ~4,200 lines of vanilla TypeScript in one file: DOM + CSS transforms, no canvas engine, touch and pinch already in place. The Obsidian coupling was thin, so the port was a port, not a rewrite: Max's code lives on in `src/core/garden.ts`, with the same structure and rather less of it.
 
 ## Getting started
 
@@ -38,14 +38,17 @@ Same code, three distributions. Diagrams: `docs/architecture.html` (and the PNG 
 src/core/      the core (independent of web, extension and Obsidian)
   shim.ts        createDiv/createEl/empty/setText/addClass … on Node/Element, as Obsidian does
   ui.ts, ui.css  View, Modal, Setting (a few dozen lines of our own)
+  menu.ts        the floating menu: the pill's, a plant's and a cell's
   model.ts       data model, constants, DEFAULT_SETTINGS
-  store.ts       GardenStore { load, save, subscribe? } + LocalStore
+  store.ts       GardenStore { load, save, subscribe? } + LocalStore + snapshot()
   supabase.ts    Supabase client + SupabaseStore (cloud)
   auth.ts        sign-in pill, magic link + 6-digit code
   boot.ts        bootGarden(host): mounts the garden and wires sign-in/sync
   assets.ts      AssetManager over the bundled asset pack in src/assets/pack/
   asset-paths.ts the pack's path rules, including the sprite names of the first build
-  modals.ts      Max's three modals
+  modals.ts      Max's modals, plus the keyboard shortcuts sheet
+  sharing.ts     the Supabase calls behind sharing a garden or a plant
+  share.ts, share-plant.ts, share-ui.ts   the two share modals and what they share
   garden.ts      GardenView, Max's main.ts ported
   app.ts         GardenApp, owns data, settings, the store switch
   markdown.ts    Max's markdown format (frontmatter + ## Flowers/Stem/Roots/Minerals), import/export
