@@ -15,9 +15,11 @@ Free tier. Auth via magic link, one row per garden in `gardens.data` (jsonb), RL
    | `VITE_SUPABASE_URL`        | Project URL                       |
    | `VITE_SUPABASE_PUBLISHABLE_KEY` | Publishable key (`sb_publishable_…`) or the legacy anon key |
 
-   `vite.config.ts` also accepts `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` without the `VITE_` prefix, so the same names as the local dev environment work.
+   The repo's `.env` already carries both values, so Vercel and `npm run dev` pick them up with no extra configuration. `vite.config.ts` also accepts `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` without the `VITE_` prefix, and real environment variables override the file.
 
-Without these two variables the app builds and runs exactly as M0: localStorage only, no sign-in button.
+   For local sign-in, also add `http://localhost:5173` to the Redirect URLs.
+
+Without these two values the app builds and runs exactly as M0: localStorage only, no sign-in button.
 
 ## Sync model
 
