@@ -2,6 +2,7 @@ import './shim';
 import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
 import { PLANT_TYPES } from './assets';
+import { openMenu, type MenuItem } from './menu';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
 import type { LayerItem, LayerName, ProjectData, ViewState } from './model';
@@ -41,6 +42,23 @@ const WORLD_BLEED = 6000;
 // How far past an edge a drag can stretch, in screen pixels, before it stops.
 const RUBBER_REACH = 120;
 
+/** An image, once the browser knows its size. A broken one resolves too, at 0x0. */
+function loadImage(url: string): Promise<HTMLImageElement> {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(img);
+        img.src = url;
+    });
+}
+
+const ZONE_LABELS: Record<LayerName, string> = {
+    flowers: '⚘✽ Flowers',
+    stem: '𖣂 Stem',
+    roots: '⫛ Roots',
+    minerals: '₊⊹˖ Minerals',
+};
+
 const stemParts: string[] = [
     stem1Url, stem2Url, stem3Url, stem4Url,
     stem5Url, stem6Url, stem7Url, stem8Url
@@ -68,10 +86,6 @@ export class GardenView extends View {
     private zoom = 1;
     private zoomMin = 0.15; // Changed from 0.3
     private zoomMax = 3;
-    private _initialViewApplied: boolean = false;
-    private _savedZoom: number | undefined;
-    private _savedTranslateX = 0;
-    private _savedTranslateY = 0;
 
 
     // --- Touch State (Mobile) ---
@@ -99,7 +113,7 @@ export class GardenView extends View {
         // Prevent the browser from doing its own scrolling/zooming
         if (e.touches.length > 0) e.preventDefault();
 
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        const viewport = this.viewport;
         if (!viewport) return;
         this.cancelSettle();
 
@@ -139,8 +153,8 @@ export class GardenView extends View {
         if (this.inPeek(e.target)) return;
         if (e.touches.length > 0) e.preventDefault(); // Prevent page scroll
 
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-        const world = this.containerEl.querySelector('.garden-world') as HTMLElement | null;
+        const viewport = this.viewport;
+        const world = this.world;
         if (!viewport || !world) return;
 
         if (this.isTouchPanning && e.touches.length === 1) {
@@ -249,8 +263,8 @@ export class GardenView extends View {
 
     /** True when the current camera still shows part of the world in this viewport. */
     private cameraInView(): boolean {
-        const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-        const world = this.contentEl.querySelector('.garden-world') as HTMLElement | null;
+        const viewport = this.viewport;
+        const world = this.world;
         if (!viewport || !world) return true;
         const vw = viewport.offsetWidth, vh = viewport.offsetHeight;
         const left = this.currentTranslateX, top = this.currentTranslateY;
@@ -271,7 +285,6 @@ export class GardenView extends View {
     private satellites: { el: HTMLElement; x: number; y: number; vx: number; vy: number; isUfo: boolean; turnTimer: number }[] = [];
     private satelliteLayer: HTMLElement | null = null;    private shootingStarRAF: number | null = null;
     private nextShootingStarCheck: number = 0;
-    private shootingStarsActiveTonight: boolean = true;
     private nightSkyState: 'unrolled' | 'dead' | 'normal' | 'shower' = 'unrolled';
 
     private startShootingStars() {
@@ -547,9 +560,6 @@ export class GardenView extends View {
     private fireflySkyHeight: number = 0;
 
     // --- Drawing Mode State ---
-
-        // Custom pixel-style pencil cursor for drawing mode
-    private drawingCursor: string = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>') 2 22, crosshair`;
     private isDrawingMode = false;
     private selectedToolEraser = false; // Tracks which toolbar button is active
     private isActivelyErasing = false;  // Tracks what the current mouse stroke is doing
@@ -576,7 +586,7 @@ export class GardenView extends View {
         if (this.antWalkInterval) return; // Already walking
 
         const walkLogic = () => {
-            const world = this.containerEl.querySelector('.garden-world') as HTMLElement;
+            const world = this.world;
             const worldWidth = world ? world.offsetWidth : 800;
             // Fixed speed (20 pixels per second). No longer scales with world width.
             const speed = 2; 
@@ -669,7 +679,7 @@ export class GardenView extends View {
 
 
         
-        const world = this.containerEl.querySelector('.garden-world') as HTMLElement;
+        const world = this.world;
         if (!world) return;
 
         const seg = this.wormPixelSize;
@@ -723,7 +733,7 @@ export class GardenView extends View {
         if (this.wormInterval) return;
 
         const moveLogic = () => {
-            const world = this.containerEl.querySelector('.garden-world') as HTMLElement;
+            const world = this.world;
             if (!world) return;
 
             const worldW = world.offsetWidth;
@@ -965,7 +975,7 @@ export class GardenView extends View {
             f.el.style.opacity = '1';
         }
 
-        const world = this.containerEl.querySelector('.garden-world') as HTMLElement;
+        const world = this.world;
         if (!world) return;
 
         // Cache plant bounds for landing
@@ -1223,8 +1233,8 @@ export class GardenView extends View {
                     const win = this.containerEl.ownerDocument.defaultView || window;
                     win.requestAnimationFrame(() => {
                         win.requestAnimationFrame(() => {
-                            const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement;
-                            const world = this.contentEl.querySelector('.garden-world') as HTMLElement;
+                            const viewport = this.viewport;
+                            const world = this.world;
                             if (viewport && world) {
                                 this.zoom = 0.4;
                                 const vpWidth = viewport.offsetWidth || 800;
@@ -1296,34 +1306,26 @@ export class GardenView extends View {
     private enterDrawingMode() {
         this.isDrawingMode = true;
         this.selectedToolEraser = false;
-        this.containerEl.addClass('is-drawing-mode'); 
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-        if (viewport) viewport.addClass('is-drawing'); // ADD CLASS
+        this.containerEl.addClass('is-drawing-mode');
         this.showDrawingToolbar();
-
-        const vp = viewport;
-        if (vp) {
-            vp.addEventListener('mousedown', this.handleDrawStart);
-            vp.addEventListener('contextmenu', this.preventContextMenu);
-        }
+        const viewport = this.viewport;
+        if (!viewport) return;
+        viewport.addClass('is-drawing');
+        viewport.addEventListener('mousedown', this.handleDrawStart);
+        viewport.addEventListener('contextmenu', this.preventContextMenu);
     }
 
     private exitDrawingMode() {
         this.isDrawingMode = false;
         this.isCurrentlyDrawing = false;
         this.containerEl.removeClass('is-drawing-mode');
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-        if (viewport) viewport.removeClass('is-drawing'); // REMOVE CLASS
-        
-        if (this.drawingToolbarEl) {
-            this.drawingToolbarEl.remove();
-            this.drawingToolbarEl = null;
-        }
-        const vp = viewport;
-        if (vp) {
-            vp.removeEventListener('mousedown', this.handleDrawStart);
-            vp.removeEventListener('contextmenu', this.preventContextMenu);
-        }
+        this.drawingToolbarEl?.remove();
+        this.drawingToolbarEl = null;
+        const viewport = this.viewport;
+        if (!viewport) return;
+        viewport.removeClass('is-drawing');
+        viewport.removeEventListener('mousedown', this.handleDrawStart);
+        viewport.removeEventListener('contextmenu', this.preventContextMenu);
     }
 
     private handleDrawStart = (e: MouseEvent) => {
@@ -1334,7 +1336,7 @@ export class GardenView extends View {
         // Don't draw/erase if clicking on the toolbar
         if ((e.target as HTMLElement).closest('.drawing-toolbar')) return;
 
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        const viewport = this.viewport;
 
         if (e.button === 2) {
             // Right click ALWAYS erases, regardless of selected tool
@@ -1418,136 +1420,56 @@ export class GardenView extends View {
     }
 
     private showDrawingToolbar() {
-        // Remove old toolbar if exists
-        if (this.drawingToolbarEl) {
-            this.drawingToolbarEl.remove();
-        }
-
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement;
+        this.drawingToolbarEl?.remove();
+        const viewport = this.viewport;
         if (!viewport) return;
 
-        const toolbar = document.createElement('div');
-        toolbar.className = 'drawing-toolbar';
-        toolbar.style.cssText = `
-            position: absolute; top: 8px; right: 8px; z-index: 100;
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            background: rgba(0,0,0,0.6); border-radius: 6px; padding: 4px;
-        `;
+        const toolbar = viewport.createDiv('drawing-toolbar');
         this.drawingToolbarEl = toolbar;
+        const row = toolbar.createDiv('drawing-toolbar-row');
 
-        const btnRow = document.createElement('div');
-        btnRow.style.cssText = 'display: flex; gap: 4px;';
+        const tools: { glyph: string; label: string; onClick: () => void }[] = [
+            { glyph: '✏', label: 'Drawing mode', onClick: () => this.selectTool(false) },
+            { glyph: '◇', label: 'Eraser', onClick: () => this.selectTool(true) },
+            { glyph: '⌫', label: 'Clear canvas', onClick: () => this.clearDrawing() },
+            { glyph: '✕', label: 'Exit drawing mode', onClick: () => this.exitDrawingMode() },
+        ];
+        for (const tool of tools) {
+            const btn = row.createEl('button', { cls: 'drawing-toolbar-btn', text: tool.glyph, attr: { type: 'button' } });
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                tool.onClick();
+            });
+            btn.addEventListener('mouseenter', () => this.setToolbarLabel(tool.label));
+            btn.addEventListener('mouseleave', () => this.setToolbarLabel());
+        }
 
-        // Pen button
-        const penBtn = document.createElement('button');
-        penBtn.className = 'drawing-toolbar-btn';
-        penBtn.style.cssText = `
-            width: 28px; height: 28px; border: none; border-radius: 4px;
-            background: ${!this.selectedToolEraser ? 'rgba(255,255,255,0.25)' : 'transparent'};
-            color: #ccc; cursor: pointer; font-size: 14px;
-            display: flex; align-items: center; justify-content: center;
-        `;
-        penBtn.textContent = '✏';
-        penBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.selectedToolEraser = false;
-            this.updateToolbarUI();
-        });
-        penBtn.addEventListener('mouseenter', () => this.setToolbarLabel('Drawing mode'));
-        penBtn.addEventListener('mouseleave', () => this.setToolbarLabel(this.selectedToolEraser ? 'Eraser' : 'Drawing mode'));
-
-        // Eraser button
-        const eraserBtn = document.createElement('button');
-        eraserBtn.className = 'drawing-toolbar-btn';
-        eraserBtn.style.cssText = `
-            width: 28px; height: 28px; border: none; border-radius: 4px;
-            background: ${this.selectedToolEraser ? 'rgba(255,255,255,0.25)' : 'transparent'};
-            color: #ccc; cursor: pointer; font-size: 14px;
-            display: flex; align-items: center; justify-content: center;
-        `;
-        eraserBtn.textContent = '◇';
-        eraserBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.selectedToolEraser = true;
-            this.updateToolbarUI();
-        });
-        
-        eraserBtn.addEventListener('mouseenter', () => this.setToolbarLabel('Eraser'));
-        eraserBtn.addEventListener('mouseleave', () => this.setToolbarLabel(this.selectedToolEraser ? 'Eraser' : 'Drawing mode'));
-
-        // Clear button
-        const clearBtn = document.createElement('button');
-        clearBtn.className = 'drawing-toolbar-btn';
-        clearBtn.style.cssText = `
-            width: 28px; height: 28px; border: none; border-radius: 4px;
-            background: transparent; color: #ccc; cursor: pointer; font-size: 14px;
-            display: flex; align-items: center; justify-content: center;
-        `;
-        clearBtn.textContent = '⌫';
-        clearBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (this.wormTrailCanvas) {
-                const ctx = this.wormTrailCanvas.getContext('2d');
-                if (ctx) ctx.clearRect(0, 0, this.wormTrailCanvas.width, this.wormTrailCanvas.height);
-            }
-        });
-        clearBtn.addEventListener('mouseenter', () => this.setToolbarLabel('Clear canvas'));
-        clearBtn.addEventListener('mouseleave', () => this.setToolbarLabel(this.selectedToolEraser ? 'Eraser' : 'Drawing mode'));
-
-        // Close button
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'drawing-toolbar-btn';
-        closeBtn.style.cssText = `
-            width: 28px; height: 28px; border: none; border-radius: 4px;
-            background: transparent; color: #ccc; cursor: pointer; font-size: 14px;
-            display: flex; align-items: center; justify-content: center;
-        `;
-        closeBtn.textContent = '✕';
-        closeBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.exitDrawingMode();
-        });
-
-        closeBtn.addEventListener('mouseenter', () => this.setToolbarLabel('Exit drawing mode'));
-        closeBtn.addEventListener('mouseleave', () => this.setToolbarLabel(this.selectedToolEraser ? 'Eraser' : 'Drawing mode'));
-
-        btnRow.appendChild(penBtn);
-        btnRow.appendChild(eraserBtn);
-        btnRow.appendChild(clearBtn);
-        btnRow.appendChild(closeBtn);
-
-        // Text label under buttons
-        const label = document.createElement('div');
-        label.className = 'drawing-toolbar-label';
-        label.style.cssText = `
-            font-size: 10px; color: #767d5e; text-align: center;
-            padding: 0 4px 2px; white-space: nowrap; user-select: none;
-        `;
-        label.textContent = 'Drawing mode';
-
-        toolbar.appendChild(btnRow);
-        toolbar.appendChild(label);
-        viewport.appendChild(toolbar);
+        toolbar.createDiv({ cls: 'drawing-toolbar-label', text: 'Drawing mode' });
+        this.updateToolbarUI();
     }
 
-    private setToolbarLabel(text: string) {
-        if (!this.drawingToolbarEl) return;
-        const label = this.drawingToolbarEl.querySelector('.drawing-toolbar-label') as HTMLElement | null;
-        if (label) label.textContent = text;
+    private selectTool(eraser: boolean) {
+        this.selectedToolEraser = eraser;
+        this.updateToolbarUI();
+    }
+
+    private clearDrawing() {
+        const ctx = this.wormTrailCanvas?.getContext('2d');
+        if (ctx && this.wormTrailCanvas) ctx.clearRect(0, 0, this.wormTrailCanvas.width, this.wormTrailCanvas.height);
+    }
+
+    /** The label under the buttons: what the pointer is over, or the tool in hand. */
+    private setToolbarLabel(text = this.selectedToolEraser ? 'Eraser' : 'Drawing mode') {
+        const label = this.drawingToolbarEl?.querySelector('.drawing-toolbar-label');
+        if (label) label.setText(text);
     }
 
     private updateToolbarUI() {
-        if (!this.drawingToolbarEl) return;
-        const btns = this.drawingToolbarEl.querySelectorAll('.drawing-toolbar-btn');
-        if (btns[0]) (btns[0] as HTMLElement).style.background = this.selectedToolEraser ? 'transparent' : 'rgba(255,255,255,0.25)';
-        if (btns[1]) (btns[1] as HTMLElement).style.background = this.selectedToolEraser ? 'rgba(255,255,255,0.25)' : 'transparent';
-        this.setToolbarLabel(this.selectedToolEraser ? 'Eraser' : 'Drawing mode');
-
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-        if (viewport) {
-            if (this.selectedToolEraser) viewport.addClass('is-erasing');
-            else viewport.removeClass('is-erasing');
-        }
+        const btns = this.drawingToolbarEl?.querySelectorAll('.drawing-toolbar-btn');
+        btns?.[0]?.toggleClass('is-active', !this.selectedToolEraser);
+        btns?.[1]?.toggleClass('is-active', this.selectedToolEraser);
+        this.setToolbarLabel();
+        this.viewport?.toggleClass('is-erasing', this.selectedToolEraser);
     }
 
     private _viewportObserver: ResizeObserver | null = null;
@@ -1576,7 +1498,7 @@ export class GardenView extends View {
             this._skyUpdateInterval = null;
         }
 
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        const viewport = this.viewport;
         if (viewport) {
             viewport.removeEventListener('mousedown', this.handleMouseDown);
             viewport.removeEventListener('wheel', this.handleWheel);
@@ -1670,12 +1592,12 @@ export class GardenView extends View {
             e.preventDefault();
             this.isDragging = true;
             this.cancelSettle();
-            const world = this.containerEl.querySelector('.garden-world') as HTMLElement | null;
-            const vp = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+            const world = this.world;
+            const vp = this.viewport;
             const b = world && vp ? this.cameraBounds(world, vp) : null;
             this.startX = e.clientX - (b ? this.rawAxis(this.currentTranslateX, b.x) : this.currentTranslateX);
             this.startY = e.clientY - (b ? this.rawAxis(this.currentTranslateY, b.y) : this.currentTranslateY);
-            const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+            const viewport = this.viewport;
             if (viewport) viewport.addClass('is-panning'); // ADD CLASS
         }
     };
@@ -1689,8 +1611,8 @@ export class GardenView extends View {
         if (!this.isDragging) return;
         e.preventDefault();
 
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-        const world = this.containerEl.querySelector('.garden-world') as HTMLElement | null;
+        const viewport = this.viewport;
+        const world = this.world;
         if (!viewport || !world) return;
 
         const b = this.cameraBounds(world, viewport);
@@ -1700,7 +1622,7 @@ export class GardenView extends View {
     };
 
     private handleMouseUp = () => {
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        const viewport = this.viewport;
         
         // If we were panning, just remove the panning class
         if (this.isDragging) {
@@ -1724,8 +1646,8 @@ export class GardenView extends View {
 
     private handleWheel = (e: WheelEvent) => {
         if (this.inPeek(e.target)) return;
-        const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-        const world = this.containerEl.querySelector('.garden-world') as HTMLElement | null;
+        const viewport = this.viewport;
+        const world = this.world;
         if (!viewport || !world) return;
         // A wheel has no release, so the camera settles once it goes quiet.
         this.cancelSettle();
@@ -1772,8 +1694,8 @@ export class GardenView extends View {
      * Returns false when there is nothing to show yet.
      */
     focusProject(index: number): boolean {
-        const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-        const world = this.contentEl.querySelector('.garden-world') as HTMLElement | null;
+        const viewport = this.viewport;
+        const world = this.world;
         const count = this.app.gardenData.length;
         if (!viewport || !world || count === 0) return false;
         const i = Math.max(0, Math.min(count - 1, index));
@@ -1800,6 +1722,15 @@ export class GardenView extends View {
         this.settleCamera(false);
         this.scheduleViewStateSave();
         return true;
+    }
+
+    /** The two elements the camera works on. Null between renders. */
+    private get viewport(): HTMLElement | null {
+        return this.contentEl.querySelector('.garden-canvas-viewport');
+    }
+
+    private get world(): HTMLElement | null {
+        return this.contentEl.querySelector('.garden-world');
     }
 
     /** The furthest out the camera goes: the garden fills the pane's height. */
@@ -1850,8 +1781,8 @@ export class GardenView extends View {
 
     /** Bring the camera back inside the garden: eased after a gesture, at once otherwise. */
     private settleCamera(animate = true) {
-        const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-        const world = this.contentEl.querySelector('.garden-world') as HTMLElement | null;
+        const viewport = this.viewport;
+        const world = this.world;
         if (!viewport || !world || !viewport.offsetWidth) return;
         this.cancelSettle();
         const floor = this.minZoomFor(world, viewport);
@@ -1925,7 +1856,7 @@ export class GardenView extends View {
 
     /** The plant under a point in the viewport, if the point is on it. */
     private plantAt(clientX: number, clientY: number): { project: ProjectData; x: number; top: number } | null {
-        const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        const viewport = this.viewport;
         if (!viewport) return null;
         const rect = viewport.getBoundingClientRect();
         const wx = (clientX - rect.left - this.currentTranslateX) / this.zoom;
@@ -1946,7 +1877,7 @@ export class GardenView extends View {
     }
 
     private showPeek(hit: { project: ProjectData; x: number; top: number }) {
-        const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        const viewport = this.viewport;
         if (!viewport) return;
         if (!this._peekEl || !this._peekEl.isConnected) {
             this._peekEl = viewport.createDiv('garden-peek-card');
@@ -2215,31 +2146,20 @@ export class GardenView extends View {
         const calculatedWidth = Math.max(600, this.app.gardenData.length * PLANT_SPACING + WORLD_PADDING * 2);
         world.style.width = `${calculatedWidth}px`;
 
-        // --- Phase 1: Preload all images first ---
-        for (const project of this.app.gardenData) {
-            await this.preloadImages(project);
-        }
-
-        // Preload bg & cloud images for pixel-scale sizing
-        const bgImg = new Image();
-        bgImg.src = bgImageUrl;
-        await new Promise<void>(r => { bgImg.onload = () => r(); bgImg.onerror = () => r(); });
-        const cloudImg = new Image();
-        cloudImg.src = cloudUrl;
-        await new Promise<void>(r => { cloudImg.onload = () => r(); cloudImg.onerror = () => r(); });
+        // The backdrops are measured before they are laid out: each is drawn at its
+        // own size times PIXEL_SCALE, so the scene keeps its pixel grid.
+        const [bgImg, cloudImg] = await Promise.all([loadImage(bgImageUrl), loadImage(cloudUrl)]);
         const bgScaledH = Math.round(bgImg.naturalHeight * PIXEL_SCALE);
         const cloudScaledH = Math.round(cloudImg.naturalHeight * PIXEL_SCALE);
         const cloudScaledW = Math.round(cloudImg.naturalWidth * PIXEL_SCALE);
 
-        // --- Phase 2: Calculate dynamic sky/ground heights from plant content ---
+        // --- Sky and ground grow to fit the tallest plant and the deepest roots ---
         let maxAbove = 0;
         let maxUnderground = 0;
-        const extentsMap: { aboveHeight: number; undergroundDepth: number }[] = [];
         for (const project of this.app.gardenData) {
             const extents = this.calculateProjectExtents(project);
-            extentsMap.push(extents);
-            if (extents.aboveHeight > maxAbove) maxAbove = extents.aboveHeight;
-            if (extents.undergroundDepth > maxUnderground) maxUnderground = extents.undergroundDepth;
+            maxAbove = Math.max(maxAbove, extents.aboveHeight);
+            maxUnderground = Math.max(maxUnderground, extents.undergroundDepth);
         }
 
         const BASE_SKY_HEIGHT = 520;
@@ -2294,19 +2214,10 @@ export class GardenView extends View {
             mix-blend-mode: screen;
             image-rendering: pixelated;
         `;
-        // Load stars GIF at runtime (not bundled) and set as background
-        const starsUrl = starsPatternUrl;
-        if (starsUrl) {
-            // Scale the GIF to match pixel art scale (like bg/plants)
-            const starsImg = new Image();
-            starsImg.src = starsUrl;
-            await new Promise<void>(r => { starsImg.onload = () => r(); starsImg.onerror = () => r(); });
-            const starsScaledW = Math.round(starsImg.naturalWidth * PIXEL_SCALE);
-            const starsScaledH = Math.round(starsImg.naturalHeight * PIXEL_SCALE);
-            starsLayer.style.backgroundImage = `url(${starsUrl})`;
-            starsLayer.style.backgroundRepeat = 'repeat';
-            starsLayer.style.backgroundSize = `${starsScaledW}px ${starsScaledH}px`;
-        }
+        const starsImg = await loadImage(starsPatternUrl);
+        starsLayer.style.backgroundImage = `url(${starsPatternUrl})`;
+        starsLayer.style.backgroundRepeat = 'repeat';
+        starsLayer.style.backgroundSize = `${Math.round(starsImg.naturalWidth * PIXEL_SCALE)}px ${Math.round(starsImg.naturalHeight * PIXEL_SCALE)}px`;
 
         // Update sky color every 60 seconds
         this._skyUpdateInterval = window.setInterval(() => {
@@ -2321,11 +2232,9 @@ export class GardenView extends View {
 
 
         // --- Mountains layer (behind clouds and bg, in front of satellites) ---
-        const mountainsImg = new Image();
-        mountainsImg.src = mountainsUrl;
-        await new Promise<void>(r => { mountainsImg.onload = () => r(); mountainsImg.onerror = () => r(); });
+        const mountainsImg = await loadImage(mountainsUrl);
         const mountainsScaledH = Math.round(mountainsImg.naturalHeight * PIXEL_SCALE);
-        
+
         const mountainsLayer = world.createDiv("garden-mountains-layer");
         mountainsLayer.style.cssText = `
             position: absolute; top: 0; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
@@ -2438,13 +2347,10 @@ export class GardenView extends View {
         antEl.style.position = 'absolute';
         antEl.style.bottom = `${groundHeight}px`;
         
-        // Dynamically size the ant to match PIXEL_SCALE
-        const antImg = new Image();
-        antImg.src = ant1Url;
-        antImg.onload = () => {
-            antEl.style.width = `${antImg.naturalWidth * PIXEL_SCALE}px`;
-            antEl.style.height = `${antImg.naturalHeight * PIXEL_SCALE}px`;
-        };
+        void loadImage(ant1Url).then((img) => {
+            antEl.style.width = `${img.naturalWidth * PIXEL_SCALE}px`;
+            antEl.style.height = `${img.naturalHeight * PIXEL_SCALE}px`;
+        });
 
         // --- Worm ---
         this.createWormElements(wormLayer);
@@ -2511,21 +2417,6 @@ export class GardenView extends View {
         window.removeEventListener('mouseup', this.handleMouseUp);
         window.addEventListener('mousemove', this.handleMouseMove);
         window.addEventListener('mouseup', this.handleMouseUp);
-    }
-
-    // Grabs all image paths in a project and ensures they are cached in memory
-    private async preloadImages(project: ProjectData) {
-        // We gather all image paths, INCLUDING the seed!
-        const pathsToLoad = [
-            ...project.stem.map(s => s.imagePath),
-            ...project.flowers.map(f => f.imagePath),
-            ...project.roots.map(r => r.imagePath),
-            ...project.minerals.map(m => m.imagePath),
-            project.seedImagePath // <--- ADD THIS LINE
-        ].filter((path): path is string => path !== undefined); // Filter out undefineds
-
-        const promises = pathsToLoad.map(path => this.app.assetManager.getImageUrl(path));
-        await Promise.all(promises);
     }
 
     // Pre-calculate above-ground height and underground depth for a project
@@ -2602,27 +2493,13 @@ export class GardenView extends View {
     }
 
 
-    // Helper to load image dimensions asynchronously
-    private async getImageDimensions(url: string | null): Promise<{ width: number; height: number; overlap: number }> {
-        let scaledWidth = STEM_ORIGIN_WIDTH * PIXEL_SCALE;
-        let scaledHeight = STEM_ORIGIN_HEIGHT * PIXEL_SCALE;
-        let scaledOverlap = STEM_OVERLAP_ORIGIN * PIXEL_SCALE;
-
-        if (url) {
-            const img = new Image();
-            img.src = url;
-            await new Promise<void>((resolve) => {
-                img.onload = () => resolve();
-                img.onerror = () => resolve(); // Resolve anyway to avoid hanging
-            });
-            
-            if (img.naturalWidth > 0) {
-                scaledWidth = Math.round(img.naturalWidth * PIXEL_SCALE);
-                scaledHeight = Math.round(img.naturalHeight * PIXEL_SCALE);
-                scaledOverlap = Math.round(scaledHeight * 0.15);
-            }
+    /** A sprite's size on screen. A missing or unreadable one falls back to a stem's. */
+    private async getImageDimensions(url: string | null): Promise<{ width: number; height: number }> {
+        const img = url ? await loadImage(url) : null;
+        if (!img || img.naturalWidth === 0) {
+            return { width: STEM_ORIGIN_WIDTH * PIXEL_SCALE, height: STEM_ORIGIN_HEIGHT * PIXEL_SCALE };
         }
-        return { width: scaledWidth, height: scaledHeight, overlap: scaledOverlap };
+        return { width: Math.round(img.naturalWidth * PIXEL_SCALE), height: Math.round(img.naturalHeight * PIXEL_SCALE) };
     }
 
 
@@ -2682,187 +2559,98 @@ export class GardenView extends View {
 
     }
 
+    /**
+     * One plant: flowers and stems stacked up from the horizon, the seed on it,
+     * roots and minerals paired going down. Every part is one FIXED_STACK_STEP
+     * from the one before it, so a taller sprite simply overlaps further.
+     */
     private async renderPlantSprite(parent: HTMLElement, project: ProjectData) {
         const stemContainer = parent.createDiv("garden-stem-container");
-        // If standby, don't apply hue-rotate so the silhouette color is pure!
+        // Standby paints the whole plant one colour, so a hue on top of it would fight it.
         stemContainer.style.filter = project.standby ? 'none' : `hue-rotate(${project.hue ?? 0}deg)`;
-        stemContainer.style.position = 'relative';
+        stemContainer.toggleClass('is-standby-plant', !!project.standby);
 
-        // --- 1. ABOVE GROUND ---
-        const aboveStack: { id: string; type: 'stem' | 'flower' | 'seed'; imagePath?: string; highlighted?: boolean }[] = [
-            ...[...project.stem].reverse().map(s => ({ id: s.id, type: 'stem' as const, imagePath: s.imagePath, highlighted: s.highlighted })),
-            ...[...project.flowers].reverse().map(f => ({ id: f.id, type: 'flower' as const, imagePath: f.imagePath, highlighted: f.highlighted }))
-        ];
-
-        let aboveY = 0;
         let maxWidth = 0;
-        const flipCounters: Record<string, number> = { stem: 0, flower: 0, seed: 0, root: 0, mineral: 0 };
-        let flipIndex = 0;
 
-        // Use a for...of loop so we can await inside it
-        for (const block of aboveStack) {
-            const partDiv = stemContainer.createDiv(`garden-${block.type}-part`);
-            partDiv.dataset.itemId = block.id;
-            this.attachPlantPartEvents(partDiv, block.id, project.id);
-            if (block.highlighted) partDiv.addClass('garden-part-slow-pulse'); // <--- ADD THIS
-            const isFlipped = flipIndex % 2 !== 0;
-            flipIndex++;
+        /** Draw one cell's sprite at `top`, flipped on every other one of its kind. */
+        const part = async (
+            type: 'stem' | 'flower' | 'seed' | 'root' | 'mineral',
+            item: { id: string; imagePath?: string; highlighted?: boolean },
+            top: (height: number) => number,
+            flipped: boolean,
+        ) => {
+            const el = stemContainer.createDiv(`garden-part garden-${type}-part`);
+            el.dataset.itemId = item.id;
+            this.attachPlantPartEvents(el, item.id, project.id);
+            el.toggleClass('garden-part-slow-pulse', !!item.highlighted);
 
-            const hash = simpleHash(block.id);
-            let url: string | null = null;
-
-            if (block.imagePath) {
-                url = this.app.assetManager.getImageUrlSync(block.imagePath);
+            let url = item.imagePath ? this.app.assetManager.getImageUrlSync(item.imagePath) : null;
+            if (!url && (type === 'stem' || type === 'flower')) {
+                // A plant from before the art pack: fall back to the bundled plant_1 sprites.
+                const hash = simpleHash(item.id);
+                url = type === 'flower' ? (hash % 2 === 0 ? flower1Url : flower2Url) : stemParts[hash % stemParts.length];
             }
 
-            if (!url) {
-                if (block.type === 'flower') {
-                    url = hash % 2 === 0 ? flower1Url : flower2Url;
-                } else {
-                    url = stemParts[hash % stemParts.length];
-                }
-            }
-
-            // Await dimensions
-            const { width: scaledWidth, height: scaledHeight } = await this.getImageDimensions(url);
-            const step = FIXED_STACK_STEP; // Use fixed step so tall images just overlap more!
-            if (scaledWidth > maxWidth) maxWidth = scaledWidth;
-
-            partDiv.style.backgroundImage = url ? `url(${url})` : 'none';
-            partDiv.style.width = `${scaledWidth}px`;
-            partDiv.style.height = `${scaledHeight}px`;
-            partDiv.style.backgroundSize = 'contain';
-            partDiv.style.backgroundRepeat = 'no-repeat';
-            partDiv.style.backgroundPosition = 'bottom center'; // Changed to center
-            partDiv.style.position = 'absolute';
-            partDiv.style.left = '50%'; // Changed to 50%
-            partDiv.style.top = `${-(aboveY + scaledHeight)}px`;
-
-            // Combine centering with flipping
-            partDiv.style.transform = isFlipped ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%)';
-            aboveY += step;
-        }
-
-        // --- 2. BELOW GROUND ---
-        // Helper to render a single part div at a given Y (now async)
-        const renderUndergroundPart = async (
-            block: { id: string; type: 'root' | 'mineral' | 'seed'; imagePath?: string; highlighted?: boolean },
-            y: number
-        ): Promise<{ width: number; height: number; step: number }> => {
-            const partDiv = stemContainer.createDiv(`garden-${block.type}-part`);
-            partDiv.dataset.itemId = block.id;
-            this.attachPlantPartEvents(partDiv, block.id, project.id);
-            if (block.highlighted) partDiv.addClass('garden-part-slow-pulse'); 
-            const isFlipped = flipCounters[block.type] % 2 !== 0;
-            flipCounters[block.type]++;
-
-            let url: string | null = null;
-            if (block.imagePath) {
-                url = this.app.assetManager.getImageUrlSync(block.imagePath);
-            }
-
-            // Await dimensions
-            const { width: scaledWidth, height: scaledHeight } = await this.getImageDimensions(url);
-            const step = FIXED_STACK_STEP; // Use fixed step so tall images just overlap more!
-            if (scaledWidth > maxWidth) maxWidth = scaledWidth;
-
-            partDiv.style.backgroundImage = url ? `url(${url})` : 'none';
-            partDiv.style.width = `${scaledWidth}px`;
-            partDiv.style.height = `${scaledHeight}px`;
-            partDiv.style.backgroundSize = 'contain';
-            partDiv.style.backgroundRepeat = 'no-repeat';
-            partDiv.style.backgroundPosition = 'top center'; // Changed to center
-            partDiv.style.position = 'absolute';
-            partDiv.style.left = '50%'; // Changed to 50%
-            partDiv.style.top = `${y}px`;
-
-            // Combine centering with flipping
-            partDiv.style.transform = isFlipped ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%)';
-            return { width: scaledWidth, height: scaledHeight, step };
+            const { width, height } = await this.getImageDimensions(url);
+            maxWidth = Math.max(maxWidth, width);
+            el.style.backgroundImage = url ? `url(${url})` : 'none';
+            el.style.width = `${width}px`;
+            el.style.height = `${height}px`;
+            el.style.top = `${top(height)}px`;
+            el.style.transform = flipped ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%)';
         };
 
-        // Seed first (await it)
-        const seedResult = await renderUndergroundPart(
-            { id: project.id, type: 'seed', imagePath: project.seedImagePath },
-            0
-        );
-        
-        // Apply standby silhouette effect to the entire plant
-        if (project.standby) {
-            stemContainer.addClass('is-standby-plant');
-        }
-        let undergroundY = seedResult.step;
-
-        // Pair roots and minerals
-        const maxUnderground = Math.max(project.roots.length, project.minerals.length);
-        for (let i = 0; i < maxUnderground; i++) {
-            let pairStep = seedResult.step;
-
-            // Render roots normally (even in standby)
-                if (project.roots[i]) {
-                    const r = await renderUndergroundPart(
-                        { id: project.roots[i].id, type: 'root', imagePath: project.roots[i].imagePath, highlighted: project.roots[i].highlighted },
-                        undergroundY
-                    );
-                pairStep = r.step;
-            }
-            
-            // ONLY render minerals if NOT in standby!
-                if (project.minerals[i] && !project.standby) {
-                    const m = await renderUndergroundPart(
-                        { id: project.minerals[i].id, type: 'mineral', imagePath: project.minerals[i].imagePath, highlighted: project.minerals[i].highlighted },
-                        undergroundY
-                    );
-                pairStep = m.step;
-            }
-            undergroundY += pairStep;
+        // Above ground, nearest the horizon first: stems, then flowers on top.
+        const above = [
+            ...[...project.stem].reverse().map(s => ({ type: 'stem' as const, item: s })),
+            ...[...project.flowers].reverse().map(f => ({ type: 'flower' as const, item: f })),
+        ];
+        for (const [i, block] of above.entries()) {
+            await part(block.type, block.item, (height) => -(i * FIXED_STACK_STEP + height), i % 2 !== 0);
         }
 
+        await part('seed', { id: project.id, imagePath: project.seedImagePath }, () => 0, false);
+
+        // Below ground, a root and a mineral share each step. Standby keeps the roots only.
+        const depth = Math.max(project.roots.length, project.minerals.length);
+        for (let i = 0; i < depth; i++) {
+            const y = (i + 1) * FIXED_STACK_STEP;
+            if (project.roots[i]) await part('root', project.roots[i], () => y, i % 2 !== 0);
+            if (project.minerals[i] && !project.standby) await part('mineral', project.minerals[i], () => y, i % 2 !== 0);
+        }
+
+        // Centre the plant on its anchor, and leave the width where the fireflies can read it.
         stemContainer.style.width = `${maxWidth}px`;
-        // Shift the container left by half its width to perfectly center it on the anchor point!
         stemContainer.style.left = `${-maxWidth / 2}px`;
-        
-        // Store the calculated width on the wrapper so fireflies can read it instantly!
         parent.dataset.width = maxWidth.toString();
     }
 
 
+    /** The sprite a cell grew: stem, flower, root, mineral or the seed itself. */
+    private plantPart(itemId: string): HTMLElement | null {
+        return this.containerEl.querySelector(`.garden-plants-layer [data-item-id="${itemId}"]`);
+    }
+
     private highlightPlantPart(itemId: string) {
-        const selector = `.garden-stem-part[data-item-id="${itemId}"], .garden-flower-part[data-item-id="${itemId}"], .garden-root-part[data-item-id="${itemId}"], .garden-mineral-part[data-item-id="${itemId}"], .garden-seed-part[data-item-id="${itemId}"]`;
-        const part = this.containerEl.querySelector(selector) as HTMLElement | null;
+        const part = this.plantPart(itemId);
         if (!part) return;
-
-        // Preserve the original transform (e.g. scaleX(-1) for flipped parts)
+        // The bounce keyframes scale the part, so they need the transform that
+        // centres it (and flips every other one) to build on.
         part.style.setProperty('--original-transform', part.style.transform || 'scaleX(1)');
-
-        // Bounce animation (one-shot, always plays)
-        part.classList.remove('garden-part-bounce');
+        // Restart the one-shot bounce even when it is already on.
+        part.removeClass('garden-part-bounce');
         void part.offsetWidth;
-        part.classList.add('garden-part-bounce');
-
-        // Keep brightness on until explicitly unhighlighted
-        part.classList.add('garden-part-highlighted');
+        part.addClass('garden-part-bounce', 'garden-part-highlighted');
     }
 
     private unhighlightPlantPart(itemId: string) {
-        const selector = `.garden-stem-part[data-item-id="${itemId}"], .garden-flower-part[data-item-id="${itemId}"], .garden-root-part[data-item-id="${itemId}"], .garden-mineral-part[data-item-id="${itemId}"], .garden-seed-part[data-item-id="${itemId}"]`;
-        const part = this.containerEl.querySelector(selector) as HTMLElement | null;
-        if (!part) return;
-        part.classList.remove('garden-part-highlighted');
+        this.plantPart(itemId)?.removeClass('garden-part-highlighted');
     }
 
-
-
-    private applyHighlightPulse(itemId: string) {
-        const selector = `.garden-stem-part[data-item-id="${itemId}"], .garden-flower-part[data-item-id="${itemId}"], .garden-root-part[data-item-id="${itemId}"], .garden-mineral-part[data-item-id="${itemId}"], .garden-seed-part[data-item-id="${itemId}"]`;
-        const part = this.containerEl.querySelector(selector) as HTMLElement | null;
-        if (part) part.addClass('garden-part-slow-pulse');
-    }
-
-    private removeHighlightPulse(itemId: string) {
-        const selector = `.garden-stem-part[data-item-id="${itemId}"], .garden-flower-part[data-item-id="${itemId}"], .garden-root-part[data-item-id="${itemId}"], .garden-mineral-part[data-item-id="${itemId}"], .garden-seed-part[data-item-id="${itemId}"]`;
-        const part = this.containerEl.querySelector(selector) as HTMLElement | null;
-        if (part) part.removeClass('garden-part-slow-pulse');
+    /** Write the garden and draw it again: what every edit from a menu or a key does. */
+    private async save() {
+        await this.app.saveGardenData();
+        await this.onOpen();
     }
 
     /**
@@ -3142,8 +2930,7 @@ export class GardenView extends View {
         }
         
         this.clearSelection();
-        await this.app.saveGardenData();
-        this.onOpen();
+        await this.save();
     }
 
     private selectCell(el: HTMLElement) {
@@ -3198,8 +2985,7 @@ export class GardenView extends View {
         const index = target[arrayName].findIndex(i => i.id === item.id);
         if (index !== -1) {
             target[arrayName].splice(index, 1);
-            await this.app.saveGardenData();
-            this.onOpen();
+            await this.save();
         }
     }
 
@@ -3208,116 +2994,92 @@ export class GardenView extends View {
 private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
 
 
-    private showSeedContextMenu(e: MouseEvent, project: ProjectData, seedContent: HTMLElement) {
-        const doc = this.containerEl.ownerDocument; // Get the correct window's document!
-        const win = doc.defaultView || window;       // Get the correct OS window!
-
-        // Remove any existing menu
-        const existing = doc.querySelector('.garden-context-menu');
-        if (existing) existing.remove();
-        
-
-        const menu = document.createElement('div');
-        menu.className = 'garden-context-menu';
-        menu.style.cssText = 'position: fixed; z-index: 10000; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 4px 0; min-width: 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
-
-        const menuStyle = 'display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 16px; text-align: left; background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-normal);';
-        const hoverStyle = 'background: var(--background-modifier-hover);';
-
-        // 2. Toggle Standby
-        const standbyOpt = document.createElement('button');
-        standbyOpt.textContent = project.standby ? 'Wake Up ⏻' : 'Standby ⏻';
-        standbyOpt.style.cssText = menuStyle;
-        standbyOpt.onmouseenter = () => standbyOpt.style.background = hoverStyle;
-        standbyOpt.onmouseleave = () => standbyOpt.style.background = 'none';
-        standbyOpt.onclick = async (ev) => {
-            ev.stopPropagation();
-            menu.remove();
-            const live = this.live(project);
-            live.standby = !live.standby;
-            project.standby = live.standby;
-            await this.app.saveGardenData();
-            this.onOpen(); // Re-render to apply canvas filters
-        };
-        menu.appendChild(standbyOpt);
-
-        // 3. Recycle Plant
-        const deleteOpt = document.createElement('button');
-        deleteOpt.textContent = 'Recycle Plant ♻';
-        deleteOpt.style.cssText = `${menuStyle} color: #E91E63;`;
-        deleteOpt.onmouseenter = () => deleteOpt.style.background = 'rgba(233, 30, 99, 0.1)';
-        deleteOpt.onmouseleave = () => deleteOpt.style.background = 'none';
-        deleteOpt.onclick = (ev) => {
-            ev.stopPropagation();
-            menu.remove();
-            new ConfirmDeleteModal(project.seed, async () => {
-                const index = this.app.gardenData.findIndex(p => p.id === project.id);
-                if (index !== -1) {
-                    this.app.gardenData.splice(index, 1);
-                    await this.app.saveGardenData();
-                    this.onOpen();
-                }
-            }).open();
-        };
-                // 4. Change Plant Type (only when the asset pack has more than this plant's type)
-        const otherTypes = PLANT_TYPES.filter(pt => pt !== project.plantType);
-        if (otherTypes.length > 0) {
-            const typeHeader = document.createElement('div');
-            typeHeader.textContent = 'Change Plant Type';
-            typeHeader.style.cssText = `${menuStyle} font-size: 11px; text-transform: uppercase; color: var(--text-faint); pointer-events: none; margin-top: 4px; border-top: 1px solid var(--background-modifier-border); padding-top: 8px;`;
-            menu.appendChild(typeHeader);
-        }
-
-        PLANT_TYPES.forEach(pt => {
-            if (pt !== project.plantType) {
-                const typeOpt = document.createElement('button');
-                // Makes "plant_2" look like "Plant 2"
-                typeOpt.textContent = pt.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()); 
-                typeOpt.style.cssText = menuStyle;
-                typeOpt.onmouseenter = () => typeOpt.style.background = hoverStyle;
-                typeOpt.onmouseleave = () => typeOpt.style.background = 'none';
-                typeOpt.onclick = async (ev: MouseEvent) => {
-                    ev.stopPropagation();
-                    menu.remove();
-                    
-                    // Change type and reassign all stem/flower images!
+    private showSeedContextMenu(e: MouseEvent, project: ProjectData) {
+        const rename = (type: string) => type.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const others = PLANT_TYPES.filter(pt => pt !== project.plantType);
+        const items: MenuItem[] = [
+            {
+                label: project.standby ? 'Wake Up ⏻' : 'Standby ⏻',
+                onClick: () => {
+                    const live = this.live(project);
+                    live.standby = project.standby = !live.standby;
+                    void this.save();
+                },
+            },
+            { label: 'Recycle Plant ♻', danger: true, onClick: () => this.confirmRecycle(project) },
+        ];
+        if (others.length > 0) items.push({ label: 'Change Plant Type', heading: true });
+        for (const pt of others) {
+            items.push({
+                label: rename(pt),
+                onClick: () => {
+                    // A new type means new art for everything the pack keeps per plant.
                     const live = this.live(project);
                     live.plantType = pt;
-                    live.stem.forEach(item => { item.imagePath = this.app.assetManager.assignRandomImage('stem', pt) || undefined; });
-                    live.flowers.forEach(item => { item.imagePath = this.app.assetManager.assignRandomImage('flowers', pt) || undefined; });
-                    
-                    await this.app.saveGardenData();
-                    this.onOpen();
-                };
-                menu.appendChild(typeOpt);
-            }
-        });
-        menu.appendChild(deleteOpt);
-
-        doc.body.appendChild(menu);
-        
-        // Measure menu and keep it on screen
-        const menuRect = menu.getBoundingClientRect();
-        let menuX = e.clientX;
-        let menuY = e.clientY;
-        if (menuX + menuRect.width > win.innerWidth) menuX = win.innerWidth - menuRect.width - 10;
-        if (menuY + menuRect.height > win.innerHeight) menuY = win.innerHeight - menuRect.height - 10;
-        menuX = Math.max(10, menuX);
-        menuY = Math.max(10, menuY);
-
-        menu.style.left = `${menuX}px`;
-        menu.style.top = `${menuY}px`;
-
-        // Close on outside click
-        const closeMenu = (ev: MouseEvent) => {
-            if (!menu.contains(ev.target as Node)) {
-                menu.remove();
-                win.removeEventListener('mousedown', closeMenu, true);
-            }
-        };
-        setTimeout(() => win.addEventListener('mousedown', closeMenu, true), 0);
+                    for (const layer of ['stem', 'flowers'] as const) {
+                        for (const item of live[layer]) item.imagePath = this.app.assetManager.assignRandomImage(layer, pt) || undefined;
+                    }
+                    void this.save();
+                },
+            });
+        }
+        openMenu(items, { x: e.clientX, y: e.clientY }, this.containerEl.ownerDocument);
     }
- 
+
+    /** The menu on a cell, acting on the whole selection when there is one. */
+    private showCellContextMenu(
+        e: MouseEvent,
+        cells: HTMLElement[],
+        one: { el: HTMLElement; item: LayerItem; project: ProjectData; arrayName: LayerName },
+    ) {
+        const multi = cells.length > 1;
+        const locations = () => cells.map(c => this.locateCell(c)).filter((l): l is NonNullable<typeof l> => l !== null);
+        const highlighted = cells.every(c => c.hasClass('garden-item-highlighted'));
+        const allMinerals = cells.every(c => c.parentElement?.dataset.array === 'minerals');
+
+        openMenu([
+            {
+                label: 'Delete',
+                onClick: () => {
+                    if (multi) void this.deleteSelectedCells();
+                    else void this.deleteCell(one.el, one.item, one.project, one.arrayName);
+                },
+            },
+            {
+                label: highlighted ? 'Remove Highlight' : 'Highlight',
+                onClick: async () => {
+                    for (const { item } of locations()) item.highlighted = !highlighted || undefined;
+                    await this.save();
+                },
+            },
+            {
+                label: 'Convert to Stem ✔️',
+                disabled: !allMinerals,
+                onClick: async () => {
+                    // By id, not by index: each move renumbers the list behind it.
+                    for (const { project, item } of locations()) {
+                        const at = project.minerals.findIndex(m => m.id === item.id);
+                        if (at === -1) continue;
+                        project.minerals.splice(at, 1);
+                        item.imagePath = this.app.assetManager.assignRandomImage('stem', project.plantType) || undefined;
+                        project.stem.push(item);
+                    }
+                    this.clearSelection();
+                    await this.save();
+                },
+            },
+        ], { x: e.clientX, y: e.clientY });
+    }
+
+    private confirmRecycle(project: ProjectData) {
+        new ConfirmDeleteModal(project.seed, async () => {
+            const index = this.app.gardenData.findIndex(p => p.id === project.id);
+            if (index === -1) return;
+            this.app.gardenData.splice(index, 1);
+            await this.save();
+        }).open();
+    }
+
     createProjectColumn(parent: HTMLElement, project: ProjectData) {
 
         const column = parent.createDiv({ cls: "project-column" });
@@ -3334,28 +3096,8 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
 
         // --- TOP HALF (Flowers, Stem) ---
         const topHalf = columnBody.createDiv("column-top-half");
-
-        const flowerZone = topHalf.createDiv("garden-zone flowers-zone");
-        const flowerLabel = flowerZone.createDiv("garden-zone-label-row");
-        flowerLabel.style.cssText = 'display: flex; align-items: center;';
-        flowerLabel.createDiv({ text: "⚘✽ Flowers", cls: "zone-label" });
-        const flowerSpacer = flowerLabel.createDiv();
-        flowerSpacer.style.flex = '1';
-        const addFlowerBtn = flowerLabel.createEl('button', { cls: 'zone-add-btn' });
-        addFlowerBtn.setText('+');
-        addFlowerBtn.onclick = () => this.addNewItem(project, 'flowers');
-        this.createSortableList(flowerZone, project, 'flowers');
-
-        const stemZone = topHalf.createDiv("garden-zone stem-zone");
-        const stemLabel = stemZone.createDiv("garden-zone-label-row");
-        stemLabel.style.cssText = 'display: flex; align-items: center;';
-        stemLabel.createDiv({ text: "𖣂 Stem", cls: "zone-label" });
-        const stemSpacer = stemLabel.createDiv();
-        stemSpacer.style.flex = '1';
-        const addStemBtn = stemLabel.createEl('button', { cls: 'zone-add-btn' });
-        addStemBtn.setText('+');
-        addStemBtn.onclick = () => this.addNewItem(project, 'stem');
-        this.createSortableList(stemZone, project, 'stem');
+        this.createZone(topHalf, project, 'flowers');
+        this.createZone(topHalf, project, 'stem');
 
         // --- SEED (Now acts as the header) ---
         const seedCell = columnBody.createDiv("garden-zone seed-cell");
@@ -3457,10 +3199,9 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
             if (project.standby) {
                 project.standby = false;
                 this.live(project).standby = false;
-                this.app.saveGardenData();
-                this.onOpen(); // Force re-render to restore the plant visually
+                void this.save();
             } else {
-                this.showSeedContextMenu(e as MouseEvent, project, seedContent);
+                this.showSeedContextMenu(e as MouseEvent, project);
             }
         };
 
@@ -3476,35 +3217,25 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
         seedContent.addEventListener("contextmenu", (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
-            this.showSeedContextMenu(e, project, seedContent);
+            this.showSeedContextMenu(e, project);
         });
 
         updateMenuBtn(); // Set initial state
 
         // --- BOTTOM HALF (Roots, Minerals) ---
         const bottomHalf = columnBody.createDiv("column-bottom-half");
+        this.createZone(bottomHalf, project, 'roots');
+        this.createZone(bottomHalf, project, 'minerals');
+    }
 
-        const rootZone = bottomHalf.createDiv("garden-zone roots-zone");
-        const rootLabel = rootZone.createDiv("garden-zone-label-row");
-        rootLabel.style.cssText = 'display: flex; align-items: center;';
-        rootLabel.createDiv({ text: "⫛ Roots", cls: "zone-label" });
-        const rootSpacer = rootLabel.createDiv();
-        rootSpacer.style.flex = '1';
-        const addRootBtn = rootLabel.createEl('button', { cls: 'zone-add-btn' });
-        addRootBtn.setText('+');
-        addRootBtn.onclick = () => this.addNewItem(project, 'roots');
-        this.createSortableList(rootZone, project, 'roots');
-
-        const mineralZone = bottomHalf.createDiv("garden-zone minerals-zone");
-        const mineralLabel = mineralZone.createDiv("garden-zone-label-row");
-        mineralLabel.style.cssText = 'display: flex; align-items: center;';
-        mineralLabel.createDiv({ text: "₊⊹˖ Minerals", cls: "zone-label" });
-        const mineralSpacer = mineralLabel.createDiv();
-        mineralSpacer.style.flex = '1';
-        const addMineralBtn = mineralLabel.createEl('button', { cls: 'zone-add-btn' });
-        addMineralBtn.setText('+');
-        addMineralBtn.onclick = () => this.addNewItem(project, 'minerals');
-        this.createSortableList(mineralZone, project, 'minerals');
+    /** One zone of a card: its label, its + and its list. The four differ only in name. */
+    private createZone(parent: HTMLElement, project: ProjectData, arrayName: LayerName) {
+        const zone = parent.createDiv(`garden-zone ${arrayName}-zone`);
+        const label = zone.createDiv("garden-zone-label-row");
+        label.createDiv({ text: ZONE_LABELS[arrayName], cls: "zone-label" });
+        const add = label.createEl('button', { cls: 'zone-add-btn', text: '+' });
+        add.onclick = () => this.addNewItem(project, arrayName);
+        this.createSortableList(zone, project, arrayName);
     }
 
     createSortableList(
@@ -3630,157 +3361,12 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
                 }
             });
 
-            // --- Right-click context menu ---
             el.addEventListener("contextmenu", (e: MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
-
-                // Close any existing context menu
-                const existing = document.querySelector('.garden-context-menu');
-                if (existing) existing.remove();
-
-                // Determine if we are acting on a group or single
-                const isMulti = this.selectedCells.includes(el) && this.selectedCells.length > 1;
-                if (!isMulti) {
-                    this.selectSingleCell(el);
-                }
-
-                const menu = document.createElement('div');
-                menu.className = 'garden-context-menu';
-                menu.style.cssText = 'position: fixed; z-index: 10000; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 4px 0; min-width: 140px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
-
-                const menuStyle = 'display: block; width: 100%; padding: 6px 16px; text-align: left; background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-normal);';
-                const hoverStyle = 'background: var(--background-modifier-hover);';
-
-                // Delete option
-                const deleteOpt = document.createElement('button');
-                deleteOpt.textContent = 'Delete';
-                deleteOpt.style.cssText = menuStyle;
-                deleteOpt.onmouseenter = () => deleteOpt.style.background = hoverStyle;
-                deleteOpt.onmouseleave = () => deleteOpt.style.background = 'none';
-                deleteOpt.onclick = () => {
-                    menu.remove();
-                    if (isMulti) {
-                        this.deleteSelectedCells();
-                    } else {
-                        this.deleteCell(el, item, project, arrayName);
-                    }
-                };
-                menu.appendChild(deleteOpt);
-
-                // Highlight toggle option
-                const cellsToHighlight = isMulti ? this.selectedCells : [el];
-                // Check if ALL selected cells are currently highlighted to decide the button text
-                const allHighlighted = cellsToHighlight.every(c => c.hasClass('garden-item-highlighted'));
-                
-                const highlightOpt = document.createElement('button');
-                highlightOpt.textContent = allHighlighted ? 'Remove Highlight' : 'Highlight';
-                highlightOpt.style.cssText = menuStyle;
-                highlightOpt.onmouseenter = () => highlightOpt.style.background = hoverStyle;
-                highlightOpt.onmouseleave = () => highlightOpt.style.background = 'none';
-                
-                highlightOpt.onclick = async () => {
-                    menu.remove();
-                    const newState = !allHighlighted; // The state we want to apply to all of them
-                    
-                    for (const cell of cellsToHighlight) {
-                        const cProjectId = cell.parentElement?.dataset.projectId;
-                        const cArrayName = cell.parentElement?.dataset.array as 'stem' | 'flowers' | 'minerals' | 'roots';
-                        const cItemId = cell.dataset.id;
-                        const cProject = this.app.gardenData.find(p => p.id === cProjectId);
-                        
-                        if (cProject && cArrayName && cItemId) {
-                            const cItem = cProject[cArrayName].find(i => i.id === cItemId);
-                            if (cItem) {
-                                cItem.highlighted = newState || undefined; // Update the data model
-                                cell.style.fontWeight = newState ? 'bold' : '';
-                                if (newState) {
-                                    cell.addClass('garden-item-highlighted');
-                                    this.applyHighlightPulse(cItemId);
-                                } else {
-                                    cell.removeClass('garden-item-highlighted');
-                                    this.removeHighlightPulse(cItemId);
-                                }
-                            }
-                        }
-                    }
-                    await this.app.saveGardenData();
-                };
-                menu.appendChild(highlightOpt);
-
-                                // Convert to Stem ✔️ option
-                const allMinerals = isMulti 
-                    ? this.selectedCells.every(cell => cell.parentElement?.dataset.array === 'minerals')
-                    : (arrayName === 'minerals');
-
-                const convertOpt = document.createElement('button');
-                convertOpt.textContent = 'Convert to Stem ✔️';
-                
-                if (allMinerals) {
-                    convertOpt.style.cssText = menuStyle;
-                    convertOpt.onmouseenter = () => convertOpt.style.background = hoverStyle;
-                    convertOpt.onmouseleave = () => convertOpt.style.background = 'none';
-                    convertOpt.onclick = async () => {
-                        menu.remove();
-                        const cellsToConvert = isMulti ? this.selectedCells : [el];
-                        for (const cell of cellsToConvert) {
-                            const cProjectId = cell.parentElement?.dataset.projectId;
-                            const cItemId = cell.dataset.id;
-                            const cProject = this.app.gardenData.find(p => p.id === cProjectId);
-                            if (cProject) {
-                                const index = cProject.minerals.findIndex(i => i.id === cItemId);
-                                if (index !== -1) {
-                                    const cItem = cProject.minerals.splice(index, 1)[0];
-                                    cItem.imagePath = this.app.assetManager.assignRandomImage('stem', cProject.plantType) || undefined;
-                                    cProject.stem.push(cItem);
-                                }
-                            }
-                        }
-                        this.clearSelection();
-                        await this.app.saveGardenData();
-                        this.scheduleRender();
-                    };
-                } else {
-                    // Faded and unclickable if selection contains non-minerals
-                    convertOpt.style.cssText = `${menuStyle} opacity: 0.4; cursor: not-allowed; color: var(--text-faint);`;
-                    convertOpt.disabled = true;
-                }
-                menu.appendChild(convertOpt);
-                
-
-                document.body.appendChild(menu);
-                
-                // Measure menu and keep it on screen
-                const menuRect = menu.getBoundingClientRect();
-                let menuX = e.clientX;
-                let menuY = e.clientY;
-
-                // Shift left if it goes off the right edge
-                if (menuX + menuRect.width > window.innerWidth) {
-                    menuX = window.innerWidth - menuRect.width - 10;
-                }
-                // Shift up if it goes off the bottom edge
-                if (menuY + menuRect.height > window.innerHeight) {
-                    menuY = window.innerHeight - menuRect.height - 10;
-                }
-                
-                // Ensure it doesn't get pushed off the top/left corners
-                menuX = Math.max(10, menuX);
-                menuY = Math.max(10, menuY);
-
-                // Position near cursor (adjusted)
-                menu.style.left = `${menuX}px`;
-                menu.style.top = `${menuY}px`;
-                
-                // Close on mousedown outside (capture phase bypasses stopPropagation on cells)
-                const closeMenu = (ev: MouseEvent) => {
-                    if (!menu.contains(ev.target as Node)) {
-                        menu.remove();
-                        window.removeEventListener('mousedown', closeMenu, true);
-                    }
-                };
-                // Use setTimeout to ensure the current right-click event finishes before listening
-                setTimeout(() => window.addEventListener('mousedown', closeMenu, true), 0);
+                const multi = this.selectedCells.includes(el) && this.selectedCells.length > 1;
+                if (!multi) this.selectSingleCell(el);
+                this.showCellContextMenu(e, multi ? this.selectedCells : [el], { el, item, project, arrayName });
             });
         });
 
@@ -3869,8 +3455,7 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
             proj.order = idx;
         });
 
-        await this.app.saveGardenData();
-        this.onOpen();
+        await this.save();
     }
 
      async createNewProject(position: 'left' | 'right' = 'right') {
@@ -3900,8 +3485,7 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
             // Renumber so a plant added on the left stays on the left after reload (data is sorted by order)
             this.app.gardenData.forEach((proj, idx) => { proj.order = idx; });
 
-            await this.app.saveGardenData();
-            this.onOpen();
+            await this.save();
         }).open();
     }
 
@@ -3948,8 +3532,7 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
                 imagePath: randomImagePath || undefined
             };
             this.live(project)[arrayName].unshift(newItem);
-            await this.app.saveGardenData();
-            this.onOpen();
+            await this.save();
         };
 
         draft.addEventListener('keydown', (e) => {
