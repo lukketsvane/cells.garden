@@ -18,7 +18,7 @@ import type { Garden, GardenSettings, LayerItem, LayerName, ProjectData } from '
 type Prefer = 'local' | 'remote';
 
 const LAYERS: LayerName[] = ['roots', 'stem', 'flowers', 'minerals'];
-const PROJECT_FIELDS = ['name', 'seed', 'seedImagePath', 'standby', 'hue', 'plantType'] as const;
+const PROJECT_FIELDS = ['name', 'seed', 'seedImagePath', 'standby', 'hue', 'plantType', 'sharedPlantId'] as const;
 
 /** JSON with sorted keys, so two equal objects compare equal whatever their key order. */
 function canonical(value: unknown): string {
@@ -134,6 +134,29 @@ function mergeSettings(base: GardenSettings | undefined, local: GardenSettings, 
     const b = base ? (({ viewState: _b, ...rest }) => rest)(base) : undefined;
     const merged = mergeFields(b, l, r, prefer) as GardenSettings;
     return viewState === undefined ? merged : { ...merged, viewState };
+}
+
+/** The fields of a plant that are its own; where it stands in a garden is not. */
+export type PlantData = Omit<ProjectData, 'order' | 'sharedPlantId'>;
+
+/** A plant without the garden-specific fields, for sharing. */
+export function plantData(project: ProjectData): PlantData {
+    const { order: _order, sharedPlantId: _shared, ...data } = project;
+    return data;
+}
+
+/**
+ * Three-way merge of one shared plant. Same rules as a garden: cells matched by
+ * id, the changed side wins, remote wins when both changed, no base is a union.
+ */
+export function mergePlant(base: PlantData | null, local: PlantData, remote: PlantData): PlantData {
+    const asProject = (p: PlantData): ProjectData => ({ ...p, order: 0 });
+    return plantData(mergeProject(base ? asProject(base) : undefined, asProject(local), asProject(remote), base ? 'remote' : 'local'));
+}
+
+/** Deep equality with sorted keys, for callers that need to know whether anything changed. */
+export function sameData(a: unknown, b: unknown): boolean {
+    return same(a, b);
 }
 
 export function mergeGardens(base: Garden | null, local: Garden, remote: Garden, now: () => string = () => new Date().toISOString()): Garden {

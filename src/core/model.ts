@@ -19,6 +19,8 @@ export interface ProjectData {
     hue: number;
     order: number;
     plantType: string;
+    /** Set when this plant is shared (a `plants` row); its cells sync with everyone who has it. */
+    sharedPlantId?: string;
     roots: LayerItem[];
     stem: LayerItem[];
     flowers: LayerItem[];

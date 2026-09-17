@@ -43,6 +43,10 @@ export class GardenApp {
     onSyncState: ((state: SyncState) => void) | null = null;
     /** Called when the open garden is no longer reachable (a shared garden left or revoked). */
     onGone: (() => void) | null = null;
+    /** Called whenever a garden is put on screen: loaded, switched, synced in or merged. */
+    onGardenApplied: (() => void) | null = null;
+    /** Called after a save of this device's edits has been handed to the store. */
+    onPersisted: (() => void) | null = null;
 
     private mirror: GardenStore | null = null;
     /**
@@ -194,6 +198,27 @@ export class GardenApp {
         this.gardenData.sort((a, b) => (a.order || 0) - (b.order || 0));
         this.settings = { ...DEFAULT_SETTINGS, ...garden.settings };
         this.updatedAt = garden.updatedAt;
+        this.onGardenApplied?.();
+    }
+
+    /**
+     * Replace one plant's own fields from elsewhere (a shared plant changed by
+     * someone else), keeping where it stands in this garden. Saves when asked.
+     */
+    async patchProject(id: string, data: Omit<ProjectData, 'order' | 'sharedPlantId'>, save = true): Promise<void> {
+        const index = this.gardenData.findIndex(p => p.id === id);
+        if (index === -1) return;
+        const current = this.gardenData[index];
+        this.gardenData[index] = { ...data, id: current.id, order: current.order, sharedPlantId: current.sharedPlantId };
+        this.view?.scheduleRender();
+        if (save) await this.saveGardenData();
+    }
+
+    /** Add a plant at the right end of the row and save. */
+    async addProject(project: ProjectData): Promise<void> {
+        this.gardenData.push({ ...project, order: this.gardenData.length });
+        this.view?.scheduleRender();
+        await this.saveGardenData();
     }
 
     /** Persist projects + settings. Serialised so saves never interleave. */
@@ -248,6 +273,7 @@ export class GardenApp {
                     this.synced = garden;
                 }
                 this.onSyncState?.(this.mirror ? 'synced' : 'local');
+                this.onPersisted?.();
             } catch (e) {
                 if (e instanceof GardenGoneError) {
                     this.onSyncState?.('error');

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mergeGardens } from './merge';
+import { mergeGardens, mergePlant, plantData } from './merge';
 import { DEFAULT_SETTINGS, type Garden, type LayerItem, type ProjectData } from './model';
 
 const NOW = '2026-09-17T12:00:00.000Z';
@@ -148,4 +148,15 @@ test('optional fields removed on one side stay removed', () => {
     delete local.projects[0].seedImagePath;
     const merged = mergeGardens(base, local, copy(base), now);
     assert.equal('seedImagePath' in merged.projects[0], false);
+});
+
+test('a shared plant merges cell edits from both people and drops garden-only fields', () => {
+    const base = plantData(plant('a', 0, { stem: [item('s1')], sharedPlantId: 'p1' }));
+    const local = { ...copy(base), stem: [item('mine'), item('s1')] };
+    const remote = { ...copy(base), flowers: [item('theirs')] };
+    const merged = mergePlant(base, local, remote);
+    assert.deepEqual(merged.stem.map(s => s.content), ['mine', 's1']);
+    assert.deepEqual(merged.flowers.map(s => s.content), ['theirs']);
+    assert.equal('order' in merged, false);
+    assert.equal('sharedPlantId' in merged, false);
 });
