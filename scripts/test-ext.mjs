@@ -188,9 +188,9 @@ try {
     await newtab.goto(`chrome-extension://${extId}/newtab.html`);
     await newtab.waitForSelector('.garden-canvas-viewport');
     assert(await newtab.getAttribute('html', 'data-context') === 'newtab', 'newtab.html must set data-context="newtab"');
-    assert(/empty/i.test(await newtab.textContent('.kanban-empty-message h3')), 'a fresh profile should start with an empty garden');
+    assert((await newtab.textContent('.kanban-empty-message h3')).includes('Empty'), 'a fresh profile should start with an empty garden');
 
-    await newtab.click('.add-plant-btn');
+    await newtab.click('.add-column-btn-inner >> nth=1');
     await newtab.waitForSelector('.modal textarea');
     await newtab.fill('.modal textarea', SEED);
     await newtab.keyboard.press('Enter');
@@ -198,8 +198,8 @@ try {
     assert(await newtab.textContent('.seed-content') === SEED, 'the seed text did not land in the column');
 
     await newtab.click('.stem-zone .zone-add-btn');
-    await newtab.waitForSelector('.stem-zone .garden-item.is-editing');
-    await newtab.keyboard.type(STEM);
+    await newtab.waitForSelector('.modal input[type=text]');
+    await newtab.fill('.modal input[type=text]', STEM);
     await newtab.keyboard.press('Enter');
     await newtab.waitForFunction((t) => [...document.querySelectorAll('.garden-item')].some((el) => el.textContent === t), STEM);
     assert((await newtab.$$('.garden-stem-container > div')).length > 0, 'the plant did not grow a stem part');
@@ -233,10 +233,11 @@ try {
 
     // Writes from the panel reach the shared storage too.
     await panel.click('.flowers-zone .zone-add-btn');
-    await panel.waitForSelector('.flowers-zone .garden-item.is-editing');
-    const cellBox = await (await panel.$('.flowers-zone .garden-item.is-editing')).boundingBox();
-    assert(cellBox.x >= 0 && cellBox.x + cellBox.width <= 360, `the new cell does not fit the panel: ${JSON.stringify(cellBox)}`);
-    await panel.keyboard.type(FLOWER);
+    await panel.waitForSelector('.modal input[type=text]');
+    const modal = await panel.$('.modal');
+    const modalBox = await modal.boundingBox();
+    assert(modalBox.x >= 0 && modalBox.x + modalBox.width <= 360, `the modal does not fit the panel: ${JSON.stringify(modalBox)}`);
+    await panel.fill('.modal input[type=text]', FLOWER);
     await panel.keyboard.press('Enter');
     await panel.waitForFunction((t) => (localStorage.getItem('cells.garden/v1') ?? '').includes(t), FLOWER);
     await screenshot(panel, 'sidepanel');
@@ -286,7 +287,7 @@ try {
     await screenshot(popup, 'popup');
 
     // A second plant added elsewhere shows up in the popup's count.
-    await newtab.click('.add-plant-btn');
+    await newtab.click('.add-column-btn-inner >> nth=1');
     await newtab.waitForSelector('.modal textarea');
     await newtab.fill('.modal textarea', SEED_2);
     await newtab.keyboard.press('Enter');

@@ -2,9 +2,9 @@ import './shim';
 import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
 import { PLANT_TYPES } from './assets';
-import { ConfirmDeleteModal, CreateProjectModal } from './modals';
+import { AddItemModal, ConfirmDeleteModal, CreateProjectModal } from './modals';
 import { View } from './ui';
-import type { LayerItem, LayerName, ProjectData, ViewState } from './model';
+import type { LayerItem, ProjectData, ViewState } from './model';
 import {
     simpleHash,
     PIXEL_SCALE, PLANT_SPACING, CLOUD_SCROLL_DURATION,
@@ -34,19 +34,6 @@ import stem8Url from '../assets/pack/plant_1/stem/plant_1_part8.png';
 
 /** Empty world on each side of the plants, in world px. Also where the first plant stands. */
 const WORLD_PADDING = 320;
-
-/**
- * The kanban board's bands, top to bottom, in the order a plant stands: flowers
- * and stem above the ground, the seed on it, roots and minerals below. Every
- * band runs across all plants, so one row of the board is one layer.
- */
-const BANDS: { key: LayerName | 'seed'; label: string; hint: string }[] = [
-    { key: 'flowers', label: '⚘✽ Flowers', hint: 'Result, takeaway' },
-    { key: 'stem', label: '𖣂 Stem', hint: 'Completed task' },
-    { key: 'seed', label: '', hint: '' },
-    { key: 'roots', label: '⫛ Roots', hint: 'Motivation, reason' },
-    { key: 'minerals', label: '₊⊹˖ Minerals', hint: 'Idea, task' },
-];
 
 const stemParts: string[] = [
     stem1Url, stem2Url, stem3Url, stem4Url,
@@ -199,9 +186,7 @@ export class GardenView extends View {
             translateX: this.currentTranslateX,
             translateY: this.currentTranslateY,
             kanbanScrollLeft: scrollContainer ? scrollContainer.scrollLeft : 0,
-            kanbanScrollTop: scrollContainer ? scrollContainer.scrollTop : 0,
-            splitRatio: this._splitRatio,
-            plantsLeft: this._plantsLeft,
+            kanbanScrollTop: scrollContainer ? scrollContainer.scrollTop : 0
         };
         try {
             localStorage.setItem(this._viewStateKey, JSON.stringify(state));
@@ -233,8 +218,6 @@ export class GardenView extends View {
                 translateY: s.translateY,
                 kanbanScrollLeft: s.kanbanScrollLeft ?? 0,
                 kanbanScrollTop: s.kanbanScrollTop ?? 0,
-                splitRatio: typeof s.splitRatio === 'number' ? s.splitRatio : undefined,
-                plantsLeft: typeof s.plantsLeft === 'number' ? s.plantsLeft : undefined,
             };
         } catch {
             return null;
@@ -1108,15 +1091,7 @@ export class GardenView extends View {
         if (this._renderDebounce) clearTimeout(this._renderDebounce);
         const win = this.containerEl.ownerDocument.defaultView || window;
         // Cast to any to bridge the gap between Node's Timeout and Browser's number
-        this._renderDebounce = win.setTimeout(() => {
-            // A render rebuilds every cell. Someone typing in one (a sync from another
-            // device can land mid-word) keeps it; the render runs once they are done.
-            if (this.contentEl.querySelector('.is-editing')) {
-                this.scheduleRender();
-                return;
-            }
-            this.onOpen();
-        }, 80) as any;
+        this._renderDebounce = win.setTimeout(() => { this.onOpen(); }, 80) as any;
     }
 
     async onOpen() {
@@ -1139,9 +1114,6 @@ export class GardenView extends View {
                 this.zoom = persistedState.zoom;
                 this.currentTranslateX = persistedState.translateX;
                 this.currentTranslateY = persistedState.translateY;
-                if (persistedState.splitRatio !== undefined) this._splitRatio = this.clampSplit(persistedState.splitRatio);
-                // The render moves the camera along if the plants start somewhere else now.
-                this._plantsLeft = persistedState.plantsLeft ?? WORLD_PADDING;
                 scrollStates.selectors = scrollStates.selectors.map(s => {
                     if (s.selector.startsWith('.kanban-scroll-container')) {
                         return { ...s, scrollLeft: persistedState.kanbanScrollLeft, scrollTop: persistedState.kanbanScrollTop };
@@ -1191,13 +1163,31 @@ export class GardenView extends View {
                     const win = this.containerEl.ownerDocument.defaultView || window;
                     win.requestAnimationFrame(() => {
                         win.requestAnimationFrame(() => {
-                            const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-                            const world = this.contentEl.querySelector('.garden-world') as HTMLElement | null;
-                            if (viewport && world) this.fitCamera(viewport, world);
-                            // The board opens at its top-left corner; the pinned seed row names the plants.
-                            if (persistedState) this.restoreScrollPositions(scrollStates);
-                            // Debounced, so a restored board scroll (two frames away) is what gets saved.
-                            this.scheduleViewStateSave();
+                            const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement;
+                            const world = this.contentEl.querySelector('.garden-world') as HTMLElement;
+                            if (viewport && world) {
+                                this.zoom = 0.4;
+                                const vpWidth = viewport.offsetWidth || 800;
+                                const vpHeight = viewport.offsetHeight || 600;
+                                const plantCount = this.app.gardenData.length;
+                                const middlePlantIndex = Math.floor(plantCount / 2);
+                                const middlePlantWorldX = 320 + (middlePlantIndex * 300) + 150;
+                                
+                                this.currentTranslateX = (vpWidth / 2) - (middlePlantWorldX * this.zoom);
+                                this.currentTranslateY = (vpHeight * 0.65) - (this._dynamicGroundLineY * this.zoom);
+                                this.applyWorldTransform(world, viewport);
+                            }
+
+                            const scrollContainer = this.contentEl.querySelector('.kanban-scroll-container') as HTMLElement;
+                            if (scrollContainer) {
+                                scrollContainer.scrollLeft = (scrollContainer.scrollWidth - scrollContainer.clientWidth) / 2;
+                                const firstSeed = scrollContainer.querySelector('.seed-cell') as HTMLElement;
+                                if (firstSeed) {
+                                    const seedCenterY = firstSeed.offsetTop + (firstSeed.offsetHeight / 2);
+                                    scrollContainer.scrollTop = seedCenterY - (scrollContainer.clientHeight / 2);
+                                }
+                            }
+                            this.saveViewState();
                         });
                     });
                 } else {
@@ -1533,7 +1523,7 @@ export class GardenView extends View {
         
         // Check if we clicked on an actual interactive element
         const interactable = (e.target as HTMLElement).closest(
-            '.garden-item, .seed-content, .column-drag-handle, button'
+            '.garden-item, .seed-content, .column-header, .zone-add-btn, .add-column-btn, .seed-light-btn, .column-drag-handle'
         );
         
         // Left mouse (button 0) pans only if NOT interactable
@@ -1541,8 +1531,6 @@ export class GardenView extends View {
 
         if (isMiddle || isLeftEmpty) {
             e.preventDefault();
-            // preventDefault keeps focus where it was, so let go of a cell being typed in explicitly.
-            (this.contentEl.querySelector('.is-editing') as HTMLElement | null)?.blur();
             this.clearSelection(); // Clear multi-selection when clicking empty space
             this.isPanningKanban = true;
             this.kanbanStartX = e.clientX;
@@ -1681,63 +1669,6 @@ export class GardenView extends View {
 
 
 
-    /** World x where the first plant's slot starts; set by each render (see renderGardenCanvas). */
-    private _plantsLeft = WORLD_PADDING;
-
-    /** World x of plant i's anchor (where its stem meets the ground). */
-    plantAnchorX(index: number): number {
-        return this._plantsLeft + index * PLANT_SPACING + PLANT_SPACING / 2;
-    }
-
-    /**
-     * First camera of a session. The world fills the canvas, so no empty strip
-     * shows around it; inside that, every plant is in view when they fit, sprites
-     * stay big enough to read (one art pixel is at least two screen pixels), and
-     * the tallest plant is not cropped. When the plants do not all fit, the view
-     * starts at the first one, as the board below does.
-     */
-    private fitCamera(viewport: HTMLElement, world: HTMLElement) {
-        const vw = viewport.offsetWidth || 800;
-        const vh = viewport.offsetHeight || 400;
-        const ww = world.offsetWidth || vw;
-        const wh = world.offsetHeight || vh;
-        const count = Math.max(1, this.app.gardenData.length);
-
-        let above = 0, below = 0;
-        for (const project of this.app.gardenData) {
-            above = Math.max(above, this.calculateProjectExtents(project).aboveHeight);
-            // Roots and minerals stand side by side under the seed, so the deeper list decides.
-            below = Math.max(below, (1 + Math.max(project.roots.length, project.minerals.length)) * FIXED_STACK_STEP);
-        }
-        // Sprites are taller than their stacking step; the margins cover the top flower and the lowest part.
-        const top = above + 120, bottom = below + 40;
-
-        const cover = Math.max(vw / ww, vh / wh);
-        // All plants side by side, zoomed in no further than leaves the hills and the sky in view.
-        const fitAll = Math.min(0.8, vw / (count * PLANT_SPACING + 80));
-        const fitTall = vh / (top + bottom);
-        const zoom = Math.max(cover, Math.min(Math.max(fitAll, 0.5), fitTall));
-        this.zoom = Math.max(this.zoomMin, Math.min(this.zoomMax, zoom));
-
-        const first = this.plantAnchorX(0) - PLANT_SPACING / 2;
-        const plantsWidth = count * PLANT_SPACING;
-        const centreX = plantsWidth * this.zoom <= vw ? first + plantsWidth / 2 : first - 40 + vw / (2 * this.zoom);
-        let tx = vw / 2 - centreX * this.zoom;
-
-        // Mostly sky (the ground is dark and mostly empty), then nudged so the plants' top and roots stay in view.
-        const ground = this._dynamicGroundLineY;
-        let ty = vh * 0.68 - ground * this.zoom;
-        ty = Math.min(ty, vh - (ground + bottom) * this.zoom);
-        ty = Math.max(ty, -(ground - top) * this.zoom);
-
-        // Never past the world's edges.
-        tx = ww * this.zoom >= vw ? Math.min(0, Math.max(vw - ww * this.zoom, tx)) : (vw - ww * this.zoom) / 2;
-        ty = wh * this.zoom >= vh ? Math.min(0, Math.max(vh - wh * this.zoom, ty)) : (vh - wh * this.zoom) / 2;
-        this.currentTranslateX = tx;
-        this.currentTranslateY = ty;
-        this.applyWorldTransform(world, viewport);
-    }
-
     /**
      * Aim the camera at one plant so it fills the viewport: as wide as one
      * plant slot, or smaller when the plant is tall or deep. Used by the popup.
@@ -1762,7 +1693,7 @@ export class GardenView extends View {
         const widthBasis = Math.max(spriteWidth + 2 * margin, 180);
         const fit = Math.min(vw / widthBasis, vh / (above + below));
         this.zoom = Math.max(this.zoomMin, Math.min(this.zoomMax, fit));
-        const plantX = this.plantAnchorX(i);
+        const plantX = WORLD_PADDING + i * PLANT_SPACING + PLANT_SPACING / 2;
         // Horizon sits so the visible part of the plant is centred vertically.
         const centreY = this._dynamicGroundLineY - (above - below) / 2;
         this.currentTranslateX = vw / 2 - plantX * this.zoom;
@@ -1780,7 +1711,7 @@ export class GardenView extends View {
 
     // --- Scroll Position Preservation ---
     saveScrollPositions(): { scrollTop: number; selectors: { selector: string; scrollTop: number; scrollLeft: number }[] } {
-        const selectors = ['.kanban-scroll-container', '.kanban-list', '.seed-content'];
+        const selectors = ['.kanban-scroll-container', '.kanban-list', '.seed-content', '.column-body'];
         const entries: { selector: string; scrollTop: number; scrollLeft: number }[] = [];
 
         for (const selector of selectors) {
@@ -1815,139 +1746,102 @@ export class GardenView extends View {
     }
 
     async renderGarden(container: HTMLElement) {
+
         container.empty();
         const splitContainer = container.createDiv("garden-split-container");
         splitContainer.style.cssText = 'display: flex; flex-direction: column; height: 100%; overflow: hidden;';
 
-        // The garden on top, the kanban board below, a divider between them.
         const canvasParent = splitContainer.createDiv("garden-canvas-area");
-        canvasParent.style.cssText = `flex: 0 0 ${this._splitRatio * 100}%; min-height: 80px; overflow: hidden; position: relative;`;
+        canvasParent.style.cssText = `flex: 0 0 ${this._splitRatio * 100}%; min-height: 100px; overflow: hidden; position: relative;`;
         await this.renderGardenCanvas(canvasParent);
 
-        const resizer = splitContainer.createDiv({
-            cls: "garden-resizer",
-            attr: { role: 'separator', 'aria-orientation': 'horizontal', 'aria-label': 'Resize', tabindex: '0' },
-        });
-        this.attachResizer(resizer, splitContainer, canvasParent);
+        // --- Draggable Resizer ---
+        const resizer = splitContainer.createDiv("garden-resizer");
+        resizer.style.cssText = 'flex: 0 0 4px; cursor: row-resize; background: var(--background-modifier-border); z-index: 15;';
 
         const bottomHalf = splitContainer.createDiv("garden-bottom-half");
-        bottomHalf.style.cssText = 'flex: 1 1 0; min-height: 80px; overflow: hidden; display: flex; flex-direction: column;';
-        this.renderBoard(bottomHalf);
-    }
+        bottomHalf.style.cssText = 'flex: 1 1 auto; min-height: 100px; overflow: hidden; display: flex; flex-direction: column;';
 
-    /** Share of the height the canvas starts with: less on tall, narrow screens, where the board needs the room. */
-    private _splitRatio = window.innerHeight > window.innerWidth * 1.2 ? 0.4 : 0.5;
-
-    private clampSplit(ratio: number): number {
-        return Math.max(0.15, Math.min(0.85, ratio));
-    }
-
-    /**
-     * The divider between the canvas and the board. Pointer events, so a finger
-     * drags it as well as a mouse; arrow keys nudge it. Its place is saved with the camera.
-     */
-    private attachResizer(resizer: HTMLElement, split: HTMLElement, canvasParent: HTMLElement) {
-        const commit = (ratio: number) => {
-            this._splitRatio = this.clampSplit(ratio);
-            canvasParent.style.flexBasis = `${this._splitRatio * 100}%`;
-            this.scheduleViewStateSave();
-        };
-
-        resizer.addEventListener('pointerdown', (e: PointerEvent) => {
-            if (e.button !== 0) return;
+        // --- Resizer Drag Logic ---
+        resizer.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            resizer.setPointerCapture(e.pointerId);
             resizer.addClass('is-dragging');
-            const rect = split.getBoundingClientRect();
-            // Keep the divider under the finger where it was grabbed, not centred on it.
-            const grab = e.clientY - canvasParent.getBoundingClientRect().bottom;
-            const onMove = (ev: PointerEvent) => {
-                const max = rect.height - resizer.offsetHeight - 80;
-                const y = Math.max(80, Math.min(max, ev.clientY - rect.top - grab));
-                canvasParent.style.flexBasis = `${y}px`;
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none'; // Prevent text highlighting while dragging
+
+            const onMouseMove = (ev: MouseEvent) => {
+                const rect = splitContainer.getBoundingClientRect();
+                // Calculate mouse position relative to the container
+                let y = ev.clientY - rect.top;
+                
+                // Clamp values so neither pane gets completely squished
+                y = Math.max(100, Math.min(rect.height - 100, y));
+                
+                // Apply explicit pixel heights instead of flex
+                canvasParent.style.flex = `0 0 ${y}px`;
+                bottomHalf.style.flex = `0 0 ${rect.height - y - 4}px`; // -4 for the resizer height
             };
-            const onUp = () => {
+
+            const onMouseUp = () => {
                 resizer.removeClass('is-dragging');
-                resizer.removeEventListener('pointermove', onMove);
-                resizer.removeEventListener('pointerup', onUp);
-                resizer.removeEventListener('pointercancel', onUp);
-                if (rect.height > 0) commit(canvasParent.getBoundingClientRect().height / rect.height);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                // Save the split ratio so it persists across re-renders
+                const rect = splitContainer.getBoundingClientRect();
+                const canvasHeight = canvasParent.getBoundingClientRect().height;
+                this._splitRatio = canvasHeight / rect.height;
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
             };
-            resizer.addEventListener('pointermove', onMove);
-            resizer.addEventListener('pointerup', onUp);
-            resizer.addEventListener('pointercancel', onUp);
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
         });
 
-        resizer.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
-            e.preventDefault();
-            commit(this._splitRatio + (e.key === 'ArrowUp' ? -0.05 : 0.05));
-        });
-    }
+        const scrollContainer = bottomHalf.createDiv("kanban-scroll-container");
+        scrollContainer.style.cssText = 'display: flex; gap: 12px; align-items: stretch;';
+        
+        // Attach the pan listener
+        scrollContainer.addEventListener('mousedown', this.handleKanbanMouseDown);
+        scrollContainer.addEventListener('auxclick', (e) => e.preventDefault()); // Prevent middle-click autoscroll bug
 
-    /**
-     * The kanban board, one surface: every plant is a column and every layer is a
-     * band across all of them (see BANDS). The board is a grid whose rows are the
-     * bands and each column is a subgrid on those rows, so a band is as tall as its
-     * fullest cell and every plant's seed sits on the same line.
-     */
-    private renderBoard(parent: HTMLElement) {
-        const scroller = parent.createDiv("kanban-scroll-container");
-        scroller.addEventListener('mousedown', this.handleKanbanMouseDown);
-        scroller.addEventListener('auxclick', (e) => e.preventDefault()); // Prevent middle-click autoscroll bug
-        // Taps and clicks behave differently on cells (a second tap edits), so remember what pressed last.
-        scroller.addEventListener('pointerdown', (e) => { this._pointerType = e.pointerType; }, true);
-        // A finger or a wheel scrolls the board natively; keep where it was left, like the camera.
-        scroller.addEventListener('scroll', () => this.scheduleViewStateSave(), { passive: true });
-        // Once a held cell or plant is picked up, the finger moves it; it must not also scroll the board.
-        scroller.addEventListener('touchmove', (e) => { if (this._pressedCell && e.cancelable) e.preventDefault(); }, { passive: false });
+        const addLeftBtn = scrollContainer.createDiv({ cls: "add-column-btn" });
+        addLeftBtn.createDiv({ cls: "add-column-btn-inner", text: "+" });
+        addLeftBtn.onclick = () => this.createNewProject('left');
 
-        const plants = this.app.gardenData;
-        if (plants.length === 0) {
-            scroller.addClass("is-empty");
-            const emptyMsg = scroller.createDiv("kanban-empty-message");
-            emptyMsg.createEl("h3", { text: "Your garden is empty" });
-            const plant = emptyMsg.createEl('button', { cls: 'add-plant-btn', text: 'Plant a seed' });
-            plant.onclick = () => this.createNewProject('right');
-            return;
+        if (this.app.gardenData.length === 0) {
+            scrollContainer.addClass("is-empty"); // lets the + buttons fill the height so they're centered
+            const emptyMsg = scrollContainer.createDiv("kanban-empty-message");
+            emptyMsg.createEl("h3", { text: "🌱 Your Garden is Empty" });
+            emptyMsg.createEl("p", { text: "Click + to plant your first seed!" });
+        } else {
+            this.app.gardenData.forEach(project => {
+                if (project && project.stem && project.flowers) {
+                    this.createProjectColumn(scrollContainer, project);
+                }
+            });
+
+            this.alignSeedCells(scrollContainer);
+            
+            
         }
 
-        const board = scroller.createDiv("kanban-board");
-        board.style.setProperty('--plants', String(plants.length));
+        const addRightBtn = scrollContainer.createDiv({ cls: "add-column-btn" });
+        addRightBtn.createDiv({ cls: "add-column-btn-inner", text: "+" });
+        addRightBtn.onclick = () => this.createNewProject('right');
 
-        // One label per band, pinned to the left edge while the board scrolls sideways.
-        const labels = board.createDiv({ cls: "kanban-band-labels", attr: { 'aria-hidden': 'true' } });
-        for (const band of BANDS) {
-            labels.createDiv({ cls: `kanban-band-label band-${band.key}`, text: band.label });
-        }
-
-        for (const project of plants) {
-            this.createProjectColumn(board, project);
-        }
-
-        // The last column plants a new seed on the seed band; its other bands carry the surface to the edge.
-        const addColumn = board.createDiv("add-column-btn");
-        for (const band of BANDS) {
-            const fill = addColumn.createDiv(`kanban-band-fill band-${band.key}`);
-            if (band.key !== 'seed') continue;
-            const add = fill.createEl('button', { cls: 'add-plant-btn', text: '+', attr: { 'aria-label': 'Plant a seed', title: 'Plant a seed' } });
-            add.onclick = () => this.createNewProject('right');
-        }
-
-        Sortable.create(board, {
+        Sortable.create(scrollContainer, {
             animation: 150,
-            draggable: '.project-column',
-            handle: '.column-drag-handle',
             ghostClass: 'sortable-column-ghost',
-            delay: 200,
-            delayOnTouchOnly: true,
-            touchStartThreshold: 16,
-            onChoose: (evt: SortableEvent) => { this.onCellPressed(evt); },
-            onUnchoose: () => { this._pressedCell = null; },
+            handle: '.column-drag-handle',
+            filter: '.add-column-btn',
             onEnd: (evt: SortableEvent) => this.handleColumnDrop(evt)
         });
     }
 
+
+
+    
     private async renderGardenCanvas(parent: HTMLElement) {
         const viewport = parent.createDiv("garden-canvas-viewport");
         viewport.style.cssText = 'width: 100%; height: 100%; overflow: hidden; position: relative; cursor: grab; background-color: var(--background-primary);';
@@ -1957,18 +1851,7 @@ export class GardenView extends View {
         // Camera coordinates are stored in the class instance and persist automatically!
         // We just apply them here.
 
-        // Wide enough that a big screen is filled without zooming the art past 0.8, with the first
-        // plant in the middle and the rest to its right. It follows the screen, not the window,
-        // so adding a plant or resizing never shifts the plants that are already there.
-        const screenWidth = typeof screen !== 'undefined' ? screen.width : 0;
-        const minWidth = Math.max(600, Math.ceil(screenWidth / 0.8));
-        const plantsLeft = Math.max(WORLD_PADDING, Math.round((minWidth - PLANT_SPACING) / 2));
-        if (plantsLeft !== this._plantsLeft) {
-            // Keep the camera on the same plants (a camera saved before, or another screen).
-            this.currentTranslateX += (this._plantsLeft - plantsLeft) * this.zoom;
-            this._plantsLeft = plantsLeft;
-        }
-        const calculatedWidth = Math.max(minWidth, plantsLeft + this.app.gardenData.length * PLANT_SPACING + WORLD_PADDING);
+        const calculatedWidth = Math.max(600, this.app.gardenData.length * PLANT_SPACING + WORLD_PADDING * 2);
         world.style.width = `${calculatedWidth}px`;
 
         // --- Phase 1: Preload all images first ---
@@ -2210,7 +2093,7 @@ export class GardenView extends View {
             const plantWrapper = plantsLayer.createDiv("garden-plant-wrapper");
             plantWrapper.dataset.projectId = project.id; // <--- ADD THIS LINE
             plantWrapper.style.position = 'absolute';
-            plantWrapper.style.left = `${this.plantAnchorX(index)}px`;
+            plantWrapper.style.left = `${WORLD_PADDING + (index * PLANT_SPACING) + (PLANT_SPACING / 2)}px`;
             // stemContainer uses top: 0 as the horizon, so wrapper top = skyHeight
             plantWrapper.style.top = `${skyHeight}px`;
             this.renderPlantSprite(plantWrapper, project);
@@ -2395,9 +2278,9 @@ export class GardenView extends View {
             if (isAboveGround) this.scareFireflies(projectId);
             const cell = this.containerEl.querySelector(`.garden-item[data-id="${itemId}"], .seed-content[data-id="${itemId}"]`) as HTMLElement | null;
             if (cell) {
-                // Bring the cell into view on the board
+                // Smoothly center the cell in the Kanban scroll container
                 cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-
+                
                 // Trigger the flash animation
                 cell.addClass('is-click-flash');
                 setTimeout(() => cell.removeClass('is-click-flash'), 800);
@@ -2484,12 +2367,6 @@ export class GardenView extends View {
             let url: string | null = null;
             if (block.imagePath) {
                 url = this.app.assetManager.getImageUrlSync(block.imagePath);
-            }
-            // No art saved, or the saved file is gone from the pack: pick a stable one by id,
-            // the way stems and flowers fall back above ground.
-            if (!url) {
-                const category = block.type === 'root' ? 'roots' : block.type === 'mineral' ? 'minerals' : 'seeds';
-                url = this.app.assetManager.fallbackImageUrl(category, block.id);
             }
 
             // Await dimensions
@@ -2695,56 +2572,21 @@ export class GardenView extends View {
         el.focus();
         const range = document.createRange();
         range.selectNodeContents(el);
-        // A mouse selects the whole text, ready to retype; a finger gets the caret at the end.
-        if (this._pointerType === 'touch') range.collapse(false);
         const sel = window.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
     }
 
-    /**
-     * A phone scrolls the whole page up to keep the cell being typed in above the keyboard,
-     * and iOS does not always scroll it back when the keyboard goes, leaving the app shifted.
-     */
-    private settlePage() {
-        setTimeout(() => {
-            if (!this.contentEl.querySelector('.is-editing') && window.scrollY !== 0) window.scrollTo(0, 0);
-        }, 250);
-    }
-
     private stopEditing(el: HTMLElement, item: LayerItem) {
-        if (!el.hasClass('is-editing')) return;
-        this.settlePage();
         el.removeClass('is-editing');
         el.contentEditable = "false";
-        const isNew = el.hasClass('is-new');
-        el.removeClass('is-new');
         const newText = el.getText().trim();
-        if (newText === '') {
-            // An emptied cell goes away; a new one that was never filled in leaves no trace.
-            this.removeItem(item.id);
-            el.remove();
-            if (!isNew) {
-                void this.app.saveGardenData();
-                this.scheduleRender();
-            }
-            return;
-        }
-        if (isNew && !this.liveItem(item.id)) {
-            // A sync replaced the garden while this was typed: put the cell back where it was going.
-            const list = el.parentElement;
-            const target = this.app.gardenData.find(p => p.id === list?.dataset.projectId);
-            const layer = list?.dataset.array as LayerName | undefined;
-            if (target && layer) target[layer].unshift(item);
-        }
-        if (isNew || newText !== item.content) {
+        if (newText !== item.content) {
             item.content = newText;
             const live = this.liveItem(item.id);
             if (live && live !== item) live.content = newText;
-            void this.app.saveGardenData();
+            this.app.saveGardenData();
         }
-        // A new cell is a new part of the plant: draw it.
-        if (isNew) this.scheduleRender();
     }
 
     private async deleteCell(el: HTMLElement, item: LayerItem, project: ProjectData, arrayName: 'stem' | 'flowers' | 'minerals' | 'roots') {
@@ -2756,6 +2598,67 @@ export class GardenView extends View {
             this.onOpen();
         }
     }
+
+    /**
+     * Align seed cells across all columns by padding the outer column wrapper.
+     * Uses double-requestAnimationFrame to ensure layout is settled before measuring.
+     */
+    private alignSeedCells(container?: HTMLElement) {
+        const scrollContainer = container ?? this.containerEl.querySelector('.kanban-scroll-container');
+        if (!scrollContainer) return;
+        
+        const win = this.containerEl.ownerDocument.defaultView || window;
+        // Double rAF: first frame lets the browser lay out, second frame measures the settled layout
+        win.requestAnimationFrame(() => {
+            win.requestAnimationFrame(() => {
+                const columns = scrollContainer.querySelectorAll('.project-column');
+                
+                if (columns.length < 2) return;
+                let maxTopH = 0, maxBotH = 0;
+                columns.forEach((colEl) => {
+                    const col = colEl as HTMLElement;
+                    const topH = (col.querySelector('.column-top-half') as HTMLElement)?.offsetHeight ?? 0;
+                    const botH = (col.querySelector('.column-bottom-half') as HTMLElement)?.offsetHeight ?? 0;
+                    if (topH > maxTopH) maxTopH = topH;
+                    if (botH > maxBotH) maxBotH = botH;
+                });
+                columns.forEach((colEl) => {
+                    const col = colEl as HTMLElement;
+                    const topHalf = col.querySelector('.column-top-half') as HTMLElement;
+                    const botHalf = col.querySelector('.column-bottom-half') as HTMLElement;
+                    let padTop = 0, padBot = 0;
+                    if (topHalf) {
+                        const diff = maxTopH - topHalf.offsetHeight;
+                        if (diff > 0) padTop = diff;
+                    }
+                    if (botHalf) {
+                        const diff = maxBotH - botHalf.offsetHeight;
+                        if (diff > 0) padBot = diff;
+                    }
+                    col.style.paddingTop = `${padTop}px`;
+                    col.style.paddingBottom = `${padBot}px`;
+                });
+                // Also align the add-column buttons (+) to vertically center on the seed row
+                // Pad the inner span so the button stays full-height with the + centered via CSS
+                const firstSeed = scrollContainer.querySelector('.seed-cell') as HTMLElement;
+                if (firstSeed) {
+                    const seedRect = firstSeed.getBoundingClientRect();
+                    const containerRect = scrollContainer.getBoundingClientRect();
+                    const seedCenterY = seedRect.top - containerRect.top + seedRect.height / 2;
+                    const addBtns = scrollContainer.querySelectorAll('.add-column-btn-inner');
+                    addBtns.forEach((innerEl) => {
+                        const inner = innerEl as HTMLElement;
+                        inner.style.top = `${Math.max(0, seedCenterY)}px`;
+                        inner.style.transform = 'translateY(-50%)';
+                    });
+                }
+            });
+        });
+    }
+
+// --- Divider ratio saves after edit ---
+private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
+
 
     private showSeedContextMenu(e: MouseEvent, project: ProjectData, seedContent: HTMLElement) {
         const doc = this.containerEl.ownerDocument; // Get the correct window's document!
@@ -2841,27 +2744,6 @@ export class GardenView extends View {
                 menu.appendChild(typeOpt);
             }
         });
-        // Move the plant along the row.
-        const index = this.app.gardenData.findIndex(p => p.id === project.id);
-        const move = (delta: number) => {
-            const target = index + delta;
-            if (index === -1 || target < 0 || target >= this.app.gardenData.length) return;
-            const data = this.app.gardenData;
-            [data[index], data[target]] = [data[target], data[index]];
-            data.forEach((p, i) => { p.order = i; });
-            void this.app.saveGardenData().then(() => this.onOpen());
-        };
-        for (const [text, delta] of [['Move left', -1], ['Move right', 1]] as const) {
-            const opt = document.createElement('button');
-            opt.textContent = text;
-            opt.style.cssText = menuStyle;
-            opt.disabled = index + delta < 0 || index + delta >= this.app.gardenData.length;
-            if (opt.disabled) opt.style.opacity = '0.4';
-            opt.onmouseenter = () => { if (!opt.disabled) opt.style.background = hoverStyle; };
-            opt.onmouseleave = () => opt.style.background = 'none';
-            opt.onclick = (ev) => { ev.stopPropagation(); menu.remove(); move(delta); };
-            menu.appendChild(opt);
-        }
         menu.appendChild(deleteOpt);
 
         doc.body.appendChild(menu);
@@ -2878,34 +2760,64 @@ export class GardenView extends View {
         menu.style.left = `${menuX}px`;
         menu.style.top = `${menuY}px`;
 
-        // Close on a press outside, mouse or finger
-        const closeMenu = (ev: PointerEvent) => {
+        // Close on outside click
+        const closeMenu = (ev: MouseEvent) => {
             if (!menu.contains(ev.target as Node)) {
                 menu.remove();
-                win.removeEventListener('pointerdown', closeMenu, true);
+                win.removeEventListener('mousedown', closeMenu, true);
             }
         };
-        setTimeout(() => win.addEventListener('pointerdown', closeMenu, true), 0);
+        setTimeout(() => win.addEventListener('mousedown', closeMenu, true), 0);
     }
  
     createProjectColumn(parent: HTMLElement, project: ProjectData) {
 
-        // A column is one plant's cell in each band; the board's grid lines the bands up.
         const column = parent.createDiv({ cls: "project-column" });
         column.dataset.projectId = project.id;
+        column.style.cssText = 'display: flex; flex-direction: column; width: 230px; flex-shrink: 0;';
 
-        this.createZone(column, project, 'flowers');
-        this.createZone(column, project, 'stem');
+        const columnCard = column.createDiv("column-card");
+        const columnBody = columnCard.createDiv("column-body");
+        columnBody.style.cssText = 'display: flex; flex-direction: column;';
 
-        // --- SEED (the plant's name, on the horizon) ---
-        const seedCell = column.createDiv("garden-zone seed-cell");
+        // --- TOP HALF (Flowers, Stem) ---
+        const topHalf = columnBody.createDiv("column-top-half");
+        topHalf.style.cssText = 'display: flex; flex-direction: column; flex-shrink: 0;';
 
-        seedCell.createDiv({ cls: "column-drag-handle", text: "⠿", attr: { title: 'Drag to move the plant' } });
+        const flowerZone = topHalf.createDiv("garden-zone flowers-zone");
+        const flowerLabel = flowerZone.createDiv("garden-zone-label-row");
+        flowerLabel.style.cssText = 'display: flex; align-items: center; position: relative;';
+        flowerLabel.createDiv({ text: "⚘✽ Flowers", cls: "zone-label" });
+        const flowerSpacer = flowerLabel.createDiv();
+        flowerSpacer.style.flex = '1';
+        const addFlowerBtn = flowerLabel.createEl('button', { cls: 'zone-add-btn' });
+        addFlowerBtn.setText('+');
+        addFlowerBtn.style.cssText = 'position: absolute; left: 50%; transform: translateX(-50%);';
+        addFlowerBtn.onclick = () => this.addNewItem(project, 'flowers');
+        this.createSortableList(flowerZone, project, 'flowers');
 
-        const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content draggable-cell", attr: { tabindex: "0" } });
+        const stemZone = topHalf.createDiv("garden-zone stem-zone");
+        const stemLabel = stemZone.createDiv("garden-zone-label-row");
+        stemLabel.style.cssText = 'display: flex; align-items: center; position: relative;';
+        stemLabel.createDiv({ text: "𖣂 Stem", cls: "zone-label" });
+        const stemSpacer = stemLabel.createDiv();
+        stemSpacer.style.flex = '1';
+        const addStemBtn = stemLabel.createEl('button', { cls: 'zone-add-btn' });
+        addStemBtn.setText('+');
+        addStemBtn.style.cssText = 'position: absolute; left: 50%; transform: translateX(-50%);';
+        addStemBtn.onclick = () => this.addNewItem(project, 'stem');
+        this.createSortableList(stemZone, project, 'stem');
+
+        // --- SEED (Now acts as the header) ---
+        const seedCell = columnBody.createDiv("garden-zone seed-cell");
+        
+        const dragHandle = seedCell.createDiv({ cls: "column-drag-handle", text: "⠿" });
+        dragHandle.style.cssText = 'margin-right: 4px;';
+        
+const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content draggable-cell", attr: { tabindex: "0" } });
         seedContent.dataset.id = project.id;
         seedContent.contentEditable = "false";
-
+        
         // Apply Hue Filter
         seedContent.style.color = '#6e7f9c';
         seedContent.style.filter = `hue-rotate(${project.hue ?? 0}deg)`;
@@ -2913,11 +2825,6 @@ export class GardenView extends View {
         seedContent.addEventListener("click", (e) => {
             if (!seedContent.hasClass("is-editing")) {
                 e.stopPropagation();
-                // On a touchscreen there is no double-click: tapping the selected seed edits it.
-                if (this._pointerType === 'touch' && seedContent.hasClass('is-selected')) {
-                    this.startEditing(seedContent, { id: project.id, content: project.seed, isComplete: false } as LayerItem);
-                    return;
-                }
                 this.selectCell(seedContent);
             }
         });
@@ -2928,7 +2835,6 @@ export class GardenView extends View {
 
         seedContent.addEventListener("blur", () => {
             if (seedContent.hasClass("is-editing")) {
-                this.settlePage();
                 seedContent.removeClass("is-editing");
                 seedContent.contentEditable = "false";
                 const newSeed = seedContent.getText().trim();
@@ -3012,19 +2918,33 @@ export class GardenView extends View {
 
         updateMenuBtn(); // Set initial state
 
-        this.createZone(column, project, 'roots');
-        this.createZone(column, project, 'minerals');
-    }
+        // --- BOTTOM HALF (Roots, Minerals) ---
+        const bottomHalf = columnBody.createDiv("column-bottom-half");
+        bottomHalf.style.cssText = 'display: flex; flex-direction: column; flex-shrink: 0;';
 
-    /** One plant's part of a band: a + that starts a new cell at the top, then the cells. */
-    private createZone(column: HTMLElement, project: ProjectData, arrayName: LayerName) {
-        const zone = column.createDiv(`garden-zone ${arrayName}-zone`);
-        const head = zone.createDiv("garden-zone-label-row");
-        const band = BANDS.find(b => b.key === arrayName);
-        const title = `Add to ${band?.label.replace(/^\W+/, '').toLowerCase() ?? arrayName}`;
-        const add = head.createEl('button', { cls: 'zone-add-btn', text: '+', attr: { 'aria-label': title, title } });
-        add.onclick = () => this.addNewItem(project, arrayName);
-        this.createSortableList(zone, project, arrayName);
+        const rootZone = bottomHalf.createDiv("garden-zone roots-zone");
+        const rootLabel = rootZone.createDiv("garden-zone-label-row");
+        rootLabel.style.cssText = 'display: flex; align-items: center; position: relative;';
+        rootLabel.createDiv({ text: "⫛ Roots", cls: "zone-label" });
+        const rootSpacer = rootLabel.createDiv();
+        rootSpacer.style.flex = '1';
+        const addRootBtn = rootLabel.createEl('button', { cls: 'zone-add-btn' });
+        addRootBtn.setText('+');
+        addRootBtn.onclick = () => this.addNewItem(project, 'roots');
+        addRootBtn.style.cssText = 'position: absolute; left: 50%; transform: translateX(-50%);';
+        this.createSortableList(rootZone, project, 'roots');
+
+        const mineralZone = bottomHalf.createDiv("garden-zone minerals-zone");
+        const mineralLabel = mineralZone.createDiv("garden-zone-label-row");
+        mineralLabel.style.cssText = 'display: flex; align-items: center; position: relative;';
+        mineralLabel.createDiv({ text: "₊⊹˖ Minerals", cls: "zone-label" });
+        const mineralSpacer = mineralLabel.createDiv();
+        mineralSpacer.style.flex = '1';
+        const addMineralBtn = mineralLabel.createEl('button', { cls: 'zone-add-btn' });
+        addMineralBtn.setText('+');
+        addMineralBtn.onclick = () => this.addNewItem(project, 'minerals');
+        addMineralBtn.style.cssText = 'position: absolute; left: 50%; transform: translateX(-50%);';
+        this.createSortableList(mineralZone, project, 'minerals');
     }
 
     createSortableList(
@@ -3036,125 +2956,71 @@ export class GardenView extends View {
         listContainer.dataset.projectId = project.id;
         listContainer.dataset.array = arrayName;
 
-        project[arrayName].forEach(item => this.createCell(listContainer, project, arrayName, item));
-
-        Sortable.create(listContainer, {
-            group: 'garden-items',
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            // On a touchscreen a swipe scrolls the board; a cell is picked up by holding it first.
-            delay: 220,
-            delayOnTouchOnly: true,
-            touchStartThreshold: 16,
-            // A cell being typed in selects text, it does not move.
-            filter: '.is-editing',
-            preventOnFilter: false,
-            onChoose: (evt: SortableEvent) => this.onCellPressed(evt),
-            onStart: () => { this._dragged = true; },
-            onUnchoose: (evt: SortableEvent) => this.onCellReleased(evt),
-            onEnd: (evt: SortableEvent) => this.handleDrop(evt)
-        });
-
-        return listContainer;
-    }
-
-    /** What pressed the board last: "mouse", "pen" or "touch". */
-    private _pointerType = '';
-    /** A cell or plant held down on a touchscreen and picked up by Sortable, until it is let go. */
-    private _pressedCell: { el: HTMLElement; x: number; y: number } | null = null;
-    /** Whether the held cell was dragged anywhere, rather than just held. */
-    private _dragged = false;
-    /** A held cell opens its menu when let go; the click that follows must not also select or edit it. */
-    private _ignoreClickUntil = 0;
-
-    private onCellPressed(evt: SortableEvent) {
-        // Sortable passes the press that picked the cell up; its typings leave the field out.
-        const down = (evt as SortableEvent & { originalEvent?: PointerEvent | TouchEvent }).originalEvent;
-        const point = down && ('touches' in down ? down.touches[0] : down.pointerType === 'touch' ? down : null);
-        this._pressedCell = point ? { el: evt.item, x: point.clientX, y: point.clientY } : null;
-        this._dragged = false;
-    }
-
-    private onCellReleased(evt: SortableEvent) {
-        const pressed = this._pressedCell;
-        this._pressedCell = null;
-        if (!pressed || this._dragged || pressed.el !== evt.item || !pressed.el.isConnected) return;
-        // Held and let go without dragging: the menu a right-click opens, which a touchscreen has no other way to reach.
-        this._ignoreClickUntil = performance.now() + 500;
-        if (document.querySelector('.garden-context-menu')) return; // the browser's own long-press already opened it
-        pressed.el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: pressed.x, clientY: pressed.y }));
-    }
-
-    /** One cell on the board. `prepend` puts it first, where a new cell goes. */
-    private createCell(listContainer: HTMLElement, project: ProjectData, arrayName: LayerName, item: LayerItem, prepend = false): HTMLElement {
-        const el = listContainer.createDiv({ cls: "garden-item draggable-cell", attr: { tabindex: "0" }, prepend });
-        el.dataset.id = item.id;
-        el.setText(item.content);
-        if (item.highlighted) {
-            el.style.fontWeight = 'bold';
-            el.addClass('garden-item-highlighted');
-        }
-
-        el.addEventListener("mouseenter", () => {
-            if (arrayName === 'stem' || arrayName === 'flowers') this.scareFireflies(project.id);
-            this.highlightPlantPart(item.id);
-        });
-
-        el.addEventListener("mouseleave", () => {
-            // Only remove brightness if the cell isn't selected
-            if (!el.hasClass("is-selected")) {
-                this.unhighlightPlantPart(item.id);
+        project[arrayName].forEach(item => {
+            const el = listContainer.createDiv({ cls: "garden-item draggable-cell", attr: { tabindex: "0" } });
+            el.dataset.id = item.id;
+            el.setText(item.content);
+            if (item.highlighted) {
+                el.style.fontWeight = 'bold';
+                el.addClass('garden-item-highlighted');
             }
-        });
-
-        el.addEventListener("click", (e) => {
-            // Ignore the second click of a double-click so it doesn't mess with editing!
-            if (e.detail === 2) return;
-            if (performance.now() < this._ignoreClickUntil) return;
-
-                if (!el.hasClass("is-editing")) {
-                e.stopPropagation();
+            
+            el.addEventListener("mouseenter", () => {
                 if (arrayName === 'stem' || arrayName === 'flowers') this.scareFireflies(project.id);
-                const currentProjectId = el.parentElement?.dataset.projectId;
+                this.highlightPlantPart(item.id);
+            });
 
-                // On a touchscreen there is no double-click: tapping the selected cell edits it.
-                if (this._pointerType === 'touch' && el.hasClass('is-selected') && this.selectedCells.length <= 1) {
-                    this.startEditing(el, item);
-                    return;
+            el.addEventListener("mouseleave", () => {
+                // Only remove brightness if the cell isn't selected
+                if (!el.hasClass("is-selected")) {
+                    this.unhighlightPlantPart(item.id);
                 }
+            });
 
-                if (e.ctrlKey || e.metaKey) {
-                    if (this.selectedCells.length > 0 && this.selectedCells[0].parentElement?.dataset.projectId !== currentProjectId) {
-                        this.clearSelection();
-                    }
-                    
-                    const itemId = el.dataset.id;
-                    if (el.hasClass("is-selected")) {
-                        el.removeClass("is-selected");
-                        this.selectedCells = this.selectedCells.filter(c => c !== el);
-                        if (itemId) this.unhighlightPlantPart(itemId);
-                    } else {
-                        el.addClass("is-selected");
-                        this.selectedCells.push(el);
-                        if (itemId) this.highlightPlantPart(itemId);
-                    }
-                } else if (e.shiftKey) {
-                    const list = el.parentElement;
-                    if (list && this.selectedCells.length > 0) {
-                        const lastEl = this.selectedCells[this.selectedCells.length - 1];
-                        if (lastEl.parentElement === list) {
-                            const items = Array.from(list.children).filter(c => c.hasClass('garden-item')) as HTMLElement[];
-                            const idx1 = items.indexOf(lastEl);
-                            const idx2 = items.indexOf(el);
-                            const [start, end] = [Math.min(idx1, idx2), Math.max(idx1, idx2)];
-                            for (let i = start; i <= end; i++) {
-                                const cell = items[i];
-                                if (!cell.hasClass("is-selected")) {
-                                    cell.addClass("is-selected");
-                                    this.selectedCells.push(cell);
-                                    const cItemId = cell.dataset.id;
-                                    if (cItemId) this.highlightPlantPart(cItemId);
+            el.addEventListener("click", (e) => {
+                // Ignore the second click of a double-click so it doesn't mess with editing!
+                if (e.detail === 2) return; 
+                
+                    if (!el.hasClass("is-editing")) {
+                    e.stopPropagation();
+                    if (arrayName === 'stem' || arrayName === 'flowers') this.scareFireflies(project.id);
+                    const currentProjectId = el.parentElement?.dataset.projectId;
+
+                    if (e.ctrlKey || e.metaKey) {
+                        if (this.selectedCells.length > 0 && this.selectedCells[0].parentElement?.dataset.projectId !== currentProjectId) {
+                            this.clearSelection();
+                        }
+                        
+                        const itemId = el.dataset.id;
+                        if (el.hasClass("is-selected")) {
+                            el.removeClass("is-selected");
+                            this.selectedCells = this.selectedCells.filter(c => c !== el);
+                            if (itemId) this.unhighlightPlantPart(itemId);
+                        } else {
+                            el.addClass("is-selected");
+                            this.selectedCells.push(el);
+                            if (itemId) this.highlightPlantPart(itemId);
+                        }
+                    } else if (e.shiftKey) {
+                        const list = el.parentElement;
+                        if (list && this.selectedCells.length > 0) {
+                            const lastEl = this.selectedCells[this.selectedCells.length - 1];
+                            if (lastEl.parentElement === list) {
+                                const items = Array.from(list.children).filter(c => c.hasClass('garden-item')) as HTMLElement[];
+                                const idx1 = items.indexOf(lastEl);
+                                const idx2 = items.indexOf(el);
+                                const [start, end] = [Math.min(idx1, idx2), Math.max(idx1, idx2)];
+                                for (let i = start; i <= end; i++) {
+                                    const cell = items[i];
+                                    if (!cell.hasClass("is-selected")) {
+                                        cell.addClass("is-selected");
+                                        this.selectedCells.push(cell);
+                                        const cItemId = cell.dataset.id;
+                                        if (cItemId) this.highlightPlantPart(cItemId);
+                                    }
                                 }
+                            } else {
+                                this.selectSingleCell(el);
                             }
                         } else {
                             this.selectSingleCell(el);
@@ -3162,229 +3028,210 @@ export class GardenView extends View {
                     } else {
                         this.selectSingleCell(el);
                     }
+                }
+            });
+
+            el.addEventListener("dblclick", () => {
+                this.startEditing(el, item);
+            });
+
+            el.addEventListener("blur", () => {
+                if (el.hasClass("is-editing")) {
+                    this.stopEditing(el, item);
                 } else {
+                    this.deselectCell(el);
+                }
+            });
+
+            el.addEventListener("keydown", (e: KeyboardEvent) => {
+                if (el.hasClass("is-editing")) {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        this.stopEditing(el, item);
+                        el.blur();
+                    }
+                    if ((e.key === "Backspace" || e.key === "Delete") && el.getText().trim() === "") {
+                        e.preventDefault();
+                        this.deleteCell(el, item, project, arrayName);
+                    }
+                } else if (el.hasClass("is-selected")) {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        this.startEditing(el, item);
+                    }
+                    if (e.key === "Backspace" || e.key === "Delete") {
+                        e.preventDefault();
+                        if (this.selectedCells.length > 1) {
+                            this.deleteSelectedCells();
+                        } else {
+                            this.deleteCell(el, item, project, arrayName);
+                        }
+                    }
+                }
+            });
+
+            // --- Right-click context menu ---
+            el.addEventListener("contextmenu", (e: MouseEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Close any existing context menu
+                const existing = document.querySelector('.garden-context-menu');
+                if (existing) existing.remove();
+
+                // Determine if we are acting on a group or single
+                const isMulti = this.selectedCells.includes(el) && this.selectedCells.length > 1;
+                if (!isMulti) {
                     this.selectSingleCell(el);
                 }
-            }
-        });
 
-        el.addEventListener("dblclick", () => {
-            this.startEditing(el, item);
-        });
+                const menu = document.createElement('div');
+                menu.className = 'garden-context-menu';
+                menu.style.cssText = 'position: fixed; z-index: 10000; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 4px 0; min-width: 140px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
 
-        el.addEventListener("blur", () => {
-            if (el.hasClass("is-editing")) {
-                this.stopEditing(el, item);
-            } else {
-                this.deselectCell(el);
-            }
-        });
+                const menuStyle = 'display: block; width: 100%; padding: 6px 16px; text-align: left; background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-normal);';
+                const hoverStyle = 'background: var(--background-modifier-hover);';
 
-        el.addEventListener("keydown", (e: KeyboardEvent) => {
-            if (el.hasClass("is-editing")) {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    this.stopEditing(el, item);
-                    el.blur();
-                }
-                if (e.key === "Escape") {
-                    // Back to what it said before; a new cell was empty, so it goes.
-                    e.preventDefault();
-                    el.setText(item.content);
-                    this.stopEditing(el, item);
-                    el.blur();
-                }
-                if ((e.key === "Backspace" || e.key === "Delete") && el.getText().trim() === "") {
-                    // Emptying a cell removes it (stopEditing does, and saves when it was stored).
-                    e.preventDefault();
-                    this.stopEditing(el, item);
-                }
-            } else if (el.hasClass("is-selected")) {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    this.startEditing(el, item);
-                }
-                if (e.key === "Backspace" || e.key === "Delete") {
-                    e.preventDefault();
-                    if (this.selectedCells.length > 1) {
+                // Delete option
+                const deleteOpt = document.createElement('button');
+                deleteOpt.textContent = 'Delete';
+                deleteOpt.style.cssText = menuStyle;
+                deleteOpt.onmouseenter = () => deleteOpt.style.background = hoverStyle;
+                deleteOpt.onmouseleave = () => deleteOpt.style.background = 'none';
+                deleteOpt.onclick = () => {
+                    menu.remove();
+                    if (isMulti) {
                         this.deleteSelectedCells();
                     } else {
                         this.deleteCell(el, item, project, arrayName);
                     }
-                }
-            }
-        });
-
-        // --- Right-click context menu ---
-        el.addEventListener("contextmenu", (e: MouseEvent) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Close any existing context menu
-            const existing = document.querySelector('.garden-context-menu');
-            if (existing) existing.remove();
-
-            // Determine if we are acting on a group or single
-            const isMulti = this.selectedCells.includes(el) && this.selectedCells.length > 1;
-            if (!isMulti) {
-                this.selectSingleCell(el);
-            }
-
-            const menu = document.createElement('div');
-            menu.className = 'garden-context-menu';
-            menu.style.cssText = 'position: fixed; z-index: 10000; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 4px 0; min-width: 140px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
-
-            // Rows a finger can hit when the menu came from a long press.
-            const rowPadding = this._pointerType === 'touch' ? '11px 18px' : '6px 16px';
-            const menuStyle = `display: block; width: 100%; padding: ${rowPadding}; text-align: left; background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-normal);`;
-            const hoverStyle = 'background: var(--background-modifier-hover);';
-
-            // Edit option (a touchscreen has no double-click)
-            if (!isMulti) {
-                const editOpt = document.createElement('button');
-                editOpt.textContent = 'Edit';
-                editOpt.style.cssText = menuStyle;
-                editOpt.onmouseenter = () => editOpt.style.background = hoverStyle;
-                editOpt.onmouseleave = () => editOpt.style.background = 'none';
-                editOpt.onclick = () => {
-                    menu.remove();
-                    this.startEditing(el, item);
                 };
-                menu.appendChild(editOpt);
-            }
+                menu.appendChild(deleteOpt);
 
-            // Delete option
-            const deleteOpt = document.createElement('button');
-            deleteOpt.textContent = 'Delete';
-            deleteOpt.style.cssText = menuStyle;
-            deleteOpt.onmouseenter = () => deleteOpt.style.background = hoverStyle;
-            deleteOpt.onmouseleave = () => deleteOpt.style.background = 'none';
-            deleteOpt.onclick = () => {
-                menu.remove();
-                if (isMulti) {
-                    this.deleteSelectedCells();
-                } else {
-                    this.deleteCell(el, item, project, arrayName);
-                }
-            };
-            menu.appendChild(deleteOpt);
-
-            // Highlight toggle option
-            const cellsToHighlight = isMulti ? this.selectedCells : [el];
-            // Check if ALL selected cells are currently highlighted to decide the button text
-            const allHighlighted = cellsToHighlight.every(c => c.hasClass('garden-item-highlighted'));
-            
-            const highlightOpt = document.createElement('button');
-            highlightOpt.textContent = allHighlighted ? 'Remove Highlight' : 'Highlight';
-            highlightOpt.style.cssText = menuStyle;
-            highlightOpt.onmouseenter = () => highlightOpt.style.background = hoverStyle;
-            highlightOpt.onmouseleave = () => highlightOpt.style.background = 'none';
-            
-            highlightOpt.onclick = async () => {
-                menu.remove();
-                const newState = !allHighlighted; // The state we want to apply to all of them
+                // Highlight toggle option
+                const cellsToHighlight = isMulti ? this.selectedCells : [el];
+                // Check if ALL selected cells are currently highlighted to decide the button text
+                const allHighlighted = cellsToHighlight.every(c => c.hasClass('garden-item-highlighted'));
                 
-                for (const cell of cellsToHighlight) {
-                    const cProjectId = cell.parentElement?.dataset.projectId;
-                    const cArrayName = cell.parentElement?.dataset.array as 'stem' | 'flowers' | 'minerals' | 'roots';
-                    const cItemId = cell.dataset.id;
-                    const cProject = this.app.gardenData.find(p => p.id === cProjectId);
-                    
-                    if (cProject && cArrayName && cItemId) {
-                        const cItem = cProject[cArrayName].find(i => i.id === cItemId);
-                        if (cItem) {
-                            cItem.highlighted = newState || undefined; // Update the data model
-                            cell.style.fontWeight = newState ? 'bold' : '';
-                            if (newState) {
-                                cell.addClass('garden-item-highlighted');
-                                this.applyHighlightPulse(cItemId);
-                            } else {
-                                cell.removeClass('garden-item-highlighted');
-                                this.removeHighlightPulse(cItemId);
-                            }
-                        }
-                    }
-                }
-                await this.app.saveGardenData();
-            };
-            menu.appendChild(highlightOpt);
-
-                            // Convert to Stem ✔️ option
-            const allMinerals = isMulti 
-                ? this.selectedCells.every(cell => cell.parentElement?.dataset.array === 'minerals')
-                : (arrayName === 'minerals');
-
-            const convertOpt = document.createElement('button');
-            convertOpt.textContent = 'Convert to Stem ✔️';
-            
-            if (allMinerals) {
-                convertOpt.style.cssText = menuStyle;
-                convertOpt.onmouseenter = () => convertOpt.style.background = hoverStyle;
-                convertOpt.onmouseleave = () => convertOpt.style.background = 'none';
-                convertOpt.onclick = async () => {
+                const highlightOpt = document.createElement('button');
+                highlightOpt.textContent = allHighlighted ? 'Remove Highlight' : 'Highlight';
+                highlightOpt.style.cssText = menuStyle;
+                highlightOpt.onmouseenter = () => highlightOpt.style.background = hoverStyle;
+                highlightOpt.onmouseleave = () => highlightOpt.style.background = 'none';
+                
+                highlightOpt.onclick = async () => {
                     menu.remove();
-                    const cellsToConvert = isMulti ? this.selectedCells : [el];
-                    for (const cell of cellsToConvert) {
+                    const newState = !allHighlighted; // The state we want to apply to all of them
+                    
+                    for (const cell of cellsToHighlight) {
                         const cProjectId = cell.parentElement?.dataset.projectId;
+                        const cArrayName = cell.parentElement?.dataset.array as 'stem' | 'flowers' | 'minerals' | 'roots';
                         const cItemId = cell.dataset.id;
                         const cProject = this.app.gardenData.find(p => p.id === cProjectId);
-                        if (cProject) {
-                            const index = cProject.minerals.findIndex(i => i.id === cItemId);
-                            if (index !== -1) {
-                                const cItem = cProject.minerals.splice(index, 1)[0];
-                                cItem.imagePath = this.app.assetManager.assignRandomImage('stem', cProject.plantType) || undefined;
-                                cProject.stem.push(cItem);
+                        
+                        if (cProject && cArrayName && cItemId) {
+                            const cItem = cProject[cArrayName].find(i => i.id === cItemId);
+                            if (cItem) {
+                                cItem.highlighted = newState || undefined; // Update the data model
+                                cell.style.fontWeight = newState ? 'bold' : '';
+                                if (newState) {
+                                    cell.addClass('garden-item-highlighted');
+                                    this.applyHighlightPulse(cItemId);
+                                } else {
+                                    cell.removeClass('garden-item-highlighted');
+                                    this.removeHighlightPulse(cItemId);
+                                }
                             }
                         }
                     }
-                    this.clearSelection();
                     await this.app.saveGardenData();
-                    this.scheduleRender();
                 };
-            } else {
-                // Faded and unclickable if selection contains non-minerals
-                convertOpt.style.cssText = `${menuStyle} opacity: 0.4; cursor: not-allowed; color: var(--text-faint);`;
-                convertOpt.disabled = true;
-            }
-            menu.appendChild(convertOpt);
-            
+                menu.appendChild(highlightOpt);
 
-            document.body.appendChild(menu);
-            
-            // Measure menu and keep it on screen
-            const menuRect = menu.getBoundingClientRect();
-            let menuX = e.clientX;
-            let menuY = e.clientY;
+                                // Convert to Stem ✔️ option
+                const allMinerals = isMulti 
+                    ? this.selectedCells.every(cell => cell.parentElement?.dataset.array === 'minerals')
+                    : (arrayName === 'minerals');
 
-            // Shift left if it goes off the right edge
-            if (menuX + menuRect.width > window.innerWidth) {
-                menuX = window.innerWidth - menuRect.width - 10;
-            }
-            // Shift up if it goes off the bottom edge
-            if (menuY + menuRect.height > window.innerHeight) {
-                menuY = window.innerHeight - menuRect.height - 10;
-            }
-            
-            // Ensure it doesn't get pushed off the top/left corners
-            menuX = Math.max(10, menuX);
-            menuY = Math.max(10, menuY);
-
-            // Position near cursor (adjusted)
-            menu.style.left = `${menuX}px`;
-            menu.style.top = `${menuY}px`;
-            
-            // Close on a press outside, mouse or finger (capture phase bypasses stopPropagation on cells)
-            const closeMenu = (ev: PointerEvent) => {
-                if (!menu.contains(ev.target as Node)) {
-                    menu.remove();
-                    window.removeEventListener('pointerdown', closeMenu, true);
+                const convertOpt = document.createElement('button');
+                convertOpt.textContent = 'Convert to Stem ✔️';
+                
+                if (allMinerals) {
+                    convertOpt.style.cssText = menuStyle;
+                    convertOpt.onmouseenter = () => convertOpt.style.background = hoverStyle;
+                    convertOpt.onmouseleave = () => convertOpt.style.background = 'none';
+                    convertOpt.onclick = async () => {
+                        menu.remove();
+                        const cellsToConvert = isMulti ? this.selectedCells : [el];
+                        for (const cell of cellsToConvert) {
+                            const cProjectId = cell.parentElement?.dataset.projectId;
+                            const cItemId = cell.dataset.id;
+                            const cProject = this.app.gardenData.find(p => p.id === cProjectId);
+                            if (cProject) {
+                                const index = cProject.minerals.findIndex(i => i.id === cItemId);
+                                if (index !== -1) {
+                                    const cItem = cProject.minerals.splice(index, 1)[0];
+                                    cItem.imagePath = this.app.assetManager.assignRandomImage('stem', cProject.plantType) || undefined;
+                                    cProject.stem.push(cItem);
+                                }
+                            }
+                        }
+                        this.clearSelection();
+                        await this.app.saveGardenData();
+                        this.scheduleRender();
+                    };
+                } else {
+                    // Faded and unclickable if selection contains non-minerals
+                    convertOpt.style.cssText = `${menuStyle} opacity: 0.4; cursor: not-allowed; color: var(--text-faint);`;
+                    convertOpt.disabled = true;
                 }
-            };
-            // Use setTimeout to ensure the current right-click event finishes before listening
-            setTimeout(() => window.addEventListener('pointerdown', closeMenu, true), 0);
+                menu.appendChild(convertOpt);
+                
+
+                document.body.appendChild(menu);
+                
+                // Measure menu and keep it on screen
+                const menuRect = menu.getBoundingClientRect();
+                let menuX = e.clientX;
+                let menuY = e.clientY;
+
+                // Shift left if it goes off the right edge
+                if (menuX + menuRect.width > window.innerWidth) {
+                    menuX = window.innerWidth - menuRect.width - 10;
+                }
+                // Shift up if it goes off the bottom edge
+                if (menuY + menuRect.height > window.innerHeight) {
+                    menuY = window.innerHeight - menuRect.height - 10;
+                }
+                
+                // Ensure it doesn't get pushed off the top/left corners
+                menuX = Math.max(10, menuX);
+                menuY = Math.max(10, menuY);
+
+                // Position near cursor (adjusted)
+                menu.style.left = `${menuX}px`;
+                menu.style.top = `${menuY}px`;
+                
+                // Close on mousedown outside (capture phase bypasses stopPropagation on cells)
+                const closeMenu = (ev: MouseEvent) => {
+                    if (!menu.contains(ev.target as Node)) {
+                        menu.remove();
+                        window.removeEventListener('mousedown', closeMenu, true);
+                    }
+                };
+                // Use setTimeout to ensure the current right-click event finishes before listening
+                setTimeout(() => window.addEventListener('mousedown', closeMenu, true), 0);
+            });
         });
 
-        return el;
+        Sortable.create(listContainer, {
+            group: 'garden-items',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: (evt: SortableEvent) => this.handleDrop(evt)
+        });
+
+        return listContainer;
     }
 
     async handleDrop(evt: SortableEvent) {
@@ -3395,7 +3242,6 @@ export class GardenView extends View {
         const itemId = evt.item.dataset.id;
 
         if (!targetProjectId || !sourceProjectId || !targetArrayName || !sourceArrayName || !itemId) return;
-        if (evt.from === evt.to && evt.oldIndex === evt.newIndex) return; // picked up and put back
 
         const sourceProject = this.app.gardenData.find(p => p.id === sourceProjectId);
         const targetProject = this.app.gardenData.find(p => p.id === targetProjectId);
@@ -3437,18 +3283,21 @@ export class GardenView extends View {
     }
 
     async handleColumnDrop(evt: SortableEvent) {
-        // Counted among the plant columns only (Sortable's `draggable`), so the labels and the + column do not shift them.
-        const oldIdx = evt.oldDraggableIndex;
-        const newIdx = evt.newDraggableIndex;
-        if (oldIdx === undefined || newIdx === undefined || oldIdx === newIdx) return;
+        if (evt.oldIndex === undefined || evt.newIndex === undefined || evt.oldIndex === evt.newIndex) return;
+
+        // Sortable indices include the +Left button at index 0, so subtract 1
+        const oldIdx = evt.oldIndex - 1;
+        let newIdx = evt.newIndex - 1;
 
         // Clamp: can't go before 0 or past the last project
         const maxIdx = this.app.gardenData.length - 1;
         if (oldIdx < 0 || newIdx < 0 || oldIdx > maxIdx || newIdx > maxIdx) return;
 
-        // newIdx is where the column ended up, so it is also the index after taking it out.
         const [movedProject] = this.app.gardenData.splice(oldIdx, 1);
         if (!movedProject) return;
+
+        // Adjust newIdx if we removed an item before it
+        if (oldIdx < newIdx) newIdx--;
         this.app.gardenData.splice(newIdx, 0, movedProject);
 
         // UPDATE ALL ORDERS: Assign 0, 1, 2, 3... based on current array position
@@ -3479,7 +3328,6 @@ export class GardenView extends View {
                 minerals: []
             };
 
-            const wasEmpty = this.app.gardenData.length === 0;
             if (position === 'left') {
                 this.app.gardenData.unshift(newProject);
             } else {
@@ -3489,59 +3337,45 @@ export class GardenView extends View {
             this.app.gardenData.forEach((proj, idx) => { proj.order = idx; });
 
             await this.app.saveGardenData();
-            await this.onOpen();
-            if (wasEmpty) {
-                // The camera was framed on an empty world, which is narrower: frame the first plant instead.
-                const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
-                const world = this.contentEl.querySelector('.garden-world') as HTMLElement | null;
-                if (viewport && world) this.fitCamera(viewport, world);
-                this.scheduleViewStateSave();
-            }
+            this.onOpen();
         }).open();
     }
 
-    /**
-     * A new cell is typed in place: it appears at the top of its zone, empty and
-     * focused, within the tap or click that asked for it (a phone only raises its
-     * keyboard for focus given there). Enter or leaving the cell keeps it; left
-     * empty, it goes away again. It is saved, and the plant grows, once it has text.
-     */
-    addNewItem(project: ProjectData, arrayName: 'flowers' | 'minerals' | 'roots' | 'stem') {
-        const live = this.live(project);
-        const list = this.contentEl.querySelector(`.kanban-list[data-project-id="${live.id}"][data-array="${arrayName}"]`) as HTMLElement | null;
-        if (!list) return;
-        // A second + before the first cell got any text: keep the one that is already waiting.
-        const waiting = list.querySelector('.garden-item.is-new') as HTMLElement | null;
-        if (waiting) {
-            waiting.focus();
-            return;
-        }
-        const newItem: LayerItem = {
-            id: 'item_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-            content: '',
-            isComplete: arrayName === 'flowers',
-            imagePath: this.app.assetManager.assignRandomImage(arrayName, live.plantType) || undefined,
+    async addNewItem(project: ProjectData, arrayName: 'flowers' | 'minerals' | 'roots' | 'stem') {
+        
+        
+        
+        const titles: Record<string, string> = {
+            'flowers': '✽ Add flower ✽',
+            'stem': '𖣂 Add stem 𖣂',
+            'roots': '⫛ Add root ⫛',
+            'minerals': '₊⊹˖ Add mineral ₊⊹˖'
         };
-        live[arrayName].unshift(newItem);
-        const el = this.createCell(list, live, arrayName, newItem, true);
-        el.addClass('is-new');
-        el.dataset.placeholder = BANDS.find(b => b.key === arrayName)?.hint ?? '';
-        this.clearSelection();
-        this.startEditing(el, newItem);
-        el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
 
-    /** Drop an item from whichever zone holds it. Returns true when something was removed. */
-    private removeItem(itemId: string): boolean {
-        for (const project of this.app.gardenData) {
-            for (const layer of ['stem', 'flowers', 'roots', 'minerals'] as const) {
-                const index = project[layer].findIndex(i => i.id === itemId);
-                if (index !== -1) {
-                    project[layer].splice(index, 1);
-                    return true;
-                }
-            }
-        }
-        return false;
+        const placeholders: Record<string, string> = {
+            'flowers': 'Result, takeaway',
+            'stem': 'Completed task',
+            'roots': 'Motivation, reason',
+            'minerals': 'Idea, task'
+        };
+
+        const title = titles[arrayName] ?? 'Add Item';
+        const placeholder = placeholders[arrayName] ?? '';
+
+        new AddItemModal(title, placeholder, async (content) => {
+
+            // Ask the manager for a random image from the matching vault folder
+            const randomImagePath = this.app.assetManager.assignRandomImage(arrayName, project.plantType);
+
+            const newItem: LayerItem = {
+                id: 'item_' + Date.now(),
+                content: content,
+                isComplete: arrayName === 'flowers',
+                imagePath: randomImagePath || undefined 
+            };
+            this.live(project)[arrayName].unshift(newItem);
+            await this.app.saveGardenData();
+            this.onOpen();
+        }).open();
     }
 }
