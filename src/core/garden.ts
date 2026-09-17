@@ -1767,20 +1767,21 @@ export class GardenView extends View {
         const vw = viewport.offsetWidth || 320;
         const vh = viewport.offsetHeight || 320;
         const extents = this.calculateProjectExtents(project);
-        const margin = 48;
+        const margin = 24;
+        // The horizon sits low in the window: the plant above ground is what you
+        // came to see, the roots only need a strip below it.
+        const horizon = 0.68;
         const above = extents.aboveHeight + margin;
-        const below = extents.undergroundDepth + margin;
+        const below = Math.max(extents.undergroundDepth, 40) + margin;
         // Width: the sprite itself (renderPlantSprite leaves it on the wrapper) plus room on each side.
         const wrapper = this.contentEl.querySelector(`.garden-plant-wrapper[data-project-id="${project.id}"]`) as HTMLElement | null;
         const spriteWidth = Number(wrapper?.dataset.width) || STEM_ORIGIN_WIDTH * PIXEL_SCALE;
-        const widthBasis = Math.max(spriteWidth + 2 * margin, 180);
-        const fit = Math.min(vw / widthBasis, vh / (above + below));
+        const widthBasis = Math.max(spriteWidth + 2 * margin, 240);
+        const fit = Math.min(vw / widthBasis, (vh * horizon) / above, (vh * (1 - horizon)) / below);
         this.zoom = Math.max(this.zoomMin, Math.min(this.zoomMax, fit));
         const plantX = WORLD_PADDING + i * PLANT_SPACING + PLANT_SPACING / 2;
-        // Horizon sits so the visible part of the plant is centred vertically.
-        const centreY = this._dynamicGroundLineY - (above - below) / 2;
         this.currentTranslateX = vw / 2 - plantX * this.zoom;
-        this.currentTranslateY = vh / 2 - centreY * this.zoom;
+        this.currentTranslateY = vh * horizon - this._dynamicGroundLineY * this.zoom;
         this.applyWorldTransform(world, viewport);
         this.settleCamera(false);
         this.scheduleViewStateSave();
@@ -2411,6 +2412,21 @@ export class GardenView extends View {
             index++;
         }
 
+
+        // --- The borders between your plants and your friends' ---
+        this.app.gardenData.forEach((project, i) => {
+            const section = this.app.sectionOf(project);
+            if (section !== 'own') {
+                const band = world.createDiv('garden-friend-band');
+                band.style.left = `${WORLD_PADDING + i * PLANT_SPACING}px`;
+                band.style.width = `${PLANT_SPACING}px`;
+            }
+            const prev = this.app.gardenData[i - 1];
+            if (prev && this.app.sectionOf(prev) !== section) {
+                const border = world.createDiv('garden-section-border');
+                border.style.left = `${WORLD_PADDING + i * PLANT_SPACING}px`;
+            }
+        });
 
         // Apply the restored pan/zoom transform
         this.applyWorldTransform(world, viewport);
@@ -3256,6 +3272,12 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
 
         const column = parent.createDiv({ cls: "project-column" });
         column.dataset.projectId = project.id;
+        // Where your garden ends and your friends' plants begin.
+        const section = this.app.sectionOf(project);
+        if (section !== 'own') column.addClass('is-friend-plant');
+        const index = this.app.gardenData.indexOf(project);
+        const next = this.app.gardenData[index + 1];
+        if (next && this.app.sectionOf(next) !== section) column.addClass('is-section-end');
 
         const columnCard = column.createDiv("column-card");
         const columnBody = columnCard.createDiv("column-body");
