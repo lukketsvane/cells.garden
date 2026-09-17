@@ -968,20 +968,20 @@
     margin-right: 0;
 }
 
-/* A plant's card floating over the garden while the board is hidden. */
+/* A plant's card floating over the garden while the board is hidden: the board's
+   own card, so everything on it works here too. */
 .garden-peek-card {
     position: absolute;
     z-index: 40;
     width: 230px;
     max-height: calc(100% - 16px);
-    overflow: hidden;
-    padding: 8px 10px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     border-radius: 6px;
-    background: color-mix(in srgb, var(--background-secondary) 94%, transparent);
-    border: 1px solid var(--background-modifier-border);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     color: var(--text-normal);
-    font-size: 12px;
+    cursor: auto;
+    user-select: text;
     pointer-events: none;
     opacity: 0;
     transform: translateY(2px);
@@ -994,39 +994,29 @@
     opacity: 1;
     transform: none;
     visibility: visible;
+    pointer-events: auto;
     transition: opacity 260ms ease-out 80ms, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms, visibility 0s;
 }
 
-.garden-peek-seed {
-    font-weight: 600;
-    font-size: 13px;
-    margin-bottom: 4px;
+.garden-peek-card.is-instant {
+    transition: none;
 }
 
-.garden-peek-zone {
-    padding-top: 5px;
-    margin-top: 5px;
-    border-top: 1px solid var(--background-modifier-border);
+.garden-peek-card .project-column {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 0;
 }
 
-.garden-peek-label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-faint);
-    margin-bottom: 3px;
+.garden-peek-card .column-card {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
 }
 
-.garden-peek-item {
-    padding: 2px 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.garden-peek-more {
-    color: var(--text-faint);
-    font-size: 11px;
+.garden-peek-card .seed-cell {
+    position: static;
 }
 
 .garden-peek-card.is-visible.is-gliding {

@@ -318,9 +318,16 @@ async function scenario(browser, errors) {
     await mpage.waitForSelector('.garden-canvas-viewport');
     const cdp = await mctx.newCDPSession(mpage);
     const touch = async (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    // A re-render swaps the garden in whole, so an element found a moment ago can be
+    // gone by the time it is measured: look again until it holds still.
     const center = async (sel) => {
-        const b = await (await mpage.$(sel)).boundingBox();
-        return [b.x + b.width / 2, b.y + b.height / 2];
+        for (let attempt = 0; attempt < 40; attempt++) {
+            const el = await mpage.$(sel);
+            const b = el ? await el.boundingBox() : null;
+            if (b) return [b.x + b.width / 2, b.y + b.height / 2];
+            await mpage.waitForTimeout(50);
+        }
+        throw new Error(`${sel} never settled on screen`);
     };
     const tapAt = async (sel) => {
         const [x, y] = await center(sel);
