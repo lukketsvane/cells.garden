@@ -19,22 +19,23 @@
    ======================================== */
 
 .garden-canvas-viewport {
-    height: 50%;
+    height: 100%;
     width: 100%;
     position: relative;
     overflow: hidden;
-    background-color: #87CEEB; /* Fallback sky color */
+    background-color: var(--background-primary);
+    cursor: grab;
     flex-shrink: 0;
     user-select: none; /* Prevent text selection while dragging */
 }
 
+/* The world's own width and height come from the view: they grow with the
+   plants. Its layers are placed inside it, so nothing here lays them out. */
 .garden-world {
-    height: 100%;
     position: absolute;
     top: 0;
     left: 0;
-    display: flex;
-    flex-direction: column;
+    background: transparent;
 }
 
 .garden-bg-layer {
@@ -661,9 +662,6 @@
 }
 
 /* Default grab cursor */
-.garden-canvas-viewport {
-    cursor: grab;
-}
 /* ========================================
    THE BOARD: one grid, a card per plant
    The board is one grid and its rows are the bands: flowers, stem, the seed
@@ -1002,6 +1000,40 @@
 
 .kanban-scroll-container .project-column.is-section-end {
     border-right: 2px dashed var(--text-faint);
+}
+
+/* The split: garden above, board below, a draggable divider between them.
+   Only the canvas pane's share of the height comes from the view. */
+.garden-canvas-area {
+    position: relative;
+    min-height: 100px;
+    overflow: hidden;
+}
+
+.garden-resizer {
+    flex: 0 0 4px;
+    cursor: row-resize;
+    background: var(--background-modifier-border);
+}
+
+.garden-bottom-half {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 100px;
+    overflow: hidden;
+}
+
+/* The next garden is built in here, out of sight, and swapped in whole. */
+.garden-render-stage {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.column-drag-handle {
+    margin-right: 4px;
 }
 
 /* A zone's label with its + pushed to the far end (was an inline style plus a spacer div). */
