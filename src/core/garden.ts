@@ -106,7 +106,9 @@ export class GardenView extends View {
             this.touchStartY = e.touches[0].clientY;
             this.touchStartTranslateX = this.currentTranslateX;
             this.touchStartTranslateY = this.currentTranslateY;
+            this._touchTap = { x: this.touchStartX, y: this.touchStartY, t: performance.now() };
         } else if (e.touches.length === 2) {
+            this._touchTap = null;
             // 2 Fingers: Start Pinching
             this.isTouchPanning = false;
             this.isPinching = true;
@@ -166,6 +168,12 @@ export class GardenView extends View {
     private handleTouchEnd = (e: TouchEvent) => {
         // If all fingers are lifted, stop everything and save the view state
         if (e.touches.length === 0) {
+            const tap = this._touchTap;
+            this._touchTap = null;
+            const end = e.changedTouches[0];
+            if (tap && end && Math.hypot(end.clientX - tap.x, end.clientY - tap.y) < 8 && performance.now() - tap.t < 400) {
+                this.peekTap(end.clientX, end.clientY);
+            }
             this.isTouchPanning = false;
             this.isPinching = false;
             this.settleCamera();
@@ -1144,12 +1152,34 @@ export class GardenView extends View {
             const container = this.contentEl;
             if (!container) return;
 
-            container.empty();
             container.addClass("garden-container");
-            await this.renderGarden(container);
+            // Build the new garden hidden behind the old one and swap them in one go.
+            // Emptying first showed a blank board for as long as the images took to
+            // load, then a jump back to the scroll position: the board shook on
+            // every edit.
+            if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
+            const stage = document.createElement('div');
+            stage.className = 'garden-render-stage';
+            stage.style.cssText = 'position: absolute; inset: 0; visibility: hidden; pointer-events: none;';
+            container.appendChild(stage);
+            try {
+                await this.renderGarden(stage);
+            } catch (e) {
+                stage.remove();
+                throw e;
+            }
 
             // If another onOpen() was triggered while we were rendering, abort this one
-            if (this._renderGeneration !== thisGeneration) return;
+            if (this._renderGeneration !== thisGeneration) {
+                stage.remove();
+                return;
+            }
+            for (const child of Array.from(container.children)) {
+                if (child !== stage) child.remove();
+            }
+            while (stage.firstChild) container.appendChild(stage.firstChild);
+            stage.remove();
+            this.settleCamera(false);
             // Canvas is now ground-only; offset by old ground line to align content
             if (savedCanvasImage && this.wormTrailCanvas) {
                 const img = new Image();
@@ -1604,6 +1634,7 @@ export class GardenView extends View {
         if (this.isDrawingMode && e.button !== 1) return; 
         
         const isMiddle = e.button === 1;
+        this._mouseDownAt = { x: e.clientX, y: e.clientY };
         const target = e.target as HTMLElement;
         // Check if we clicked a plant part or interactable element
         const isInteractable = target.closest('.interactable, [data-item-id]');
@@ -1778,6 +1809,7 @@ export class GardenView extends View {
         return shown;
     }
 
+    private _mouseDownAt: { x: number; y: number } | null = null;
     private _settleFrame = 0;
     private _settleTimeout: number | null = null;
 
@@ -1826,8 +1858,128 @@ export class GardenView extends View {
         this._settleFrame = requestAnimationFrame(step);
     }
 
+
+    // --- Peeking at a plant with the board hidden ---
+    // With the board out of the way, hovering a plant (or tapping it) floats its
+    // card over the garden. The card is read-only and sits on top of the scene:
+    // the camera, the plants and the layout stay exactly where they are.
+
+    private _peekEl: HTMLElement | null = null;
+    private _peekProjectId: string | null = null;
+    private _peekPinned = false;
+    private _touchTap: { x: number; y: number; t: number } | null = null;
+
+    /**
+     * Right-click in the garden: on a plant's part, that cell's menu; anywhere else
+     * on a plant, the plant's own menu. The same menus as on the board, opened where
+     * the pointer is, so they work with the board hidden too.
+     */
+    private handleGardenContextMenu = (e: MouseEvent) => {
+        if (this.isDrawingMode) return;
+        e.preventDefault();
+        this.hidePeek();
+        const forward = (target: Element | null) => {
+            if (!target) return false;
+            target.dispatchEvent(new MouseEvent('contextmenu', { bubbles: false, cancelable: true, clientX: e.clientX, clientY: e.clientY, button: 2 }));
+            return true;
+        };
+        const part = (e.target as HTMLElement).closest('[data-item-id]') as HTMLElement | null;
+        const itemId = part?.dataset.itemId;
+        if (itemId && forward(this.contentEl.querySelector(`.garden-item[data-id="${itemId}"]`))) return;
+        const hit = this.plantAt(e.clientX, e.clientY);
+        if (hit) forward(this.contentEl.querySelector(`.project-column[data-project-id="${hit.project.id}"] .seed-content`));
+    };
+
+    private boardHidden(): boolean {
+        return document.documentElement.dataset.board === 'hidden';
+    }
+
+    /** The plant under a point in the viewport, if the point is on it. */
+    private plantAt(clientX: number, clientY: number): { project: ProjectData; x: number; top: number } | null {
+        const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        if (!viewport) return null;
+        const rect = viewport.getBoundingClientRect();
+        const wx = (clientX - rect.left - this.currentTranslateX) / this.zoom;
+        const wy = (clientY - rect.top - this.currentTranslateY) / this.zoom;
+        const index = Math.round((wx - WORLD_PADDING - PLANT_SPACING / 2) / PLANT_SPACING);
+        const project = this.app.gardenData[index];
+        if (!project) return null;
+        const centre = WORLD_PADDING + index * PLANT_SPACING + PLANT_SPACING / 2;
+        if (Math.abs(wx - centre) > PLANT_SPACING * 0.3) return null;
+        const extents = this.calculateProjectExtents(project);
+        const ground = this._dynamicGroundLineY;
+        if (wy < ground - extents.aboveHeight - 60 || wy > ground + extents.undergroundDepth + 60) return null;
+        return {
+            project,
+            x: rect.left + this.currentTranslateX + centre * this.zoom - rect.left,
+            top: this.currentTranslateY + (ground - extents.aboveHeight - 20) * this.zoom,
+        };
+    }
+
+    private showPeek(hit: { project: ProjectData; x: number; top: number }) {
+        const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        if (!viewport) return;
+        if (!this._peekEl || !this._peekEl.isConnected) {
+            this._peekEl = viewport.createDiv('garden-peek-card');
+            this._peekProjectId = null;
+        }
+        const card = this._peekEl;
+        if (this._peekProjectId !== hit.project.id) {
+            this._peekProjectId = hit.project.id;
+            card.empty();
+            card.createDiv({ cls: 'garden-peek-seed', text: hit.project.seed || hit.project.name });
+            const zones: [LayerName, string][] = [['flowers', 'Flowers'], ['stem', 'Stem'], ['roots', 'Roots'], ['minerals', 'Minerals']];
+            for (const [layer, label] of zones) {
+                const items = hit.project[layer];
+                if (items.length === 0) continue;
+                const zone = card.createDiv('garden-peek-zone');
+                zone.createDiv({ cls: 'garden-peek-label', text: label });
+                for (const item of items.slice(0, 6)) zone.createDiv({ cls: 'garden-peek-item', text: item.content });
+                if (items.length > 6) zone.createDiv({ cls: 'garden-peek-more', text: `${items.length - 6} more` });
+            }
+        }
+        // Above the plant when there is room, otherwise below its top; always inside the pane.
+        const vw = viewport.offsetWidth, vh = viewport.offsetHeight;
+        const w = card.offsetWidth || 230, h = card.offsetHeight || 120;
+        const left = Math.max(8, Math.min(vw - w - 8, hit.x - w / 2));
+        const above = hit.top - h - 8;
+        const top = Math.max(8, Math.min(vh - h - 8, above >= 8 ? above : hit.top + 16));
+        card.style.left = `${left}px`;
+        card.style.top = `${top}px`;
+        card.addClass('is-visible');
+    }
+
+    private hidePeek() {
+        this._peekPinned = false;
+        this._peekEl?.removeClass('is-visible');
+    }
+
+    private handlePeekMove = (e: MouseEvent) => {
+        if (!this.boardHidden() || this.isDragging || this._peekPinned) return;
+        const hit = this.plantAt(e.clientX, e.clientY);
+        if (hit) this.showPeek(hit);
+        else this.hidePeek();
+    };
+
+    private handlePeekLeave = () => {
+        if (!this._peekPinned) this.hidePeek();
+    };
+
+    /** A tap (touch or a click without a drag) pins the card, a tap elsewhere lets it go. */
+    private peekTap(clientX: number, clientY: number) {
+        if (!this.boardHidden()) return;
+        const hit = this.plantAt(clientX, clientY);
+        if (hit) {
+            this.showPeek(hit);
+            this._peekPinned = true;
+        } else {
+            this.hidePeek();
+        }
+    }
+
     private applyWorldTransform(world: HTMLElement, viewport: HTMLElement) {
         // Standard 2D camera math: origin at top-left makes centering predictable
+        if (this._peekEl && !this._peekPinned) this._peekEl.removeClass('is-visible');
         world.style.transformOrigin = '0 0';
         world.style.transform = `translate(${this.currentTranslateX}px, ${this.currentTranslateY}px) scale(${this.zoom})`;
     }
@@ -1848,24 +2000,22 @@ export class GardenView extends View {
     }
 
     restoreScrollPositions(states: { scrollTop: number; selectors: { selector: string; scrollTop: number; scrollLeft: number }[] }) {
+        const apply = () => {
+            for (const entry of states.selectors) {
+                const match = entry.selector.match(/^(.+)\[(\d+)\]$/);
+                if (!match) continue;
+                const els = this.containerEl.querySelectorAll(match[1]);
+                const htmlEl = els[parseInt(match[2])] as HTMLElement | undefined;
+                if (!htmlEl) continue;
+                if (htmlEl.scrollTop !== entry.scrollTop) htmlEl.scrollTop = entry.scrollTop;
+                if (htmlEl.scrollLeft !== entry.scrollLeft) htmlEl.scrollLeft = entry.scrollLeft;
+            }
+        };
+        // At once, before the swapped-in board paints, or it shows at the top for a
+        // frame and jumps back. Again after two frames for anything still settling.
+        apply();
         const win = this.containerEl.ownerDocument.defaultView || window;
-        // Double-rAF ensures the browser has fully painted the new layout
-        win.requestAnimationFrame(() => {
-            win.requestAnimationFrame(() => {
-                for (const entry of states.selectors) {
-                    const match = entry.selector.match(/^(.+)\[(\d+)\]$/);
-                    if (!match) continue;
-                    const selector = match[1];
-                    const index = parseInt(match[2]);
-                    const els = this.containerEl.querySelectorAll(selector);
-                    if (els[index]) {
-                        const htmlEl = els[index] as HTMLElement;
-                        htmlEl.scrollTop = entry.scrollTop;
-                        htmlEl.scrollLeft = entry.scrollLeft;
-                    }
-                }
-            });
-        });
+        win.requestAnimationFrame(() => win.requestAnimationFrame(apply));
     }
 
     async renderGarden(container: HTMLElement) {
@@ -2242,6 +2392,16 @@ export class GardenView extends View {
 
         viewport.addEventListener('mousedown', this.handleMouseDown);
         viewport.addEventListener('wheel', this.handleWheel, { passive: false });
+        viewport.addEventListener('mousemove', this.handlePeekMove);
+        viewport.addEventListener('contextmenu', this.handleGardenContextMenu);
+        viewport.addEventListener('mouseleave', this.handlePeekLeave);
+        viewport.addEventListener('click', (e) => {
+            const down = this._mouseDownAt;
+            if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6) this.peekTap(e.clientX, e.clientY);
+        });
+        this._peekEl = null;
+        this._peekProjectId = null;
+        this._peekPinned = false;
         
         // Mobile Touch Listeners
         viewport.addEventListener('touchstart', this.handleTouchStart, { passive: false });
