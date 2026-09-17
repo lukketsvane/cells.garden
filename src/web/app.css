@@ -72,8 +72,7 @@ body {
     position: fixed;
     inset: 0;
     height: 100dvh;
-    /* Keep the kanban above the home indicator on phones. */
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    /* The board runs under the home indicator on phones; its own padding keeps the last cells above it. */
     background: var(--background-primary);
 }
 
@@ -95,8 +94,8 @@ button {
 /* --- Sign-in pill (M1) --- */
 .auth-pill {
     position: fixed;
-    top: 8px;
-    left: 8px;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    left: calc(8px + env(safe-area-inset-left, 0px));
     z-index: 50;
     display: flex;
     align-items: center;
@@ -170,8 +169,8 @@ button {
 /* --- Garden files: export / import (M3) --- */
 .garden-files-button {
     position: fixed;
-    top: 8px;
-    right: 8px;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    right: calc(8px + env(safe-area-inset-right, 0px));
     z-index: 50;
     width: 28px;
     height: 28px;

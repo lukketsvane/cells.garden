@@ -119,18 +119,31 @@ async function scenario(browser, errors) {
 
     await page.goto(BASE, { waitUntil: 'networkidle' });
     await page.waitForSelector('.garden-canvas-viewport');
-    console.log('empty msg:', await page.textContent('.kanban-empty-message h3'));
+    const emptyMsg = await page.textContent('.kanban-empty-message h3');
+    console.log('empty msg:', emptyMsg);
+    assert(/empty/i.test(emptyMsg), 'a fresh garden should say it is empty');
     await shot(page, '01-empty.png');
 
+    // The garden on top, the divider, the board below: separate panes.
+    const panes = await page.evaluate(() => {
+        const r = (s) => document.querySelector(s).getBoundingClientRect();
+        return { canvas: r('.garden-canvas-viewport'), resizer: r('.garden-resizer'), board: r('.kanban-scroll-container') };
+    });
+    console.log('panes:', JSON.stringify(panes));
+    assert(Math.abs(panes.canvas.bottom - panes.resizer.top) < 2 && Math.abs(panes.resizer.bottom - panes.board.top) < 2, `canvas, divider and board must stack: ${JSON.stringify(panes)}`);
+    assert(panes.canvas.height > 200 && panes.board.height > 200, `both panes need room: ${JSON.stringify(panes)}`);
+
     // Plant a seed
-    await page.click('.add-column-btn-inner >> nth=1');
+    await page.click('.add-plant-btn');
     await page.waitForSelector('.modal textarea');
     await page.fill('.modal textarea', 'Port the garden to the web');
     await page.keyboard.press('Enter');
     await page.waitForSelector('.project-column');
+    assert((await page.$('.kanban-empty-message')) === null, 'the empty message must go once a plant exists');
+    assert((await page.$('.garden-canvas-viewport .project-column')) === null, 'the cells belong on the board, not in the canvas');
     console.log('seed:', await page.textContent('.seed-content'));
 
-    // Add items to each zone
+    // Add items to each zone: typed in place, no modal.
     const zones = [
         ['flowers-zone', 'Runs in browser'],
         ['stem-zone', 'Scaffold + shim'],
@@ -139,24 +152,63 @@ async function scenario(browser, errors) {
     ];
     for (const [zone, text] of zones) {
         await page.click(`.${zone} .zone-add-btn`);
-        await page.waitForSelector('.modal input[type=text]');
-        await page.fill('.modal input[type=text]', text);
+        await page.waitForSelector(`.${zone} .garden-item.is-editing`);
+        assert(await page.getAttribute(`.${zone} .garden-item.is-editing`, 'data-placeholder'), `${zone}: the new cell should show a hint`);
+        await page.keyboard.type(text);
         await page.keyboard.press('Enter');
         await page.waitForFunction((t) => [...document.querySelectorAll('.garden-item')].some((el) => el.textContent === t), text);
     }
+    // An empty new cell disappears again.
+    await page.click('.stem-zone .zone-add-btn');
+    await page.waitForSelector('.stem-zone .garden-item.is-editing');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction((n) => document.querySelectorAll('.garden-item').length === n, zones.length);
     await page.waitForTimeout(600);
     const items = await page.$$eval('.garden-item', (els) => els.map((e) => e.textContent));
     console.log('items:', items);
     assert(items.length === zones.length, `expected ${zones.length} items, got ${items.length}`);
     console.log('plant parts:', await page.$$eval('.garden-stem-container > div', (els) => els.map((e) => e.className)));
+    // The column's bands stack in the order the plant stands: flowers, stem, seed, roots, minerals.
+    const order = await page.evaluate(() => ['.flowers-zone', '.stem-zone', '.seed-cell', '.roots-zone', '.minerals-zone']
+        .map((s) => document.querySelector(`.project-column > ${s}`).getBoundingClientRect().y));
+    console.log('band tops:', order);
+    assert(order.every((y, i) => i === 0 || y > order[i - 1]), `the bands are out of order: ${order}`);
     await shot(page, '02-one-plant.png');
 
-    // Second plant on the left
-    await page.click('.add-column-btn-inner >> nth=0');
+    // Second plant, from the + at the end of the seed row
+    await page.click('.add-plant-btn');
     await page.fill('.modal textarea', 'Second plant');
     await page.click('.modal button.mod-cta');
     await page.waitForFunction(() => document.querySelectorAll('.project-column').length === 2);
     console.log('columns:', await page.$$eval('.seed-content', (els) => els.map((e) => e.textContent)));
+
+    // One board: every band lines up across the plants, although the first plant has more cells.
+    const bands = await page.evaluate(() => ['.flowers-zone', '.stem-zone', '.seed-cell', '.roots-zone', '.minerals-zone'].map((s) =>
+        [...document.querySelectorAll(`.project-column > ${s}`)].map((el) => { const b = el.getBoundingClientRect(); return [Math.round(b.y), Math.round(b.height)]; })));
+    console.log('bands per column:', JSON.stringify(bands));
+    for (const band of bands) {
+        assert(band.length === 2 && band[0][0] === band[1][0] && band[0][1] === band[1][1], `a band does not line up across plants: ${JSON.stringify(bands)}`);
+    }
+    const noCards = await page.$$eval('.column-card', (els) => els.length);
+    assert(noCards === 0, 'plants must not be boxed in cards of their own');
+
+    // The divider drags with a mouse, and stays where it was left.
+    const canvasBefore = (await (await page.$('.garden-canvas-area')).boundingBox()).height;
+    const divider = await (await page.$('.garden-resizer')).boundingBox();
+    await page.mouse.move(divider.x + divider.width / 2, divider.y + divider.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(divider.x + divider.width / 2, divider.y + divider.height / 2 - 120, { steps: 6 });
+    await page.mouse.up();
+    const canvasAfter = (await (await page.$('.garden-canvas-area')).boundingBox()).height;
+    console.log('canvas height after dragging the divider:', canvasBefore, '->', canvasAfter);
+    assert(Math.abs(canvasBefore - 120 - canvasAfter) < 6, `the divider did not follow the mouse: ${canvasBefore} -> ${canvasAfter}`);
+
+    // Move it left from the seed menu; the order is saved.
+    await page.click('.seed-content >> nth=1', { button: 'right' });
+    await page.waitForSelector('.garden-context-menu');
+    await page.click('.garden-context-menu button:has-text("Move left")');
+    await page.waitForFunction(() => document.querySelector('.seed-content')?.textContent === 'Second plant');
+    console.log('after move:', await page.$$eval('.seed-content', (els) => els.map((e) => e.textContent)));
 
     // Context menu on a cell -> highlight
     await page.click('.garden-item >> nth=0', { button: 'right' });
@@ -172,13 +224,16 @@ async function scenario(browser, errors) {
     await page.keyboard.press('Escape');
     await page.mouse.click(5, 5);
 
-    // Pan + zoom on the canvas
+    // Pan + zoom on the canvas (start on empty sky, not on a cell)
     const viewport = await page.$('.garden-canvas-viewport');
     const box = await viewport.boundingBox();
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    const before = await page.evaluate(() => document.querySelector('.garden-world').style.transform);
+    await page.mouse.move(box.x + 40, box.y + 40);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 40, { steps: 5 });
+    await page.mouse.move(box.x + 160, box.y + 80, { steps: 5 });
     await page.mouse.up();
+    const after = await page.evaluate(() => document.querySelector('.garden-world').style.transform);
+    assert(before !== after, 'dragging the sky did not pan the world');
     await page.mouse.wheel(0, -200);
     await page.waitForTimeout(1300); // let the debounced view-state save fire
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')));
@@ -192,6 +247,7 @@ async function scenario(browser, errors) {
     console.log('highlighted:', highlighted);
     assert(saved.projects.length === 2, `expected 2 saved projects, got ${saved.projects.length}`);
     assert(viewState && typeof viewState.zoom === 'number', 'view state was not saved');
+    assert(typeof viewState.splitRatio === 'number', 'the divider position was not saved');
     assert(!saved.settings.viewState, 'view state must not be written into the synced garden');
     assert(highlighted.length === 1, `expected 1 highlighted cell, got ${highlighted.length}`);
     await shot(page, '03-two-plants.png');
@@ -203,6 +259,8 @@ async function scenario(browser, errors) {
     console.log('after reload columns:', columns);
     console.log('after reload items:', (await page.$$('.garden-item')).length);
     assert(columns.length === 2, `expected 2 columns after reload, got ${columns.length}`);
+    const canvasReloaded = (await (await page.$('.garden-canvas-area')).boundingBox()).height;
+    assert(Math.abs(canvasReloaded - canvasAfter) < 3, `the divider did not come back where it was left: ${canvasAfter} -> ${canvasReloaded}`);
 
     // --- PWA: manifest and service worker are served ---------------------------
     const manifestRes = await fetch(new URL('manifest.webmanifest', BASE));
@@ -281,6 +339,68 @@ async function scenario(browser, errors) {
     watchErrors(mpage, 'mobile', errors);
     await mpage.goto(BASE, { waitUntil: 'networkidle' });
     await mpage.waitForSelector('.garden-canvas-viewport');
+    // Garden above, board below, both on screen; nothing scrolls sideways.
+    const mobile = await mpage.evaluate(() => {
+        const r = (s) => document.querySelector(s).getBoundingClientRect();
+        return { canvas: r('.garden-canvas-viewport'), board: r('.kanban-scroll-container'), button: r('.add-plant-btn'), innerH: innerHeight, scrollW: document.documentElement.scrollWidth };
+    });
+    console.log('mobile:', JSON.stringify(mobile));
+    assert(mobile.canvas.height >= 150 && mobile.board.height >= mobile.canvas.height, `on a phone the board should get the larger pane: ${JSON.stringify(mobile)}`);
+    assert(mobile.board.bottom <= mobile.innerH + 1, `the board runs off the screen: ${JSON.stringify(mobile)}`);
+    assert(mobile.button.bottom <= mobile.innerH && mobile.button.right <= 390, `the plant button is off screen: ${JSON.stringify(mobile)}`);
+    assert(mobile.scrollW <= 390, `the page scrolls sideways on a phone: ${mobile.scrollW}`);
+    // Tap + on a phone opens the seed modal, and it fits.
+    await mpage.tap('.add-plant-btn');
+    await mpage.waitForSelector('.modal textarea');
+    const mModal = await (await mpage.$('.modal')).boundingBox();
+    assert(mModal.x >= 0 && mModal.x + mModal.width <= 390, `the modal does not fit a phone: ${JSON.stringify(mModal)}`);
+    await mpage.fill('.modal textarea', 'Phone plant');
+    await mpage.keyboard.press('Enter');
+    await mpage.waitForFunction(() => document.querySelectorAll('.project-column').length === 1);
+    const mColumn = await (await mpage.$('.project-column')).boundingBox();
+    assert(mColumn.x >= 0 && mColumn.width <= 390 / 2, `two plants should fit side by side on a phone: ${JSON.stringify(mColumn)}`);
+    // Tapping + in a zone opens an inline cell, typed straight away.
+    await mpage.tap('.stem-zone .zone-add-btn');
+    await mpage.waitForSelector('.stem-zone .garden-item.is-editing');
+    assert(await mpage.evaluate(() => document.activeElement?.classList.contains('is-editing')), 'the new cell must have focus, or a phone shows no keyboard');
+    await mpage.keyboard.type('Typed on a phone');
+    await mpage.keyboard.press('Enter');
+    const typed = '.garden-item:has-text("Typed on a phone")';
+    await mpage.waitForSelector(typed);
+    // No double-click on a phone: tap once selects, a second tap edits.
+    await mpage.waitForTimeout(700);
+    await mpage.tap(typed);
+    await mpage.waitForSelector('.garden-item.is-selected:has-text("Typed on a phone")');
+    await mpage.waitForTimeout(700);
+    await mpage.tap(typed);
+    await mpage.waitForSelector('.garden-item.is-editing');
+    await mpage.keyboard.press('Escape');
+    await mpage.waitForFunction(() => !document.querySelector('.is-editing'));
+    // No right-click either: holding a cell and letting go opens its menu.
+    const cdp = await mctx.newCDPSession(mpage);
+    const touch = async (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    const cell = await (await mpage.waitForSelector(typed)).boundingBox();
+    await touch('touchStart', cell.x + cell.width / 2, cell.y + cell.height / 2);
+    await mpage.waitForTimeout(600);
+    await touch('touchEnd');
+    await mpage.waitForSelector('.garden-context-menu');
+    const held = await mpage.$$eval('.garden-context-menu button', (els) => els.map((e) => e.textContent));
+    console.log('long-press menu:', held);
+    assert(held.includes('Edit') && held.includes('Delete'), `the long-press menu is missing its actions: ${held}`);
+    await mpage.waitForTimeout(700);
+    await mpage.tap('.garden-canvas-viewport');
+    await mpage.waitForFunction(() => !document.querySelector('.garden-context-menu'));
+    // The divider drags with a finger too.
+    const mDivider = await (await mpage.$('.garden-resizer')).boundingBox();
+    const mCanvasBefore = (await (await mpage.$('.garden-canvas-area')).boundingBox()).height;
+    const dx = mDivider.x + mDivider.width / 2;
+    const dy = mDivider.y + mDivider.height / 2;
+    await touch('touchStart', dx, dy);
+    for (let step = 1; step <= 6; step++) await touch('touchMove', dx, dy + step * 15);
+    await touch('touchEnd');
+    const mCanvasAfter = (await (await mpage.$('.garden-canvas-area')).boundingBox()).height;
+    console.log('phone canvas height after dragging the divider:', mCanvasBefore, '->', mCanvasAfter);
+    assert(Math.abs(mCanvasBefore + 90 - mCanvasAfter) < 6, `the divider did not follow the finger: ${mCanvasBefore} -> ${mCanvasAfter}`);
     await shot(mpage, '04-mobile-dark.png');
     await mctx.close();
 }

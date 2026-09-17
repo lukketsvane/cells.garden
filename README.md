@@ -79,7 +79,7 @@ interface GardenStore {
 - Signed out: `LocalStore` (localStorage, key `cells.garden/v1`). Tabs stay in step through the `storage` event.
 - Signed in: `SupabaseStore` is primary and a per-user `LocalStore` mirrors every save, so the device keeps an offline copy and sign-out never loses anything. The whole garden is one JSON blob per user; the newest `updatedAt` wins; realtime pushes changes to the other devices.
 - First sign-in on a device offers the anonymous garden to an account that has none yet, once.
-- Camera and kanban scroll are per surface (web, new tab, side panel) and stay on the device.
+- Camera, kanban scroll and the divider between them are per surface (web, new tab, side panel) and stay on the device.
 
 The `.env` file carries the Supabase URL and publishable key on purpose; both are public by design and RLS protects the data. Anything private for local tooling goes in `.env.local`, which git ignores. See `supabase/README.md` for the migrations and the dashboard settings.
 
