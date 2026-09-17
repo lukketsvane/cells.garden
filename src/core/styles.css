@@ -4,15 +4,6 @@
     height: 100%;
     padding: 0 !important;
     margin: 0 !important;
-
-    /* The kanban board's surfaces: above-ground bands, the seed row, the ground. */
-    --board-sky: var(--background-primary);
-    --board-horizon: var(--background-secondary);
-    --board-soil: color-mix(in srgb, var(--background-primary) 92%, #8a6a44);
-    --board-line: var(--background-modifier-border);
-    /* A band's top strip, with its label and every plant's +. */
-    --board-head: 30px;
-    --board-col: 230px;
 }
 
 .garden-split-container {
@@ -124,268 +115,197 @@
 }
 
 /* ========================================
-   BOTTOM HALF — Kanban board
+   BOTTOM HALF — Kanban Strip
    ======================================== */
 
 .garden-bottom-half {
+    height: 50%;
     display: flex;
     flex-direction: column;
-    background: var(--board-soil);
+    background: var(--background-primary);
     overflow: hidden;
 }
 
-/* --- Draggable Resizer --- */
-.garden-resizer {
-    flex: 0 0 12px;
-    width: 100%;
-    background: var(--board-horizon);
-    border-top: 1px solid var(--board-line);
-    border-bottom: 1px solid var(--board-line);
-    cursor: row-resize;
-    position: relative;
-    z-index: 15;
-    touch-action: none;
-    outline: none;
-}
-
-/* The grip */
-.garden-resizer::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 36px;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--text-faint);
-    transform: translate(-50%, -50%);
-    transition: background 0.2s ease;
-}
-
-.garden-resizer:hover::before,
-.garden-resizer:focus-visible::before,
-.garden-resizer.is-dragging::before {
-    background: var(--interactive-accent);
-}
-
-/* --- The one scroller: the board moves both ways, under a finger or a dragged mouse --- */
+/* --- The Scrolling Container --- */
 .kanban-scroll-container {
-    position: relative;
-    height: 100%;
-    overflow: auto;
-    overscroll-behavior: contain;
-    background: var(--board-soil);
-    touch-action: pan-x pan-y;
-    /* A cell scrolled into view stays clear of the pinned seed row and band labels. */
-    scroll-padding: calc(var(--board-head) + 16px) 16px;
-}
-
-/* --- The board: plants are columns, layers are bands across all of them ---
-   The grid's rows are the bands (BANDS in garden.ts). Every column is a subgrid
-   on those rows, so a band is as tall as its fullest cell and the seeds of all
-   plants share one line. The first column holds the band labels and is 0 wide;
-   the last one is the + that plants a seed, and stretches to the right edge. */
-.kanban-board {
-    display: grid;
-    grid-template-columns: 0 repeat(var(--plants, 1), var(--board-col)) minmax(72px, 1fr);
-    grid-template-rows: repeat(5, auto);
-    width: max-content;
-    min-width: 100%;
-    padding: 0 env(safe-area-inset-right, 0px) calc(32px + env(safe-area-inset-bottom, 0px)) env(safe-area-inset-left, 0px);
-}
-
-.kanban-band-labels,
-.project-column,
-.add-column-btn {
-    display: grid;
-    grid-row: 1 / -1;
-    grid-template-rows: subgrid;
-    min-width: 0;
-}
-
-.band-flowers, .project-column > .flowers-zone { grid-row: 1; }
-.band-stem, .project-column > .stem-zone { grid-row: 2; }
-.band-seed, .project-column > .seed-cell { grid-row: 3; }
-.band-roots, .project-column > .roots-zone { grid-row: 4; }
-.band-minerals, .project-column > .minerals-zone { grid-row: 5; }
-
-.project-column > .flowers-zone,
-.project-column > .stem-zone,
-.add-column-btn > .band-flowers,
-.add-column-btn > .band-stem {
-    background: var(--board-sky);
-}
-
-.project-column > .roots-zone,
-.project-column > .minerals-zone,
-.add-column-btn > .band-roots,
-.add-column-btn > .band-minerals {
-    background: var(--board-soil);
-}
-
-/* A line between the two bands of each half; the seed row draws the horizon. */
-.project-column > .stem-zone,
-.project-column > .minerals-zone,
-.add-column-btn > .band-stem,
-.add-column-btn > .band-minerals {
-    border-top: 1px solid var(--board-line);
-}
-
-/* --- Band labels: once per band, pinned to the left edge --- */
-.kanban-band-labels {
-    grid-column: 1;
-    position: sticky;
-    left: env(safe-area-inset-left, 0px);
-    z-index: 3;
-    width: 0;
-    pointer-events: none;
-}
-
-.kanban-band-label {
-    align-self: start;
-    width: max-content;
-    height: var(--board-head);
-    display: flex;
-    align-items: center;
-    padding: 0 20px 0 10px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-faint);
-    white-space: nowrap;
-}
-
-.kanban-band-label.band-flowers,
-.kanban-band-label.band-stem {
-    background: linear-gradient(to right, var(--board-sky) 75%, transparent);
-}
-
-.kanban-band-label.band-roots,
-.kanban-band-label.band-minerals {
-    background: linear-gradient(to right, var(--board-soil) 75%, transparent);
-}
-
-/* Below the line the band starts with */
-.kanban-band-label.band-stem,
-.kanban-band-label.band-minerals {
-    margin-top: 1px;
-    height: calc(var(--board-head) - 1px);
-}
-
-.kanban-band-label.band-seed {
-    visibility: hidden;
-}
-
-/* --- The Column --- */
-.project-column {
-    background: transparent;
-}
-
-/* --- The Zones --- */
-.garden-zone {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    padding: 0 6px 10px;
-}
-
-/* A band's top strip in one column: the + sits at its right, clear of the band label. */
-.garden-zone-label-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    height: var(--board-head);
-    flex-shrink: 0;
-}
-
-/* Seed row: the plants' names on the horizon. It stays in view at the top or the
-   bottom edge while the board scrolls, so a cell's plant is always named. */
-.seed-cell,
-.add-column-btn > .band-seed {
     display: flex;
     flex-direction: row;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 6px;
-    font-weight: 600;
-    font-size: 13px;
-    background: var(--board-horizon);
-    border-top: 1px solid var(--board-line);
-    border-bottom: 1px solid var(--board-line);
-    position: sticky;
-    top: 0;
-    bottom: 0;
-    z-index: 4;
+    align-items: flex-start; /* CRITICAL: Allows columns to grow to full content height */
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    padding: 0;
+    gap: 0;
 }
 
-/* --- Plant a seed --- */
-.add-plant-btn {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border-radius: 50%;
-    border: 1px dashed var(--text-faint);
-    background: transparent;
-    color: var(--text-muted);
-    font: inherit;
-    font-size: 18px;
-    line-height: 1;
+.add-column-btn {
+    width: 44px;
+    min-width: 44px;
+    height: 0; /* CRITICAL: Zero height so it never affects scroll calculations! */
+    position: relative;
     cursor: pointer;
     flex-shrink: 0;
-    transition: all 0.15s ease;
 }
 
-@media (hover: hover) {
-    .add-plant-btn:hover {
-        border-style: solid;
-        border-color: var(--interactive-accent);
-        background: var(--interactive-accent);
-        color: var(--text-on-accent);
-    }
+/* Empty garden: no seed row to align to, so let the button span the strip and center the + */
+.kanban-scroll-container.is-empty .add-column-btn {
+    height: 100%;
 }
 
-.add-plant-btn:active {
-    border-style: solid;
-    border-color: var(--interactive-accent);
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-}
-
-/* --- Empty garden --- */
-.kanban-scroll-container.is-empty {
+.add-column-btn-inner {
+    position: absolute;
+    top: 50%; /* Fallback, overridden by JS */
+    left: 0;
+    right: 0;
+    height: 44px; /* Fixed click area */
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: translateY(-50%);
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--text-faint);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.add-column-btn:hover .add-column-btn-inner {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+    font-weight: 400;
 }
 
 .kanban-empty-message {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    justify-content: center;
+    width: 100%;
     color: var(--text-muted);
     text-align: center;
-    padding: 32px 24px;
+    padding: 40px;
 }
 
 .kanban-empty-message h3 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
+    margin: 0 0 8px 0;
     color: var(--text-normal);
 }
 
-.kanban-empty-message .add-plant-btn {
-    width: auto;
-    height: auto;
-    padding: 9px 18px;
-    border: 1px solid var(--interactive-accent);
-    border-radius: 999px;
+.kanban-empty-message p {
+    margin: 0;
+}
+
+/* --- The Column --- */
+.project-column {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    max-width: 240px;
+    min-height: 100%; /* Allows short columns to fill the screen */
+    /* No border-right: with content-height columns it hung below each card at a different length. */
+    background: transparent;
+    flex-shrink: 0;
+}
+
+/* --- The visible card (background hugs content) --- */
+.column-card {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    background: var(--background-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+/* --- The Splitter --- */
+.column-body {
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* --- Draggable Resizer --- */
+.garden-resizer {
+    flex: 0 0 4px;
+    width: 100%;
+    background: var(--background-modifier-border);
+    cursor: row-resize;
+    position: relative;
+    z-index: 15;
+    transition: background 0.2s ease;
+}
+
+.garden-resizer:hover,
+.garden-resizer.is-dragging {
     background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    font-size: 14px;
+}
+
+
+/* --- TOP HALF (Flowers, Stem) --- */
+.column-top-half {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+/* --- BOTTOM HALF (Roots, Minerals) --- */
+.column-bottom-half {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+
+
+/* --- THE GROUND LAYER (Top Half) --- */
+.column-top-half {
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Eats all remaining space (The infinite sky) */
+    justify-content: flex-end; /* Glues the seed/stems to the ground */
+    background: var(--background-secondary);
+    border-radius: 4px 4px 0 0;
+}
+
+/* --- THE UNDERGROUND (Bottom Half) --- */
+.column-bottom-half {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; /* CRITICAL: Takes ONLY the space it needs, no more */
+    justify-content: flex-start; /* Grows DOWN into the earth */
+    background: var(--background-secondary);
+    border-radius: 0 0 4px 4px;
+}
+
+/* --- The Zones --- */
+.garden-zone {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    flex-shrink: 0; /* Prevents zones from squishing */
+}
+
+
+.garden-zone:last-child {
+    border-bottom: none;
+}
+
+/* Seed styling (Now acts as the Header) */
+.seed-cell {
+    display: flex;
+    flex-direction: row; /* <--- ADD THIS to override garden-zone's column layout */
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
     font-weight: 600;
+    font-size: 13px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    background: color-mix(in srgb, var(--background-primary-alt) 77%, transparent);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 
@@ -403,47 +323,34 @@
 
 }
 
+.zone-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-faint);
+    margin-bottom: 3px;
+    flex-shrink: 0;
+}
+
+
 .seed-content {
-    flex: 1 1 auto;
-    min-width: 0;
+    flex-grow: 1;
     font-size: 13px; /* Matches header */
     font-weight: 600;
     padding: 2px 4px;
     overflow: hidden;
-    /* Two lines of a long seed, then an ellipsis */
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow-wrap: anywhere;
-    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.4;
     cursor: text;
-    border-radius: 4px;
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
 }
 
 /* Seed Content Editable styles */
 .seed-content.draggable-cell {
     text-align: left;
-    /* Spacing as margin: padding would show the top of a clamped third line. */
-    padding: 0 4px;
-    margin: 5px 0;
+    padding: 6px 4px;
     cursor: default; /* Not grabbable */
-}
-
-.seed-content.is-selected {
-    outline: 2px solid var(--text-muted);
-}
-
-.seed-content.is-editing {
-    display: block;
-    -webkit-line-clamp: none;
-    outline: 2px solid var(--interactive-accent);
-    background: var(--background-primary-alt);
-    cursor: text;
-    -webkit-user-select: text;
-    user-select: text;
 }
 
 /* 3-Dot Context Menu Button */
@@ -473,23 +380,20 @@
 .kanban-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    min-height: 4px; /* an empty zone still takes a dropped cell */
+    gap: 3px;
 }
 
 .garden-item.draggable-cell {
-    padding: 6px 9px;
+    padding: 5px 8px;
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
-    border-radius: 5px;
-    font-size: 13px;
+    border-radius: 4px;
+    font-size: 12px;
     color: var(--text-normal);
     cursor: grab;
-    -webkit-user-select: none;
     user-select: none;
-    -webkit-touch-callout: none;
-    overflow-wrap: anywhere;
-    line-height: 1.35;
+    word-break: break-word;
+    line-height: 1.3;
     transition: border-color 0.15s ease;
 }
 
@@ -520,10 +424,11 @@
     font-size: 15px;
     line-height: 1;
     border-radius: 50%;
-    border: none;
-    background: var(--background-modifier-hover);
-    color: var(--text-muted);
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-faint);
     cursor: pointer;
+    margin-top: 3px;
     flex-shrink: 0;
     transition: all 0.15s ease;
     display: flex;
@@ -531,21 +436,14 @@
     justify-content: center;
 }
 
-/* Hover only where there is a pointer to hover with: a tap would leave it lit. */
-@media (hover: hover) {
-    .zone-add-btn:hover {
-        background: var(--interactive-accent);
-        color: var(--text-on-accent);
-    }
-}
-
-.zone-add-btn:active {
+.zone-add-btn:hover {
     background: var(--interactive-accent);
     color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
 }
 
 /* Scrollbars */
-.kanban-scroll-container::-webkit-scrollbar { width: 8px; height: 8px; }
+.kanban-scroll-container::-webkit-scrollbar { height: 8px; }
 .kanban-scroll-container::-webkit-scrollbar-track { background: var(--background-primary); }
 .kanban-scroll-container::-webkit-scrollbar-thumb { background: var(--background-modifier-border); border-radius: 4px; }
 .kanban-scroll-container::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
@@ -657,9 +555,6 @@
     outline: 2px solid var(--interactive-accent);
     background: var(--background-primary-alt);
     cursor: text;
-    /* Safari will not place a caret in text that cannot be selected. */
-    -webkit-user-select: text;
-    user-select: text;
 }
 
 
@@ -753,10 +648,23 @@
 }
 
 /* --- Standby Mode (Kanban) --- */
-/* Hide the plant's cells and + buttons; its bands stay, so the board's rows run on unbroken. */
-.project-column.is-standby .kanban-list,
-.project-column.is-standby .zone-add-btn {
+/* Hide Flowers, Stems, Roots, and Minerals completely */
+.project-column.is-standby .flowers-zone,
+.project-column.is-standby .stem-zone,
+.project-column.is-standby .roots-zone,
+.project-column.is-standby .minerals-zone {
     display: none;
+}
+
+/* Hide Add Buttons and Category Titles */
+.project-column.is-standby .zone-add-btn,
+.project-column.is-standby .zone-label {
+    display: none;
+}
+
+/* Clean up seed cell borders when it's the only thing left */
+.project-column.is-standby .seed-cell {
+    border-bottom: none;
 }
 
 /* --- Eye Icon Styling --- */
@@ -796,73 +704,4 @@
 /* Default grab cursor */
 .garden-canvas-viewport {
     cursor: grab;
-}
-
-
-/* A new cell shows what belongs in it until something is typed. */
-.garden-item.is-editing:empty::before {
-    content: attr(data-placeholder);
-    color: var(--text-faint);
-    pointer-events: none;
-}
-
-/* --- Touchscreens: bigger targets, the seed menu always in reach --- */
-@media (pointer: coarse) {
-    .garden-container {
-        --board-head: 38px;
-    }
-
-    .garden-item.draggable-cell {
-        padding: 9px 11px;
-        font-size: 14px;
-    }
-
-    .seed-content {
-        font-size: 14px;
-    }
-
-    .zone-add-btn,
-    .add-plant-btn {
-        width: 30px;
-        height: 30px;
-        min-width: 30px;
-        font-size: 18px;
-    }
-
-    /* No hover to reveal it */
-    .seed-context-btn {
-        opacity: 0.7;
-        padding: 6px;
-    }
-
-    .column-drag-handle {
-        padding: 6px 2px;
-        font-size: 16px;
-    }
-
-    /* A finger may land a little beside the divider */
-    .garden-resizer::after {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: -8px;
-        bottom: -8px;
-    }
-
-    /* Swiping sideways settles on a plant */
-    .kanban-scroll-container {
-        scroll-snap-type: x proximity;
-    }
-
-    .project-column {
-        scroll-snap-align: start;
-    }
-}
-
-/* --- Narrow screens: two plants side by side, a peek of the next --- */
-@media (max-width: 520px) {
-    .garden-container {
-        --board-col: clamp(150px, calc((100vw - 8px) / 2.2), 230px);
-    }
 }

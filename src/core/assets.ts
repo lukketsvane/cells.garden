@@ -76,15 +76,4 @@ export class AssetManager {
         return PACK.get(path) ?? null;
     }
 
-    /**
-     * A stable image from a shared category folder for an item that has none,
-     * chosen by hashing its id, so it looks the same on every render and device.
-     */
-    fallbackImageUrl(category: string, key: string): string | null {
-        const paths = [...this.getPathsInFolder(`${category}/`)].sort();
-        if (paths.length === 0) return null;
-        let hash = 0;
-        for (let i = 0; i < key.length; i++) hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0;
-        return PACK.get(paths[Math.abs(hash) % paths.length]) ?? null;
-    }
 }

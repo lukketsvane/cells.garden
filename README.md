@@ -86,7 +86,7 @@ The `.env` file carries the Supabase URL and publishable key on purpose; both ar
 
 ## Assets
 
-Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell is the path relative to `src/assets/pack/`, e.g. `plant_1/stem/plant_1_part3.png`, so it survives markdown export unchanged. The pack only has `plant_1` (stems + flowers) today. Roots, minerals and seeds are generated placeholders (`npm run art:placeholders`, from `scripts/make-placeholder-art.mjs`) until real art lands; drop real PNGs into `pack/roots/`, `pack/minerals/` and `pack/seeds/`. A part whose saved file is missing falls back to a stable pick from its folder, so removing the placeholders later does not blank existing plants.
+Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell is the path relative to `src/assets/pack/`, e.g. `plant_1/stem/plant_1_part3.png`, so it survives markdown export unchanged. The pack only has `plant_1` (stems + flowers) today. Roots, minerals and seeds have no art yet and render invisibly, exactly as in Obsidian without `Garden-Assets/`.
 
 ## Milestones
 
@@ -94,4 +94,4 @@ Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell 
 - **M1**: Supabase auth + sync, PWA. Same garden on phone and desktop. Done.
 - **M2**: Chrome extension (new tab + side panel), service worker, per-surface camera, hardened sync. Done.
 - **M3**: Obsidian import/export in the UI, and the extension popup (one plant at a time). Done. An Obsidian plugin on top of the core, syncing to the same backend, is still open. Custom images are out of scope for now.
-- **M4**: shared gardens (invite by link, live co-editing, merge on conflict) and placeholder art for roots, minerals and seeds. Done.
+- **M4**: shared gardens (invite by link, live co-editing, merge on conflict). Done.

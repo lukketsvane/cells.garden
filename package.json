@@ -14,7 +14,6 @@
     "build:ext": "vite build --config vite.ext.config.ts",
     "dev:ext": "vite build --config vite.ext.config.ts --watch --mode development",
     "icons": "node scripts/make-icons.mjs",
-    "art:placeholders": "node scripts/make-placeholder-art.mjs",
     "test:unit": "node --import ./scripts/ts-resolve.mjs --test \"src/**/*.test.ts\"",
     "test:web": "node scripts/test-web.mjs",
     "test:ext": "node scripts/test-ext.mjs",
