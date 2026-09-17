@@ -769,6 +769,93 @@
 }
 
 /* ========================================
+   THE BOARD IS ONE CANVAS
+   Every plant used to be its own little board: its own flowers box, its own
+   stem box, its own seed. The bands only looked like bands because a pass of
+   JavaScript padded each column until the seeds happened to line up, and the
+   labels above them staggered anyway.
+   Here the board is one grid and its rows ARE the bands — flowers, stem, the
+   seed horizon, roots, minerals. A plant is a column of that one grid, not a
+   board of its own, and it hands the five rows straight down to its zones, so
+   a band is as tall as the fullest plant in it and every plant shares it.
+   ======================================== */
+
+.kanban-scroll-container {
+    display: grid;
+    grid-auto-flow: column;
+    /* Each track is as wide as what stands in it: a plant is a column, the two
+       add-a-plant buttons are only as wide as themselves. */
+    grid-auto-columns: min-content;
+    /* Flowers, stem, the seed horizon, roots, minerals. */
+    grid-template-rows: auto auto auto auto auto;
+    align-items: start;
+    column-gap: 12px;
+    row-gap: 0;
+}
+
+.kanban-scroll-container .project-column {
+    display: grid;
+    grid-row: 1 / -1;
+    grid-template-rows: subgrid;
+    width: var(--garden-column-width, 230px);
+    /* Max's own min and max would fight the width above. */
+    min-width: 0;
+    max-width: none;
+    min-height: 0;
+}
+
+/* The wrappers are bookkeeping, not boxes. Flattening them puts the zones
+   themselves in the grid, which is what lets a band be one row. */
+.kanban-scroll-container .column-card,
+.kanban-scroll-container .column-body,
+.kanban-scroll-container .column-top-half,
+.kanban-scroll-container .column-bottom-half {
+    display: contents;
+}
+
+/* A band is as tall as its fullest plant, so a plant with fewer cells has room
+   to spare in it. Above the horizon that room goes above the cells, which grow
+   up from the ground: the label keeps the top of the band, where it lines up
+   with the other plants' labels, and the cells hang from the bottom against the
+   seed row. Below the horizon the default is already right, because roots and
+   minerals grow down from it. */
+.kanban-scroll-container .flowers-zone,
+.kanban-scroll-container .stem-zone {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+}
+
+.kanban-scroll-container .flowers-zone .kanban-list,
+.kanban-scroll-container .stem-zone .kanban-list {
+    margin-top: auto;
+}
+
+/* A band can now be taller than the board is, because it is as tall as its
+   fullest plant. Its label sticks to the top of the board while any of the band
+   is still in view, so a plant with one flower still says Flowers over it. */
+.kanban-scroll-container .garden-zone-label-row {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    /* The board's own colour, so the label reads as part of the canvas and only
+       shows itself when a cell passes under it. */
+    background: var(--background-secondary);
+}
+
+/* The + for a new plant sits on the horizon because the horizon is its row,
+   rather than because a measuring pass moved it there. */
+.kanban-scroll-container .add-column-btn {
+    grid-row: 3;
+    height: auto;
+    min-height: 44px;
+}
+
+.kanban-scroll-container .add-column-btn-inner {
+    top: 50%;
+}
+
+/* ========================================
    THE BOARD ON A NARROW SURFACE (a phone, the side panel)
    A column is 230px, and the board opens centred on the middle plant. On a
    desktop that frames whole columns; on a 390px phone it parks the board
@@ -779,9 +866,11 @@
 
 @media (max-width: 599px) {
     .kanban-scroll-container {
-        /* The 44px is the add-column button's width: the next plant's edge shows
-           by exactly as much, so it reads as something to swipe to. */
-        --garden-column-width: calc(100% - 44px);
+        /* The 44px is the add-a-plant button's width: the next plant's edge shows
+           by exactly as much, so it reads as something to swipe to. Measured off
+           the viewport, because the column's own track is sized from its width
+           and a percentage of it would be circular. */
+        --garden-column-width: calc(100vw - 44px);
         scroll-snap-type: x mandatory;
     }
 
