@@ -14,20 +14,6 @@
 }
 
 
-.garden-stem-part {
-    image-rendering: pixelated;
-}
-
-.garden-flower-container {
-    image-rendering: pixelated;
-}
-
-.garden-flower-part {
-    image-rendering: pixelated;
-}
-
-
-
 /* ========================================
    TOP HALF — Interactive Canvas
    ======================================== */
@@ -82,24 +68,43 @@
     height: 0; /* Acts as an anchor point, so children can grow upwards */
 }
 
+/* The wrapper above is the anchor on the horizon; this box holds the parts and
+   is shifted left by half its width (from renderPlantSprite) to centre them. */
 .garden-stem-container {
-    position: absolute;
-    bottom: 0;      /* Anchors the stem base directly to the wrapper (the horizon) */
-    left: 0;
+    position: relative;
     image-rendering: pixelated;
+}
 
+/* Every sprite of a plant. The size, the offset and the flip come from the view. */
+.garden-part {
+    position: absolute;
+    left: 50%;
+    background-size: contain;
+    background-repeat: no-repeat;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+}
+
+.garden-part:hover {
+    filter: brightness(1.4);
+}
+
+/* Above ground a part sits on the one below it; below ground it hangs from it. */
+.garden-stem-part,
+.garden-flower-part {
+    background-position: bottom center;
+}
+
+.garden-seed-part,
+.garden-root-part,
+.garden-mineral-part {
+    background-position: top center;
 }
 /* ========================================
    Animation
    ======================================== */
    
-.garden-flower-part,
-.garden-root-part,
-.garden-mineral-part,
-.garden-seed-part {
-    transition: filter 0.3s ease;
-}
-
 .garden-part-highlighted {
     filter: brightness(1.4);
 }
@@ -506,26 +511,6 @@
     cursor: grabbing;
 }
 
-.column-title {
-    flex-grow: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: left;
-}
-
-
-
-/* Only show the recycle button when hovering over the seed cell */
-.seed-cell:hover .column-delete-btn {
-    opacity: 1;
-}
-
-.column-delete-btn:hover {
-    color: #E91E63; /* Red/Pink recycle color */
-    background: rgba(233, 30, 99, 0.1);
-}
-
 /* Modal Warning Text */
 .modal-warning-text {
     color: var(--text-muted);
@@ -565,39 +550,6 @@
 }
 
 
-
-.seed-cell:hover .column-open-btn {
-    opacity: 1;
-}
-
-.column-open-btn:hover {
-    color: var(--interactive-accent);
-    background: var(--background-modifier-hover);
-}
-
-.column-open-btn svg {
-    width: 14px;
-    height: 14px;
-}
-
-/* --- Plant Part to Kanban Interactions --- */
-.garden-stem-part,
-.garden-flower-part,
-.garden-root-part,
-.garden-mineral-part,
-.garden-seed-part {
-    pointer-events: auto;
-    cursor: pointer;
-    transition: filter 0.2s ease;
-}
-
-.garden-stem-part:hover,
-.garden-flower-part:hover,
-.garden-root-part:hover,
-.garden-mineral-part:hover,
-.garden-seed-part:hover {
-    filter: brightness(1.4);
-}
 
 /* Highlight when hovering plant part */
 .garden-item.is-hover-highlighted,
@@ -1050,4 +1002,130 @@
 
 .kanban-scroll-container .project-column.is-section-end {
     border-right: 2px dashed var(--text-faint);
+}
+
+/* A zone's label with its + pushed to the far end (was an inline style plus a spacer div). */
+.garden-zone-label-row {
+    display: flex;
+    align-items: center;
+}
+
+.garden-zone-label-row .zone-label {
+    flex: 1;
+}
+
+/* --- The floating menu (menu.ts): the pill's, a plant's and a cell's --- */
+.garden-context-menu {
+    position: fixed;
+    z-index: 10000;
+    min-width: 160px;
+    padding: 4px 0;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.garden-menu-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 16px;
+    background: none;
+    border: none;
+    text-align: left;
+    font-size: 14px;
+    color: var(--text-normal);
+    cursor: pointer;
+}
+
+.garden-menu-item:hover:not(:disabled) {
+    background: var(--background-modifier-hover);
+}
+
+.garden-menu-item.is-danger {
+    color: #E91E63;
+}
+
+.garden-menu-item.is-danger:hover:not(:disabled) {
+    background: rgba(233, 30, 99, 0.1);
+}
+
+.garden-menu-item:disabled {
+    opacity: 0.4;
+    color: var(--text-faint);
+    cursor: not-allowed;
+}
+
+.garden-menu-check {
+    flex: 0 0 12px;
+    width: 12px;
+}
+
+.garden-menu-sub {
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+.garden-menu-heading {
+    margin-top: 4px;
+    padding: 8px 16px 6px;
+    border-top: 1px solid var(--background-modifier-border);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-faint);
+}
+
+.garden-context-menu > .garden-menu-heading:first-child {
+    margin-top: 0;
+    border-top: none;
+}
+
+/* --- The worm's drawing toolbar --- */
+.drawing-toolbar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 6px;
+}
+
+.drawing-toolbar-row {
+    display: flex;
+    gap: 4px;
+}
+
+.drawing-toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #ccc;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.drawing-toolbar-btn.is-active {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.drawing-toolbar-label {
+    padding: 0 4px 2px;
+    font-size: 10px;
+    color: #767d5e;
+    text-align: center;
+    white-space: nowrap;
+    user-select: none;
 }
