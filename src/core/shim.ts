@@ -4,6 +4,11 @@
  * so we install the same helpers here and the garden code ports without edits.
  *
  * Import this module once (for its side effects) before anything else in core.
+ *
+ * Inside Obsidian the real helpers are already on the prototypes, and they are
+ * the fuller implementation; ours covers only the surface the garden uses. So
+ * every install below is skipped when the method is already there, and the core
+ * runs unchanged in the vault, in the browser and in the extension.
  */
 
 export interface DomElementInfo {
@@ -70,7 +75,16 @@ function applyInfo(el: HTMLElement, o?: DomElementInfo | string) {
     if (o.value !== undefined) (el as HTMLInputElement).value = o.value;
 }
 
-Node.prototype.createEl = function <K extends keyof HTMLElementTagNameMap>(
+/**
+ * Install `name` on `proto` unless something already provides it. Obsidian
+ * does, and its version is the complete one.
+ */
+function install<T extends object>(proto: T, name: keyof T & string, value: unknown) {
+    if (typeof (proto as Record<string, unknown>)[name] === 'function') return;
+    Object.defineProperty(proto, name, { value, writable: true, configurable: true, enumerable: false });
+}
+
+install(Node.prototype, 'createEl', function <K extends keyof HTMLElementTagNameMap>(
     this: Node,
     tag: K,
     o?: DomElementInfo | string,
@@ -84,57 +98,57 @@ Node.prototype.createEl = function <K extends keyof HTMLElementTagNameMap>(
     else this.appendChild(el);
     callback?.(el);
     return el;
-};
+});
 
-Node.prototype.createDiv = function (this: Node, o?: DomElementInfo | string, callback?: (el: HTMLDivElement) => void) {
+install(Node.prototype, 'createDiv', function (this: Node, o?: DomElementInfo | string, callback?: (el: HTMLDivElement) => void) {
     return this.createEl('div', o, callback);
-};
+});
 
-Node.prototype.createSpan = function (this: Node, o?: DomElementInfo | string, callback?: (el: HTMLSpanElement) => void) {
+install(Node.prototype, 'createSpan', function (this: Node, o?: DomElementInfo | string, callback?: (el: HTMLSpanElement) => void) {
     return this.createEl('span', o, callback);
-};
+});
 
-Node.prototype.empty = function (this: Node) {
+install(Node.prototype, 'empty', function (this: Node) {
     while (this.firstChild) this.removeChild(this.firstChild);
-};
+});
 
-Element.prototype.addClass = function (this: Element, ...classes: string[]) {
+install(Element.prototype, 'addClass', function (this: Element, ...classes: string[]) {
     this.classList.add(...splitClasses(classes));
-};
-Element.prototype.addClasses = function (this: Element, classes: string[]) {
+});
+install(Element.prototype, 'addClasses', function (this: Element, classes: string[]) {
     this.classList.add(...splitClasses(classes));
-};
-Element.prototype.removeClass = function (this: Element, ...classes: string[]) {
+});
+install(Element.prototype, 'removeClass', function (this: Element, ...classes: string[]) {
     this.classList.remove(...splitClasses(classes));
-};
-Element.prototype.removeClasses = function (this: Element, classes: string[]) {
+});
+install(Element.prototype, 'removeClasses', function (this: Element, classes: string[]) {
     this.classList.remove(...splitClasses(classes));
-};
-Element.prototype.toggleClass = function (this: Element, classes: string | string[], value: boolean) {
+});
+install(Element.prototype, 'toggleClass', function (this: Element, classes: string | string[], value: boolean) {
     for (const c of splitClasses(classes)) this.classList.toggle(c, value);
-};
-Element.prototype.hasClass = function (this: Element, cls: string) {
+});
+install(Element.prototype, 'hasClass', function (this: Element, cls: string) {
     return this.classList.contains(cls);
-};
-Element.prototype.setAttr = function (this: Element, name: string, value: string | number | boolean | null) {
+});
+install(Element.prototype, 'setAttr', function (this: Element, name: string, value: string | number | boolean | null) {
     if (value === null) this.removeAttribute(name);
     else this.setAttribute(name, String(value));
-};
-Element.prototype.setAttrs = function (this: Element, attrs: { [key: string]: string | number | boolean | null }) {
+});
+install(Element.prototype, 'setAttrs', function (this: Element, attrs: { [key: string]: string | number | boolean | null }) {
     for (const [k, v] of Object.entries(attrs)) this.setAttr(k, v);
-};
-Element.prototype.getAttr = function (this: Element, name: string) {
+});
+install(Element.prototype, 'getAttr', function (this: Element, name: string) {
     return this.getAttribute(name);
-};
-Element.prototype.setText = function (this: Element, val: string | DocumentFragment) {
+});
+install(Element.prototype, 'setText', function (this: Element, val: string | DocumentFragment) {
     if (typeof val === 'string') this.textContent = val;
     else {
         this.empty();
         this.appendChild(val);
     }
-};
-Element.prototype.getText = function (this: Element) {
+});
+install(Element.prototype, 'getText', function (this: Element) {
     return this.textContent ?? '';
-};
+});
 
 export {};

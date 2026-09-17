@@ -26,9 +26,9 @@ The tests use the repo's Playwright and a Chromium it can find; run `npx playwri
 
 The web app is the core. The extension and the PWA are shells around the same build.
 
-- **Web** — the garden at a URL, deployed by Vercel: `main` is `cells.garden`, `dev` is `dev.cells.garden`.
-- **PWA** — same app on a phone; service worker precaches the shell so it opens offline.
-- **Extension** — New Tab override and Side Panel, same core, same local storage.
+- **Web**: the garden at a URL, deployed by Vercel: `main` is `cells.garden`, `dev` is `dev.cells.garden`.
+- **PWA**: same app on a phone; service worker precaches the shell so it opens offline.
+- **Extension**: New Tab override and Side Panel, same core, same local storage.
 
 Same code, three distributions. Diagrams: `docs/architecture.html` (and the PNG next to it).
 
@@ -45,9 +45,12 @@ src/core/      the core (independent of web, extension and Obsidian)
   boot.ts        bootGarden(host): mounts the garden and wires sign-in/sync
   assets.ts      AssetManager over the bundled asset pack in src/assets/pack/
   modals.ts      Max's three modals
-  garden.ts      GardenView — Max's main.ts, ported
-  app.ts         GardenApp — owns data, settings, the store switch
+  garden.ts      GardenView, Max's main.ts ported
+  app.ts         GardenApp, owns data, settings, the store switch
   markdown.ts    Max's markdown format (frontmatter + ## Flowers/Stem/Roots/Minerals), import/export
+  vault.ts       a garden as a folder of files, and back; merge/replace on import
+  zip.ts         a small zip reader/writer, no dependencies
+  transfer.ts    the download, the drop target and the Garden files modal
   styles.css     Max's styles.css
 src/web/       index.html, main.ts, app.css (theme tokens), service-worker registration
 src/assets/    sprites; pack/<plantType>/<category>/ is what Garden-Assets/ was in the vault
@@ -86,7 +89,7 @@ Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell 
 
 ## Milestones
 
-- **M0** — runs in a browser, localStorage, deployed on Vercel. Done.
-- **M1** — Supabase auth + sync, PWA. Same garden on phone and desktop. Done.
-- **M2** — Chrome extension (new tab + side panel), service worker, per-surface camera, hardened sync. Done.
-- **M3** — Obsidian import/export in the UI, custom images, an Obsidian plugin on top of the core syncing to the same backend.
+- **M0**: runs in a browser, localStorage, deployed on Vercel. Done.
+- **M1**: Supabase auth + sync, PWA. Same garden on phone and desktop. Done.
+- **M2**: Chrome extension (new tab + side panel), service worker, per-surface camera, hardened sync. Done.
+- **M3**: Obsidian import/export in the UI. Done. Custom images and an Obsidian plugin on top of the core, syncing to the same backend, are still open.

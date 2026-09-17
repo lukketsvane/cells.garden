@@ -8,6 +8,7 @@ import { GardenApp } from './app';
 import { AuthPill } from './auth';
 import { anonymousGardenClaimedBy, claimAnonymousGarden, LocalStore, userStoreKey } from './store';
 import { createSupabase, SupabaseStore } from './supabase';
+import { GardenFilesButton } from './transfer';
 
 export interface BootOptions {
     /** Where a magic link should land. Defaults to the current page. */
@@ -27,6 +28,10 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         host.createEl('p', { text: String(e) });
         return app;
     }
+
+    // M3: export/import. On the host, not in the view, which rebuilds itself.
+    // Local-first, so it works signed out and without Supabase config too.
+    new GardenFilesButton(app, host);
 
     // M1: when the build has Supabase config, offer sign-in and sync.
     const supabase = createSupabase();
