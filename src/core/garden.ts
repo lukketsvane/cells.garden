@@ -1180,7 +1180,20 @@ export class GardenView extends View {
 
                             const scrollContainer = this.contentEl.querySelector('.kanban-scroll-container') as HTMLElement;
                             if (scrollContainer) {
-                                scrollContainer.scrollLeft = (scrollContainer.scrollWidth - scrollContainer.clientWidth) / 2;
+                                // Open on the middle plant, and land on a column edge: a board
+                                // only wide enough for one plant (a phone) would otherwise open
+                                // parked between two, with neither of them whole.
+                                const middle = (scrollContainer.scrollWidth - scrollContainer.clientWidth) / 2;
+                                const cols = scrollContainer.querySelectorAll('.project-column');
+                                const firstCol = cols[0] as HTMLElement | undefined;
+                                const secondCol = cols[1] as HTMLElement | undefined;
+                                // One plant to the next, gap included.
+                                const columnStep = firstCol && secondCol
+                                    ? secondCol.offsetLeft - firstCol.offsetLeft
+                                    : (firstCol?.offsetWidth ?? 0);
+                                scrollContainer.scrollLeft = columnStep > 0
+                                    ? Math.round(middle / columnStep) * columnStep
+                                    : middle;
                                 const firstSeed = scrollContainer.querySelector('.seed-cell') as HTMLElement;
                                 if (firstSeed) {
                                     const seedCenterY = firstSeed.offsetTop + (firstSeed.offsetHeight / 2);
@@ -2778,7 +2791,10 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
 
         const column = parent.createDiv({ cls: "project-column" });
         column.dataset.projectId = project.id;
-        column.style.cssText = 'display: flex; flex-direction: column; width: 230px; flex-shrink: 0;';
+        // The width is a variable so a narrow surface can widen the column to its
+        // own width (styles.css, THE BOARD ON A NARROW SURFACE). An inline width
+        // would otherwise beat any stylesheet rule.
+        column.style.cssText = 'display: flex; flex-direction: column; width: var(--garden-column-width, 230px); flex-shrink: 0;';
 
         const columnCard = column.createDiv("column-card");
         const columnBody = columnCard.createDiv("column-body");
