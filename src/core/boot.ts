@@ -1,12 +1,34 @@
 /**
  * One entry point for every distribution (web, PWA, extension pages).
  * Mounts the garden on `host`, local-first, and adds sign-in + sync when the
- * build carries Supabase config.
+ * build carries Supabase config. With migrations 0005 and 0006 it also opens
+ * gardens shared by link (`#join=<token>`) and lets the user switch between
+ * their own garden and shared ones from the pill menu.
  */
 import './shim';
 import { GardenApp } from './app';
-import { AuthPill } from './auth';
-import { anonymousGardenClaimedBy, claimAnonymousGarden, LocalStore, userStoreKey } from './store';
+import { AuthPill, type MenuItem } from './auth';
+import { LeaveGardenModal, ShareGardenModal } from './share';
+import {
+    GardenFullError,
+    InvalidInviteError,
+    inviteTokenFromHash,
+    joinGarden,
+    listSharedGardens,
+    ownGardenId,
+    removeMember,
+    sharingAvailable,
+    SharingUnavailableError,
+} from './sharing';
+import {
+    anonymousGardenClaimedBy,
+    claimAnonymousGarden,
+    gardenStoreKey,
+    GardenGoneError,
+    LOCAL_KEY,
+    LocalStore,
+    userStoreKey,
+} from './store';
 import { createSupabase, SupabaseStore } from './supabase';
 import { GardenFilesButton } from './transfer';
 
@@ -15,7 +37,69 @@ export interface BootOptions {
     redirectTo?: string;
 }
 
+interface OpenGarden {
+    id: string;
+    name: string;
+}
+
+const PENDING_JOIN_KEY = `${LOCAL_KEY}/pendingJoin`;
+/** An invite waits this long for a sign-in before it is dropped. */
+const PENDING_JOIN_TTL = 24 * 60 * 60 * 1000;
+const activeKey = (uid: string) => `${LOCAL_KEY}/active/${uid}`;
+
+function readJson<T>(key: string): T | null {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? (JSON.parse(raw) as T) : null;
+    } catch {
+        return null;
+    }
+}
+
+function writeJson(key: string, value: unknown) {
+    try {
+        if (value === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+        // Storage blocked: the choice just does not survive a reload.
+    }
+}
+
+/**
+ * Read `#join=<token>` from the address, keep it until a sign-in can use it, and
+ * take it out of the address so it is not bookmarked or passed on by accident.
+ * Kept in localStorage because the emailed sign-in link opens a new tab.
+ */
+function stashInviteFromUrl() {
+    if (typeof location === 'undefined') return;
+    const token = inviteTokenFromHash(location.hash);
+    if (!token) return;
+    writeJson(PENDING_JOIN_KEY, { token, at: Date.now() });
+    history.replaceState(null, '', location.pathname + location.search);
+}
+
+function takePendingJoin(): string | null {
+    const pending = readJson<{ token?: string; at?: number }>(PENDING_JOIN_KEY);
+    if (!pending?.token || typeof pending.at !== 'number') return null;
+    if (Date.now() - pending.at > PENDING_JOIN_TTL) {
+        writeJson(PENDING_JOIN_KEY, null);
+        return null;
+    }
+    return pending.token;
+}
+
+/** A one-line notice over the garden that goes away by itself. */
+function notify(host: HTMLElement, text: string) {
+    host.querySelector('.garden-notice')?.remove();
+    const el = host.createDiv({ cls: 'garden-notice', text, attr: { role: 'status' } });
+    setTimeout(() => el.remove(), 5000);
+}
+
 export async function bootGarden(host: HTMLElement, options: BootOptions = {}): Promise<GardenApp> {
+    // Extension pages never receive a link, so only the web app looks.
+    const inExtension = !!(globalThis as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
+    if (!inExtension) stashInviteFromUrl();
+
     // Always start local so the garden shows instantly, signed in or not.
     const anonymous = new LocalStore();
     const app = new GardenApp(anonymous);
@@ -35,38 +119,163 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
 
     // M1: when the build has Supabase config, offer sign-in and sync.
     const supabase = createSupabase();
-    if (!supabase) return app;
+    if (!supabase) {
+        if (takePendingJoin()) {
+            writeJson(PENDING_JOIN_KEY, null);
+            notify(host, 'Sharing needs an account. This build has none.');
+        }
+        return app;
+    }
 
     const pill = new AuthPill(supabase, host, { redirectTo: options.redirectTo });
     app.onSyncState = (state) => pill.setSyncState(state);
 
     let currentUser: string | null = null;
+    /** The shared garden on screen, or null for the user's own. */
+    let shared: OpenGarden | null = null;
+
+    const openGarden = async (uid: string, target: OpenGarden | null): Promise<void> => {
+        shared = target;
+        writeJson(activeKey(uid), target);
+        pill.setLabel(target?.name ?? null);
+        if (target) {
+            try {
+                await app.useStore(new SupabaseStore(supabase, uid, { gardenId: target.id }), {
+                    mirror: new LocalStore(gardenStoreKey(target.id)),
+                });
+            } catch (e) {
+                if (!(e instanceof GardenGoneError)) throw e;
+                notify(host, `You no longer have access to ${target.name}. Showing your garden.`);
+                await openGarden(uid, null);
+            }
+            return;
+        }
+        // The anonymous garden of this device is offered to an account that has
+        // nothing yet, and only once, so a second account never inherits it.
+        const claimedBy = anonymousGardenClaimedBy();
+        const seed = app.store === anonymous && (!claimedBy || claimedBy === uid) ? app.toGarden() : null;
+        await app.useStore(new SupabaseStore(supabase, uid), {
+            mirror: new LocalStore(userStoreKey(uid)),
+            seed,
+            onSeedUsed: () => claimAnonymousGarden(uid),
+        });
+    };
+
+    const fail = (e: unknown) => {
+        console.error('Garden Cells: could not switch gardens', e);
+        pill.setSyncState('error');
+    };
+
+    app.onGone = () => {
+        const uid = currentUser;
+        if (!uid || !shared) return;
+        notify(host, `You no longer have access to ${shared.name}. Showing your garden.`);
+        openGarden(uid, null).catch(fail);
+    };
+
+    /** Use a waiting invite, if there is one. Returns the garden it opened. */
+    const joinPending = async (uid: string): Promise<OpenGarden | null> => {
+        const token = takePendingJoin();
+        if (!token) return null;
+        writeJson(PENDING_JOIN_KEY, null);
+        try {
+            const garden = await joinGarden(supabase, token);
+            const own = await ownGardenId(supabase, uid).catch(() => null);
+            if (own && own.id === garden.id) {
+                notify(host, 'This is your garden.');
+                return null;
+            }
+            notify(host, `Opened ${garden.name}.`);
+            return garden;
+        } catch (e) {
+            if (e instanceof InvalidInviteError || e instanceof GardenFullError || e instanceof SharingUnavailableError) {
+                notify(host, e.message);
+            } else {
+                console.error('Garden Cells: could not use the invite', e);
+                notify(host, 'Could not open that link. Try it again.');
+            }
+            return null;
+        }
+    };
+
+    pill.setMenu(async (): Promise<MenuItem[]> => {
+        const uid = currentUser;
+        if (!uid || !(await sharingAvailable(supabase))) return [];
+        const gardens = await listSharedGardens(supabase, uid);
+        const items: MenuItem[] = [];
+        if (gardens.length > 0) {
+            items.push({ label: 'Gardens', heading: true });
+            items.push({ label: 'My garden', active: !shared, onClick: () => { openGarden(uid, null).catch(fail); } });
+            for (const g of gardens) {
+                items.push({
+                    label: g.name,
+                    sub: `by ${g.ownerName}`,
+                    active: shared?.id === g.id,
+                    onClick: () => { openGarden(uid, { id: g.id, name: g.name }).catch(fail); },
+                });
+            }
+        }
+        if (!shared) {
+            items.push({
+                label: 'Share garden',
+                onClick: async () => {
+                    let own = await ownGardenId(supabase, uid);
+                    if (!own) {
+                        // A fresh account has no row until its first save.
+                        await app.saveGardenData();
+                        own = await ownGardenId(supabase, uid);
+                    }
+                    if (!own) {
+                        notify(host, 'Could not share yet. Try again in a moment.');
+                        return;
+                    }
+                    new ShareGardenModal(supabase, own.id, own.name, () => {}).open();
+                },
+            });
+        } else {
+            const leaving = shared;
+            items.push({
+                label: 'Leave garden',
+                danger: true,
+                onClick: () => new LeaveGardenModal(leaving.name, async () => {
+                    try {
+                        await removeMember(supabase, leaving.id, uid);
+                        notify(host, `Left ${leaving.name}.`);
+                        await openGarden(uid, null);
+                    } catch (e) {
+                        fail(e);
+                    }
+                }).open(),
+            });
+        }
+        return items;
+    });
+
+    let askedToSignIn = false;
     supabase.auth.onAuthStateChange((_event, session) => {
         pill.setSession(session);
         const uid = session?.user.id ?? null;
+        // An invite is waiting and nobody is signed in: ask once, on the first answer.
+        if (!uid && !askedToSignIn && takePendingJoin()) {
+            askedToSignIn = true;
+            setTimeout(() => pill.signIn('Sign in to open the garden you were invited to.'), 0);
+        }
         if (uid === currentUser) return; // token refresh, same user
         currentUser = uid;
         // Supabase asks that other client calls run outside this callback.
         setTimeout(() => {
-            let switching: Promise<void>;
             if (uid) {
-                // The anonymous garden of this device is offered to an account that has
-                // nothing yet, and only once, so a second account never inherits it.
-                const claimedBy = anonymousGardenClaimedBy();
-                const seed = app.store === anonymous && (!claimedBy || claimedBy === uid) ? app.toGarden() : null;
-                switching = app.useStore(new SupabaseStore(supabase, uid), {
-                    mirror: new LocalStore(userStoreKey(uid)),
-                    seed,
-                    onSeedUsed: () => claimAnonymousGarden(uid),
-                });
+                void (async () => {
+                    const joined = await joinPending(uid);
+                    const remembered = joined ?? readJson<OpenGarden>(activeKey(uid));
+                    await openGarden(uid, remembered && remembered.id ? remembered : null);
+                })().catch(fail);
             } else {
+                shared = null;
+                pill.setLabel(null);
                 // Sign-out: show the anonymous garden again, never write the account's data into it.
-                switching = app.useStore(anonymous, { reconcile: false });
+                app.useStore(anonymous, { reconcile: false }).catch(fail);
             }
-            switching.catch((e) => {
-                console.error('Garden Cells: could not switch store', e);
-                pill.setSyncState('error');
-            });
         }, 0);
     });
 

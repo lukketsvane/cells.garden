@@ -23,6 +23,21 @@ import { Modal, Setting } from './ui';
 export interface AuthOptions {
     /** Where the magic link should land. Defaults to the current page. */
     redirectTo?: string;
+    /** One extra line under the heading, e.g. why sign-in is being asked for. */
+    note?: string;
+}
+
+/** A row in the signed-in menu. */
+export interface MenuItem {
+    label: string;
+    /** Smaller text after the label. */
+    sub?: string;
+    /** Shows a check mark. */
+    active?: boolean;
+    danger?: boolean;
+    /** A non-clickable heading. */
+    heading?: boolean;
+    onClick?: () => void;
 }
 
 /** Checked when a password is chosen, never when one is typed to sign in. */
@@ -71,6 +86,7 @@ class SignInModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         contentEl.createEl('h2', { text: 'Sign in' });
+        if (this.options.note) contentEl.createEl('p', { cls: 'auth-note', text: this.options.note });
         contentEl.createEl('p', { text: 'Syncs to every device you sign in on. New here? Pick a password and press Create account.' });
 
         let password = '';
@@ -279,6 +295,8 @@ class SignInModal extends Modal {
 export class AuthPill {
     el: HTMLElement;
     private session: Session | null = null;
+    private label: string | null = null;
+    private buildMenu: (() => MenuItem[] | Promise<MenuItem[]>) | null = null;
 
     constructor(private readonly client: SupabaseClient, host: HTMLElement, private readonly options: AuthOptions = {}) {
         this.el = host.createEl('button', { cls: 'auth-pill', attr: { type: 'button', title: 'Sign in to sync your garden' } });
@@ -292,6 +310,22 @@ export class AuthPill {
 
     setSession(session: Session | null) {
         this.session = session;
+        this.render();
+    }
+
+    /** Open the sign-in modal, with an optional line explaining why. */
+    signIn(note?: string) {
+        new SignInModal(this.client, { ...this.options, note }).open();
+    }
+
+    /** Rows shown between the email and Sign out. Built each time the menu opens. */
+    setMenu(build: () => MenuItem[] | Promise<MenuItem[]>) {
+        this.buildMenu = build;
+    }
+
+    /** Shown instead of the email, e.g. the name of a shared garden. null: the email. */
+    setLabel(label: string | null) {
+        this.label = label;
         this.render();
     }
 
@@ -311,7 +345,8 @@ export class AuthPill {
             const email = this.session.user.email ?? '';
             const initial = (email[0] ?? '•').toUpperCase();
             this.el.createSpan({ cls: 'auth-pill-avatar', text: initial });
-            this.el.createSpan({ cls: 'auth-pill-label', text: email });
+            this.el.createSpan({ cls: 'auth-pill-label', text: this.label ?? email });
+            this.el.toggleClass('is-shared', this.label !== null);
             this.el.addClass('is-signed-in');
         } else {
             this.el.createSpan({ cls: 'auth-pill-label', text: 'Sign in' });
@@ -319,8 +354,14 @@ export class AuthPill {
         }
     }
 
-    private showMenu() {
+    private async showMenu() {
         document.querySelector('.garden-context-menu')?.remove();
+        let items: MenuItem[] = [];
+        try {
+            items = this.buildMenu ? await this.buildMenu() : [];
+        } catch (e) {
+            console.error('Garden Cells: could not build the menu', e);
+        }
         const menu = document.createElement('div');
         menu.className = 'garden-context-menu';
         menu.style.cssText = 'position: fixed; z-index: 10000; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 4px 0; min-width: 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
@@ -330,6 +371,39 @@ export class AuthPill {
         who.textContent = this.session?.user.email ?? '';
         who.style.cssText = `${menuStyle} font-size: 11px; color: var(--text-faint); pointer-events: none; cursor: default;`;
         menu.appendChild(who);
+
+        for (const item of items) {
+            if (item.heading) {
+                const h = document.createElement('div');
+                h.textContent = item.label;
+                h.style.cssText = `${menuStyle} font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); pointer-events: none; cursor: default; margin-top: 4px; border-top: 1px solid var(--background-modifier-border); padding-top: 8px;`;
+                menu.appendChild(h);
+                continue;
+            }
+            const row = document.createElement('button');
+            row.className = 'auth-menu-item';
+            row.style.cssText = `${menuStyle} display: flex; align-items: baseline; gap: 8px;${item.danger ? ' color: #E91E63;' : ''}`;
+            const check = document.createElement('span');
+            check.textContent = item.active ? '✓' : '';
+            check.style.cssText = 'width: 12px; flex: 0 0 12px;';
+            row.appendChild(check);
+            const text = document.createElement('span');
+            text.textContent = item.label;
+            row.appendChild(text);
+            if (item.sub) {
+                const sub = document.createElement('span');
+                sub.textContent = item.sub;
+                sub.style.cssText = 'font-size: 11px; color: var(--text-faint);';
+                row.appendChild(sub);
+            }
+            row.onmouseenter = () => { row.style.background = 'var(--background-modifier-hover)'; };
+            row.onmouseleave = () => { row.style.background = 'none'; };
+            row.onclick = () => {
+                menu.remove();
+                item.onClick?.();
+            };
+            menu.appendChild(row);
+        }
 
         const out = document.createElement('button');
         out.textContent = 'Sign out';
