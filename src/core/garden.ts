@@ -169,7 +169,10 @@ export class GardenView extends View {
 
     // --- View State ---
 
-    private _viewStateKey = 'garden-cells-view-state';
+    // Camera + kanban scroll are per surface (web, newtab, sidepanel): a camera saved from a
+    // wide New Tab page would leave the world off-screen in a 360px side panel. Kept in
+    // localStorage on this device only, never in the synced garden blob.
+    private _viewStateKey = 'cells.garden/view/' + (document.documentElement.dataset.context || 'web');
 
     private saveViewState() {
         const scrollContainer = this.contentEl.querySelector('.kanban-scroll-container') as HTMLElement | null;
@@ -180,9 +183,11 @@ export class GardenView extends View {
             kanbanScrollLeft: scrollContainer ? scrollContainer.scrollLeft : 0,
             kanbanScrollTop: scrollContainer ? scrollContainer.scrollTop : 0
         };
-        this.app.settings.viewState = state;
-        // Save silently to data.json. We don't need to await this.
-        this.app.saveSettings(); 
+        try {
+            localStorage.setItem(this._viewStateKey, JSON.stringify(state));
+        } catch {
+            // private mode or blocked storage: the camera just starts centred next time
+        } 
     }
     private scheduleViewStateSave() {
         if (this._viewStateSaveTimeout) clearTimeout(this._viewStateSaveTimeout);
@@ -197,7 +202,34 @@ export class GardenView extends View {
         this.saveViewState();
     }
     private loadViewState(): ViewState | null {
-        return this.app.settings.viewState ?? null;
+        try {
+            const raw = localStorage.getItem(this._viewStateKey);
+            if (!raw) return null;
+            const s = JSON.parse(raw) as Partial<ViewState>;
+            if (typeof s.zoom !== 'number' || typeof s.translateX !== 'number' || typeof s.translateY !== 'number') return null;
+            return {
+                zoom: s.zoom,
+                translateX: s.translateX,
+                translateY: s.translateY,
+                kanbanScrollLeft: s.kanbanScrollLeft ?? 0,
+                kanbanScrollTop: s.kanbanScrollTop ?? 0,
+            };
+        } catch {
+            return null;
+        }
+    }
+
+    /** True when the current camera still shows part of the world in this viewport. */
+    private cameraInView(): boolean {
+        const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        const world = this.contentEl.querySelector('.garden-world') as HTMLElement | null;
+        if (!viewport || !world) return true;
+        const vw = viewport.offsetWidth, vh = viewport.offsetHeight;
+        const left = this.currentTranslateX, top = this.currentTranslateY;
+        const right = left + world.offsetWidth * this.zoom;
+        const bottom = top + world.offsetHeight * this.zoom;
+        const margin = 40;
+        return right > margin && left < vw - margin && bottom > margin && top < vh - margin;
     }
 
 
@@ -1121,8 +1153,8 @@ export class GardenView extends View {
             if (!this._hasLoadedInitialState) {
                 this._hasLoadedInitialState = true; // Mark as done so this only runs once ever!
                 
-                if (!persistedState) {
-                    // No saved state found. Calculate the default centered view.
+                if (!persistedState || !this.cameraInView()) {
+                    // No usable saved state (none, or saved by a surface of another size): centre the view.
                     const win = this.containerEl.ownerDocument.defaultView || window;
                     win.requestAnimationFrame(() => {
                         win.requestAnimationFrame(() => {
@@ -2402,6 +2434,25 @@ export class GardenView extends View {
         if (part) part.removeClass('garden-part-slow-pulse');
     }
 
+    /**
+     * Store updates (another tab, another device) replace app.gardenData with fresh objects,
+     * so a project captured by a modal or an event handler may be stale by the time it is used.
+     * Always mutate the live object.
+     */
+    private live(project: ProjectData): ProjectData {
+        return this.app.gardenData.find(p => p.id === project.id) ?? project;
+    }
+
+    private liveItem(itemId: string): LayerItem | null {
+        for (const p of this.app.gardenData) {
+            for (const layer of ['stem', 'flowers', 'roots', 'minerals'] as const) {
+                const found = p[layer].find(i => i.id === itemId);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
     private _highlightedItemId: string | null = null;
 
     private selectedCells: HTMLElement[] = [];
@@ -2493,14 +2544,17 @@ export class GardenView extends View {
         const newText = el.getText().trim();
         if (newText !== item.content) {
             item.content = newText;
+            const live = this.liveItem(item.id);
+            if (live && live !== item) live.content = newText;
             this.app.saveGardenData();
         }
     }
 
     private async deleteCell(el: HTMLElement, item: LayerItem, project: ProjectData, arrayName: 'stem' | 'flowers' | 'minerals' | 'roots') {
-        const index = project[arrayName].findIndex(i => i.id === item.id);
+        const target = this.live(project);
+        const index = target[arrayName].findIndex(i => i.id === item.id);
         if (index !== -1) {
-            project[arrayName].splice(index, 1);
+            target[arrayName].splice(index, 1);
             await this.app.saveGardenData();
             this.onOpen();
         }
@@ -2592,7 +2646,9 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         standbyOpt.onclick = async (ev) => {
             ev.stopPropagation();
             menu.remove();
-            project.standby = !project.standby;
+            const live = this.live(project);
+            live.standby = !live.standby;
+            project.standby = live.standby;
             await this.app.saveGardenData();
             this.onOpen(); // Re-render to apply canvas filters
         };
@@ -2638,9 +2694,10 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                     menu.remove();
                     
                     // Change type and reassign all stem/flower images!
-                    project.plantType = pt;
-                    project.stem.forEach(item => { item.imagePath = this.app.assetManager.assignRandomImage('stem', pt) || undefined; });
-                    project.flowers.forEach(item => { item.imagePath = this.app.assetManager.assignRandomImage('flowers', pt) || undefined; });
+                    const live = this.live(project);
+                    live.plantType = pt;
+                    live.stem.forEach(item => { item.imagePath = this.app.assetManager.assignRandomImage('stem', pt) || undefined; });
+                    live.flowers.forEach(item => { item.imagePath = this.app.assetManager.assignRandomImage('flowers', pt) || undefined; });
                     
                     await this.app.saveGardenData();
                     this.onOpen();
@@ -2744,6 +2801,9 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
                 const newSeed = seedContent.getText().trim();
                 
                 if (newSeed && newSeed !== project.seed) {
+                    const live = this.live(project);
+                    live.seed = newSeed;
+                    live.name = newSeed;
                     project.seed = newSeed;
                     project.name = newSeed;
                     this.app.saveGardenData();
@@ -2794,6 +2854,7 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
             e.stopPropagation();
             if (project.standby) {
                 project.standby = false;
+                this.live(project).standby = false;
                 this.app.saveGardenData();
                 this.onOpen(); // Force re-render to restore the plant visually
             } else {
@@ -3273,7 +3334,7 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
                 isComplete: arrayName === 'flowers',
                 imagePath: randomImagePath || undefined 
             };
-            project[arrayName].unshift(newItem);
+            this.live(project)[arrayName].unshift(newItem);
             await this.app.saveGardenData();
             this.onOpen();
         }).open();

@@ -21,8 +21,18 @@ Free tier. Auth via magic link, one row per garden in `gardens.data` (jsonb), RL
 
 Without these two values the app builds and runs exactly as M0: localStorage only, no sign-in button.
 
+## Migrations
+
+Run them in order in the SQL editor. Each one is safe to run more than once.
+
+| File | What it does |
+|------|--------------|
+| `migrations/0001_init.sql` | `profiles`, `gardens`, RLS, `updated_at` trigger, realtime publication |
+| `migrations/0002_gardens_unique_user.sql` | removes duplicate garden rows and adds a unique index on `gardens(user_id)` |
+
 ## Sync model
 
-- Signed out: `LocalStore` (localStorage).
-- Signed in: `SupabaseStore`. On first sign-in the local garden is uploaded if the cloud garden is empty; otherwise the newer `updatedAt` wins. Every save writes the whole blob. Realtime on `gardens` re-renders other open devices.
-- Sign out keeps the local copy so the garden never disappears from the device.
+- Signed out: `LocalStore` (localStorage, `cells.garden/v1`).
+- Signed in: `SupabaseStore` is primary; a per-user `LocalStore` (`cells.garden/v1/user/<uid>`) mirrors every save as the offline copy. On sign-in the newer `updatedAt` of cloud vs. mirror wins. An account with no garden yet receives the device's anonymous garden, once (`cells.garden/v1/claimedBy` remembers which account took it), so a second account on the same device never inherits the first one's plants.
+- Two pages signing in at the same moment (new tab + side panel) are serialised with `navigator.locks`; the store also re-checks for an existing row before inserting and follows the newest row per user in realtime.
+- Sign-out shows the anonymous garden again and never writes the account's data into it.

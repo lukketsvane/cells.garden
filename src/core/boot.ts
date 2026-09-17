@@ -6,7 +6,7 @@
 import './shim';
 import { GardenApp } from './app';
 import { AuthPill } from './auth';
-import { LocalStore } from './store';
+import { anonymousGardenClaimedBy, claimAnonymousGarden, LocalStore, userStoreKey } from './store';
 import { createSupabase, SupabaseStore } from './supabase';
 
 export interface BootOptions {
@@ -16,8 +16,8 @@ export interface BootOptions {
 
 export async function bootGarden(host: HTMLElement, options: BootOptions = {}): Promise<GardenApp> {
     // Always start local so the garden shows instantly, signed in or not.
-    const local = new LocalStore();
-    const app = new GardenApp(local);
+    const anonymous = new LocalStore();
+    const app = new GardenApp(anonymous);
 
     try {
         await app.mount(host);
@@ -43,9 +43,21 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         currentUser = uid;
         // Supabase asks that other client calls run outside this callback.
         setTimeout(() => {
-            const switching = uid
-                ? app.useStore(new SupabaseStore(supabase, uid), { mirror: local })
-                : app.useStore(local);
+            let switching: Promise<void>;
+            if (uid) {
+                // The anonymous garden of this device is offered to an account that has
+                // nothing yet, and only once, so a second account never inherits it.
+                const claimedBy = anonymousGardenClaimedBy();
+                const seed = app.store === anonymous && (!claimedBy || claimedBy === uid) ? app.toGarden() : null;
+                switching = app.useStore(new SupabaseStore(supabase, uid), {
+                    mirror: new LocalStore(userStoreKey(uid)),
+                    seed,
+                    onSeedUsed: () => claimAnonymousGarden(uid),
+                });
+            } else {
+                // Sign-out: show the anonymous garden again, never write the account's data into it.
+                switching = app.useStore(anonymous, { reconcile: false });
+            }
             switching.catch((e) => {
                 console.error('Garden Cells: could not switch store', e);
                 pill.setSyncState('error');
