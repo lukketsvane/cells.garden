@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <title>cells.garden</title>
     <meta name="description" content="A kanban-style project garden where tasks grow into plants.">
     <meta name="theme-color" content="#87CEEB" media="(prefers-color-scheme: light)">
@@ -12,7 +12,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Garden">
     <link rel="icon" href="./icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="./icon.svg">
+    <!-- iOS ignores SVG touch icons. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
     <!-- <link rel="manifest"> is injected by vite-plugin-pwa in the build. -->
 </head>
 <body>
