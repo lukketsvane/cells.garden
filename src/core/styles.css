@@ -738,20 +738,58 @@
 }
 
 /* The seed row is the horizon of the board: one continuous band. The border image
-   is painted far past the row on both sides (the scroll container clips it), so the
-   band and its two lines run across every plant and the empty board around them. */
+   is painted past the row (the scroll container clips it), so the band and its two
+   lines run across every plant and the empty board around them.
+
+   It bleeds to the right, not the left. Every seed cell is sticky, so each one is
+   its own stacking context and paints whole — band and all — after the one before
+   it. A bleed to the left therefore paints over the previous plant's name, which
+   left every plant but the last one nameless. A bleed to the right lands under the
+   next plant's name, which paints after it, so it costs nothing. The 12px on the
+   left is the gap between columns (set on the container in garden.ts), enough to
+   join the band up and too little to reach a neighbour. */
 .kanban-scroll-container .seed-cell {
     border: none;
     background: transparent;
     border-image: linear-gradient(to bottom,
         var(--background-modifier-border) 0 1px,
         var(--background-primary-alt) 1px calc(100% - 1px),
-        var(--background-modifier-border) calc(100% - 1px)) fill 0 / 0 / 0 100vw;
+        var(--background-modifier-border) calc(100% - 1px)) fill 0 / 0 / 0 100vw 0 12px;
     margin: 0;
+}
+
+/* Nothing has painted yet to the left of the first plant, so it keeps the full
+   bleed and the band still runs out to the edge of the board. */
+.kanban-scroll-container .project-column:first-child .seed-cell {
+    border-image-outset: 0 100vw;
 }
 
 .kanban-scroll-container .add-column-btn {
     align-self: stretch;
+}
+
+/* ========================================
+   THE BOARD ON A NARROW SURFACE (a phone, the side panel)
+   A column is 230px, and the board opens centred on the middle plant. On a
+   desktop that frames whole columns; on a 390px phone it parks the board
+   mid-plant, with one column cut off on the left and another on the right, and
+   no plant ever whole. Here a column is the board's own width less the edge of
+   the next one, and a swipe snaps to one plant at a time.
+   ======================================== */
+
+@media (max-width: 599px) {
+    .kanban-scroll-container {
+        /* The 44px is the add-column button's width: the next plant's edge shows
+           by exactly as much, so it reads as something to swipe to. */
+        --garden-column-width: calc(100% - 44px);
+        scroll-snap-type: x mandatory;
+    }
+
+    /* Max's cap on a column is what the variable has to get past. */
+    .kanban-scroll-container .project-column {
+        max-width: none;
+        scroll-snap-align: start;
+    }
 }
 
 /* ========================================
