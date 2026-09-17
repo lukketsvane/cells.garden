@@ -41,6 +41,17 @@ const WORLD_PADDING = 320;
 const WORLD_BLEED = 6000;
 // How far past an edge a drag can stretch, in screen pixels, before it stops.
 const RUBBER_REACH = 120;
+// Frames a shooting star lives, long enough to fade in and out again.
+const STAR_LIFE = 25;
+
+/** Cancel a timer or interval and hand back null, so `x = stop(x)` clears it. */
+function stop(handle: number | null): null {
+    if (handle !== null) {
+        clearTimeout(handle);
+        clearInterval(handle);
+    }
+    return null;
+}
 
 /** An image, once the browser knows its size. A broken one resolves too, at 0x0. */
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -84,7 +95,7 @@ export class GardenView extends View {
     private currentTranslateX = 0;
     private currentTranslateY = 0;
     private zoom = 1;
-    private zoomMin = 0.15; // Changed from 0.3
+    private zoomMin = 0.15;
     private zoomMax = 3;
 
 
@@ -279,11 +290,12 @@ export class GardenView extends View {
     
     // --- Shooting Star State ---
     private shootingStarCanvas: HTMLCanvasElement | null = null;
-    private shootingStars: { x: number; y: number; angle: number; speed: number; life: number; maxLife: number; history: {x: number, y: number}[] }[] = [];
+    private shootingStars: { x: number; y: number; angle: number; speed: number; life: number }[] = [];
     private showerAngle: number = Math.PI / 4;
     private showerRemaining: number = 0;
     private satellites: { el: HTMLElement; x: number; y: number; vx: number; vy: number; isUfo: boolean; turnTimer: number }[] = [];
-    private satelliteLayer: HTMLElement | null = null;    private shootingStarRAF: number | null = null;
+    private satelliteLayer: HTMLElement | null = null;
+    private shootingStarRAF: number | null = null;
     private nextShootingStarCheck: number = 0;
     private nightSkyState: 'unrolled' | 'dead' | 'normal' | 'shower' = 'unrolled';
 
@@ -291,15 +303,16 @@ export class GardenView extends View {
         if (this.shootingStarRAF !== null) return;
         const win = this.containerEl.ownerDocument.defaultView || window;
 
-        const spawnStar = () => {
+        /** A star anywhere in the top half of the sky. Without an angle, any angle. */
+        const spawnStar = (angle = Math.random() * Math.PI * 2) => {
+            const canvas = this.shootingStarCanvas;
+            if (!canvas) return;
             this.shootingStars.push({
-                x: Math.random() * this.shootingStarCanvas!.width,
-                y: Math.random() * this.shootingStarCanvas!.height * 0.5, 
-                angle: Math.random() * Math.PI * 2, // Random angle for normal stars
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height * 0.5,
+                angle,
                 speed: 4 + Math.random() * 2,
-                life: 25, // Increased life to allow for fade in/out time
-                maxLife: 25,
-                history: [] // Initialize empty history for the trail!
+                life: STAR_LIFE,
             });
         };
 
@@ -386,19 +399,8 @@ export class GardenView extends View {
                                 this.showerAngle = Math.PI / 4 + (Math.random() - 0.5) * Math.PI / 2; 
                                 this.nextShootingStarCheck = time + 1000 + Math.random() * 2000; 
                             } else {
-                                const angleVariance = (Math.random() - 0.5) * 0.52; 
-                                const starAngle = this.showerAngle + angleVariance;
-                                
-                                this.shootingStars.push({
-                                    x: Math.random() * this.shootingStarCanvas!.width,
-                                    y: Math.random() * this.shootingStarCanvas!.height * 0.5, 
-                                    angle: starAngle,
-                                    speed: 4 + Math.random() * 2,
-                                    life: 25, // Updated to match normal stars
-                                    maxLife: 25,
-                                    history: [] // <--- ADD THIS!
-                                });
-                                
+                                // A shower's stars all fall roughly the same way.
+                                spawnStar(this.showerAngle + (Math.random() - 0.5) * 0.52);
                                 this.showerRemaining--;
                                 if (this.showerRemaining > 0) {
                                     this.nextShootingStarCheck = time + 300 + Math.random() * 500; 
@@ -429,7 +431,7 @@ export class GardenView extends View {
                 const vy = Math.sin(s.angle) * s.speed;
 
                 // 1. Calculate smooth sine-wave fade (0 to 1 to 0 over lifespan)
-                const progress = 1 - (s.life / s.maxLife); // 0.0 to 1.0
+                const progress = 1 - s.life / STAR_LIFE;
                 const fadeAlpha = Math.sin(progress * Math.PI) * 0.55; // Peaks at 0.55 in the middle!
 
                 // 2. Draw a perfect, straight 1-pixel line trail
@@ -614,7 +616,7 @@ export class GardenView extends View {
     }
 
     private scheduleRandomTurn() {
-        if (this.antTurnTimeout) clearTimeout(this.antTurnTimeout);
+        stop(this.antTurnTimeout);
 
         const turnTime = 2000 + Math.random() * 4000;
         this.antTurnTimeout = window.setTimeout(() => {
@@ -632,44 +634,22 @@ export class GardenView extends View {
 
     private stopAnt() {
         this.isWalking = false;
-        if (this.antWalkInterval) {
-            clearInterval(this.antWalkInterval);
-            this.antWalkInterval = null;
-        }
-        if (this.antBreakTimeout) {
-            clearTimeout(this.antBreakTimeout);
-            this.antBreakTimeout = null;
-        }
-        if (this.antTurnTimeout) {
-            clearTimeout(this.antTurnTimeout);
-            this.antTurnTimeout = null;
-        }
+        this.antWalkInterval = stop(this.antWalkInterval);
+        this.antBreakTimeout = stop(this.antBreakTimeout);
+        this.antTurnTimeout = stop(this.antTurnTimeout);
     }
 
+    /** Walk 4-10 seconds, stand still for half a second to two, then again. */
     private scheduleAntBreak() {
-        if (this.antBreakTimeout) clearTimeout(this.antBreakTimeout);
-
-        // Walk for 4 to 10 seconds before taking a break
-        const walkTime = 4000 + Math.random() * 6000;
-
+        stop(this.antBreakTimeout);
         this.antBreakTimeout = window.setTimeout(() => {
-            // Pause walking
-            if (this.antWalkInterval) {
-                clearInterval(this.antWalkInterval);
-                this.antWalkInterval = null;
-            }
-            if (this.antTurnTimeout) {
-                clearTimeout(this.antTurnTimeout);
-                this.antTurnTimeout = null;
-            }
-
-            // Stand still for 0.5 to 2 seconds
-            const pauseTime = 500 + Math.random() * 1500;
+            this.antWalkInterval = stop(this.antWalkInterval);
+            this.antTurnTimeout = stop(this.antTurnTimeout);
             this.antBreakTimeout = window.setTimeout(() => {
                 this.resumeWalking();
-                this.scheduleAntBreak(); // Schedule the next break
-            }, pauseTime);
-        }, walkTime);
+                this.scheduleAntBreak();
+            }, 500 + Math.random() * 1500);
+        }, 4000 + Math.random() * 6000);
     }
 
     // --- The Worm Logic ---
@@ -794,18 +774,12 @@ export class GardenView extends View {
     }
 
     private pauseWorm() {
-        if (this.wormInterval) {
-            clearInterval(this.wormInterval);
-            this.wormInterval = null;
-        }
-        if (this.wormTurnTimeout) {
-            clearTimeout(this.wormTurnTimeout);
-            this.wormTurnTimeout = null;
-        }
+        this.wormInterval = stop(this.wormInterval);
+        this.wormTurnTimeout = stop(this.wormTurnTimeout);
     }
 
     private scheduleWormTurn() {
-        if (this.wormTurnTimeout) clearTimeout(this.wormTurnTimeout);
+        stop(this.wormTurnTimeout);
 
         const turnTime = 1000 + Math.random() * 4000;
         this.wormTurnTimeout = window.setTimeout(() => {
@@ -827,19 +801,15 @@ export class GardenView extends View {
     }
 
     private scheduleWormBreak() {
-        if (this.wormBreakTimeout) clearTimeout(this.wormBreakTimeout);
-
-        const moveTime = 4000 + Math.random() * 8000;
+        stop(this.wormBreakTimeout);
         this.wormBreakTimeout = window.setTimeout(() => {
             this.pauseWorm();
-
-            const pauseTime = 3000 + Math.random() * 6000;
             this.wormBreakTimeout = window.setTimeout(() => {
                 this.resumeWorm();
                 this.scheduleWormTurn();
                 this.scheduleWormBreak();
-            }, pauseTime);
-        }, moveTime);
+            }, 3000 + Math.random() * 6000);
+        }, 4000 + Math.random() * 8000);
     }
 
     private stopWorm() {
@@ -851,10 +821,7 @@ export class GardenView extends View {
             this._savedWormNextDir = { ...this.wormNextDir };
         }
         this.pauseWorm();
-        if (this.wormBreakTimeout) {
-            clearTimeout(this.wormBreakTimeout);
-            this.wormBreakTimeout = null;
-        }
+        this.wormBreakTimeout = stop(this.wormBreakTimeout);
     }
 
     private createWormElements(parent: HTMLElement) {
@@ -1117,22 +1084,18 @@ export class GardenView extends View {
     }
 
     private _renderGeneration = 0; // Guards against concurrent onOpen() calls
-    private _renderDebounce: ReturnType<typeof setTimeout> | null = null;
+    private _renderDebounce: number | null = null;
 
-    /** Debounced version of onOpen — coalesces rapid calls (e.g. fast cell reorders) */
+    /** onOpen, debounced, so a run of fast edits draws the garden once. */
     scheduleRender() {
-        if (this._renderDebounce) clearTimeout(this._renderDebounce);
+        this._renderDebounce = stop(this._renderDebounce);
         const win = this.containerEl.ownerDocument.defaultView || window;
-        // Cast to any to bridge the gap between Node's Timeout and Browser's number
         this._renderDebounce = win.setTimeout(() => {
             // A sync from another tab or device must not throw away a cell being
             // written: wait until the typing is done, then render.
-            if (this.isTyping()) {
-                this.scheduleRender();
-                return;
-            }
-            this.onOpen();
-        }, 80) as any;
+            if (this.isTyping()) this.scheduleRender();
+            else void this.onOpen();
+        }, 80);
     }
 
     private isTyping(): boolean {
@@ -1293,7 +1256,7 @@ export class GardenView extends View {
             const container = this.contentEl;
             if (container) {
                 container.createEl("h2", { text: "Garden Crashed" });
-                container.createEl("p", { text: String(e) }); // String(e) safely converts unknown to text
+                container.createEl("p", { text: String(e) });
             }
         }
     }
@@ -1344,15 +1307,11 @@ export class GardenView extends View {
             return;
         }
 
-        // Update cursor if we started an erasing stroke with the pencil tool selected
-        if (viewport) {
-            if (this.isActivelyErasing) viewport.addClass('is-erasing');
-            else viewport.removeClass('is-erasing');
-        }
+        // Right-dragging with the pencil in hand still shows the eraser.
+        viewport?.toggleClass('is-erasing', this.isActivelyErasing);
 
         this.isCurrentlyDrawing = true;
-        // Draw a dot at the start point
-        this.lastDrawX = -1; 
+        this.lastDrawX = -1; // No last point yet: the stroke starts as a dot.
         this.drawOnCanvas(e);
     };
 
@@ -1380,39 +1339,30 @@ export class GardenView extends View {
         const coords = this.screenToCanvasCoords(e);
         if (!coords) return;
 
-        const brushSize = this.isActivelyErasing ? 32 : 4;
+        const brush = this.isActivelyErasing ? 32 : 4;
+        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
 
         if (this.isActivelyErasing) {
+            // A round eraser, rubbing the tunnels back out.
             ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgba(0,0,0,1)';
-        } else {
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.fillStyle = 'rgba(0, 0, 0, 1)'; 
-        }
-
-        if (this.isActivelyErasing) {
-            // Round eraser: draw a filled circle
             ctx.beginPath();
-            ctx.arc(coords.x, coords.y, brushSize / 2, 0, Math.PI * 2);
+            ctx.arc(coords.x, coords.y, brush / 2, 0, Math.PI * 2);
             ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
         } else if (this.lastDrawX >= 0) {
-            // Draw line from last point to current (smooth strokes)
-            ctx.lineWidth = brushSize;
+            ctx.lineWidth = brush;
             ctx.lineCap = 'square';
             ctx.beginPath();
             ctx.moveTo(this.lastDrawX, this.lastDrawY);
             ctx.lineTo(coords.x, coords.y);
             ctx.stroke();
         } else {
-            // First dot
-            ctx.fillRect(coords.x - brushSize / 2, coords.y - brushSize / 2, brushSize, brushSize);
+            ctx.fillRect(coords.x - brush / 2, coords.y - brush / 2, brush, brush);
         }
 
         this.lastDrawX = coords.x;
         this.lastDrawY = coords.y;
-
-        // Reset composite operation
-        ctx.globalCompositeOperation = 'source-over';
     }
 
     private showDrawingToolbar() {
@@ -1475,37 +1425,35 @@ export class GardenView extends View {
         this._viewportObserver?.disconnect();
         this._viewportObserver = null;
         this.cancelSettle();
-        if (this._viewStateSaveTimeout) clearTimeout(this._viewStateSaveTimeout); // Clear pending timer
-        this.saveViewState(); // Save immediately
+        this.saveViewStateNow();
 
-        // Clean up kanban panning if closed mid-drag
-        window.removeEventListener('mousemove', this.handleKanbanMouseMove);
-        window.removeEventListener('mouseup', this.handleKanbanMouseUp);
-
-        // Stop all animations!
         this.stopFireflies();
         this.stopShootingStars();
         this.stopAnt();
         this.stopWorm();
-        
-        if (this._renderDebounce) { clearTimeout(this._renderDebounce); this._renderDebounce = null; }
-        if (this._skyUpdateInterval) {
-            clearInterval(this._skyUpdateInterval);
-            this._skyUpdateInterval = null;
+        this._renderDebounce = stop(this._renderDebounce);
+        this._skyUpdateInterval = stop(this._skyUpdateInterval);
+
+        for (const [type, fn] of [
+            ['mousemove', this.handleKanbanMouseMove],
+            ['mouseup', this.handleKanbanMouseUp],
+            ['mousemove', this.handleMouseMove],
+            ['mouseup', this.handleMouseUp],
+        ] as [string, EventListener][]) {
+            window.removeEventListener(type, fn);
         }
 
         const viewport = this.viewport;
-        if (viewport) {
-            viewport.removeEventListener('mousedown', this.handleMouseDown);
-            viewport.removeEventListener('wheel', this.handleWheel);
-            window.removeEventListener('mousemove', this.handleMouseMove);
-            window.removeEventListener('mouseup', this.handleMouseUp);
-            
-            // Remove Mobile Touch Listeners
-            viewport.removeEventListener('touchstart', this.handleTouchStart);
-            viewport.removeEventListener('touchmove', this.handleTouchMove);
-            viewport.removeEventListener('touchend', this.handleTouchEnd);
-            viewport.removeEventListener('touchcancel', this.handleTouchEnd);
+        if (!viewport) return;
+        for (const [type, fn] of [
+            ['mousedown', this.handleMouseDown],
+            ['wheel', this.handleWheel],
+            ['touchstart', this.handleTouchStart],
+            ['touchmove', this.handleTouchMove],
+            ['touchend', this.handleTouchEnd],
+            ['touchcancel', this.handleTouchEnd],
+        ] as [string, EventListener][]) {
+            viewport.removeEventListener(type, fn);
         }
     }
 
@@ -1593,8 +1541,7 @@ export class GardenView extends View {
             const b = world && vp ? this.cameraBounds(world, vp) : null;
             this.startX = e.clientX - (b ? this.rawAxis(this.currentTranslateX, b.x) : this.currentTranslateX);
             this.startY = e.clientY - (b ? this.rawAxis(this.currentTranslateY, b.y) : this.currentTranslateY);
-            const viewport = this.viewport;
-            if (viewport) viewport.addClass('is-panning'); // ADD CLASS
+            vp?.addClass('is-panning');
         }
     };
 
@@ -1619,24 +1566,16 @@ export class GardenView extends View {
 
     private handleMouseUp = () => {
         const viewport = this.viewport;
-        
-        // If we were panning, just remove the panning class
         if (this.isDragging) {
             this.isDragging = false;
-            if (viewport) viewport.removeClass('is-panning');
+            viewport?.removeClass('is-panning');
             this.settleCamera();
         }
-        
         if (this.isDrawingMode && this.isCurrentlyDrawing) {
             this.isCurrentlyDrawing = false;
-            this.isActivelyErasing = false; // Stroke is over
-            
-            // Revert cursor to the selected tool
-            if (viewport) {
-                if (this.selectedToolEraser) viewport.addClass('is-erasing');
-                else viewport.removeClass('is-erasing');
-            }
-            return;
+            this.isActivelyErasing = false;
+            // The stroke is over: back to the cursor of the tool in hand.
+            viewport?.toggleClass('is-erasing', this.selectedToolEraser);
         }
     };
 
@@ -2087,7 +2026,8 @@ export class GardenView extends View {
         addLeftBtn.onclick = () => this.createNewProject('left');
 
         if (this.app.gardenData.length === 0) {
-            scrollContainer.addClass("is-empty"); // lets the + buttons fill the height so they're centered
+            // The + buttons then fill the height, so they sit centred.
+            scrollContainer.addClass("is-empty");
             const emptyMsg = scrollContainer.createDiv("kanban-empty-message");
             emptyMsg.createEl("h3", { text: "🌱 Your Garden is Empty" });
             emptyMsg.createEl("p", { text: "Click + to plant your first seed!" });
@@ -2345,7 +2285,7 @@ export class GardenView extends View {
         let index = 0;
         for (const project of this.app.gardenData) {
             const plantWrapper = plantsLayer.createDiv("garden-plant-wrapper");
-            plantWrapper.dataset.projectId = project.id; // <--- ADD THIS LINE
+            plantWrapper.dataset.projectId = project.id;
             plantWrapper.style.position = 'absolute';
             plantWrapper.style.left = `${WORLD_PADDING + (index * PLANT_SPACING) + (PLANT_SPACING / 2)}px`;
             // stemContainer uses top: 0 as the horizon, so wrapper top = skyHeight
@@ -2899,38 +2839,22 @@ export class GardenView extends View {
     }
 
     private async deleteSelectedCells() {
-        if (this.selectedCells.length === 0) return;
-        
-        const toDelete = this.selectedCells.map(cell => {
-            const projectId = cell.parentElement?.dataset.projectId;
-            const arrayName = cell.parentElement?.dataset.array as 'stem' | 'flowers' | 'minerals' | 'roots';
-            const itemId = cell.dataset.id;
-            return { projectId, arrayName, itemId };
-        });
-
-        for (const sel of toDelete) {
-            const project = this.app.gardenData.find(p => p.id === sel.projectId);
-            if (project && sel.arrayName && sel.itemId) {
-                project[sel.arrayName] = project[sel.arrayName].filter(i => i.id !== sel.itemId);
-            }
+        const locations = this.selectedLocations();
+        if (locations.length === 0) return;
+        for (const { project, arrayName, item } of locations) {
+            project[arrayName] = project[arrayName].filter(i => i.id !== item.id);
         }
-        
         this.clearSelection();
         await this.save();
     }
 
+    /** Select the seed's cell: the board's own cells go through selectSingleCell. */
     private selectCell(el: HTMLElement) {
-        // Unhighlight previous
-        if (this._highlightedItemId) {
-            this.unhighlightPlantPart(this._highlightedItemId);
-        }
+        if (this._highlightedItemId) this.unhighlightPlantPart(this._highlightedItemId);
         this.containerEl.querySelectorAll('.garden-item.is-selected').forEach(s => s.removeClass('is-selected'));
         el.addClass('is-selected');
-        const itemId = el.dataset.id;
-        if (itemId) {
-            this._highlightedItemId = itemId;
-            this.highlightPlantPart(itemId);
-        }
+        this._highlightedItemId = el.dataset.id ?? null;
+        if (this._highlightedItemId) this.highlightPlantPart(this._highlightedItemId);
     }
 
     private deselectCell(el: HTMLElement) {
@@ -2942,7 +2866,7 @@ export class GardenView extends View {
         }
     }
 
-    private startEditing(el: HTMLElement, item: LayerItem) {
+    private startEditing(el: HTMLElement) {
         el.removeClass('is-selected');
         el.addClass('is-editing');
         el.contentEditable = "true";
@@ -3105,7 +3029,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         });
 
         seedContent.addEventListener("dblclick", () => {
-            this.startEditing(seedContent, { id: project.id, content: project.seed, isComplete: false } as LayerItem);
+            this.startEditing(seedContent);
         });
 
         seedContent.addEventListener("blur", () => {
@@ -3138,7 +3062,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
             } else if (seedContent.hasClass("is-selected")) {
                 if (e.key === "Enter") {
                     e.preventDefault();
-                    this.startEditing(seedContent, { id: project.id, content: project.seed, isComplete: false } as LayerItem);
+                    this.startEditing(seedContent);
                 }
             }
         });
@@ -3307,7 +3231,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
             });
 
             el.addEventListener("dblclick", () => {
-                this.startEditing(el, item);
+                this.startEditing(el);
             });
 
             el.addEventListener("blur", () => {
@@ -3332,7 +3256,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 } else if (el.hasClass("is-selected")) {
                     if (e.key === "Enter") {
                         e.preventDefault();
-                        this.startEditing(el, item);
+                        this.startEditing(el);
                     }
                     if (e.key === "Backspace" || e.key === "Delete") {
                         e.preventDefault();
@@ -3451,7 +3375,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 name: seed,
                 seed: seed,
                 seedImagePath: seedImagePath || undefined,
-                standby: false, // <--- ADD THIS
+                standby: false,
                 hue: Math.floor(Math.random() * 360),
                 order: this.app.gardenData.length,
                 plantType: PLANT_TYPES[Math.floor(Math.random() * PLANT_TYPES.length)],
