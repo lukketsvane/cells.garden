@@ -38,6 +38,10 @@ export interface ViewState {
     translateY: number;
     kanbanScrollLeft: number;
     kanbanScrollTop: number;
+    /** Share of the height the garden canvas takes above the kanban board, 0..1. */
+    splitRatio?: number;
+    /** World x where the first plant's slot started when this camera was saved (320 before it was recorded). */
+    plantsLeft?: number;
 }
 
 export interface GardenSettings {
