@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "js-yaml": "^4.1.0",
     "sortablejs": "^1.15.7"
   },
