@@ -13,18 +13,8 @@ import {
     renewInvite,
     type GardenMember,
 } from './sharing';
+import { inviteSection } from './share-ui';
 import { Modal, Setting } from './ui';
-
-async function copyText(text: string, fallback: HTMLInputElement): Promise<boolean> {
-    try {
-        await navigator.clipboard.writeText(text);
-        return true;
-    } catch {
-        fallback.focus();
-        fallback.select();
-        return false;
-    }
-}
 
 export class ShareGardenModal extends Modal {
     constructor(
@@ -78,44 +68,15 @@ export class ShareGardenModal extends Modal {
             return;
         }
 
-        const link = new Setting(contentEl)
-            .setName('Invite link')
-            .setDesc(token ? 'Anyone with the link can open and edit this garden.' : 'No link yet.');
-        if (token) {
-            const url = inviteUrl(token);
-            const input = link.controlEl.createEl('input', { type: 'text', cls: 'share-link', value: url });
-            input.readOnly = true;
-            input.addEventListener('focus', () => input.select());
-            link.addButton((b) => b.setButtonText('Copy').setCta().onClick(async () => {
-                say(await copyText(url, input) ? 'Link copied.' : 'Select the link and copy it.');
-            }));
-            new Setting(contentEl)
-                .addButton((b) => b.setButtonText('New link').onClick(async () => {
-                    try {
-                        await renewInvite(this.client, this.gardenId);
-                        await this.render('New link made. The old one stops working.');
-                    } catch (e) {
-                        say(`Could not make a link: ${(e as Error).message}`);
-                    }
-                }))
-                .addButton((b) => b.setButtonText('Turn off link').setWarning().onClick(async () => {
-                    try {
-                        await clearInvite(this.client, this.gardenId);
-                        await this.render('Link turned off. People already here keep access.');
-                    } catch (e) {
-                        say(`Could not turn it off: ${(e as Error).message}`);
-                    }
-                }));
-        } else {
-            link.addButton((b) => b.setButtonText('Create link').setCta().onClick(async () => {
-                try {
-                    await renewInvite(this.client, this.gardenId);
-                    await this.render('Link ready.');
-                } catch (e) {
-                    say(`Could not make a link: ${(e as Error).message}`);
-                }
-            }));
-        }
+        inviteSection(contentEl, {
+            token,
+            url: inviteUrl,
+            desc: 'Anyone with the link can open and edit this garden.',
+            say,
+            renew: () => renewInvite(this.client, this.gardenId),
+            clear: () => clearInvite(this.client, this.gardenId),
+            again: (message) => this.render(message),
+        });
 
         const people = contentEl.createDiv('share-people');
         people.createDiv({ cls: 'setting-item-name', text: 'People' });

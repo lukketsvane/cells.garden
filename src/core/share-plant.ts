@@ -23,18 +23,8 @@ import {
     removePlantMember,
     renewPlantInvite,
 } from './sharing';
+import { inviteSection } from './share-ui';
 import { Modal, Setting } from './ui';
-
-async function copyText(text: string, fallback: HTMLInputElement): Promise<boolean> {
-    try {
-        await navigator.clipboard.writeText(text);
-        return true;
-    } catch {
-        fallback.focus();
-        fallback.select();
-        return false;
-    }
-}
 
 export class SharePlantModal extends Modal {
     constructor(
@@ -61,6 +51,13 @@ export class SharePlantModal extends Modal {
         this.contentEl.empty();
         this.contentEl.createEl('h2', { text: project.seed || project.name });
         const status = this.contentEl.createDiv({ cls: 'auth-status', text: 'Sharing…' });
+        await this.startSharing(projectId, (text) => status.setText(text));
+    }
+
+    /** Make the plants row, link this plant to it and give it its first link. */
+    private async startSharing(projectId: string, say: (text: string) => void) {
+        const project = this.live(projectId);
+        if (!project) return;
         try {
             const created = await createSharedPlant(this.client, this.userId, plantData(project));
             project.sharedPlantId = created.id;
@@ -69,7 +66,7 @@ export class SharePlantModal extends Modal {
             await renewPlantInvite(this.client, created.id);
             await this.showPlant(projectId, 'Link ready.');
         } catch (e) {
-            status.setText(`Could not share: ${(e as Error).message}`);
+            say(`Could not share: ${(e as Error).message}`);
         }
     }
 
@@ -94,18 +91,7 @@ export class SharePlantModal extends Modal {
             } else {
                 row.addButton((b) => b.setButtonText('Share').onClick(async () => {
                     status.setText('Sharing…');
-                    try {
-                        const live = this.live(project.id);
-                        if (!live) return;
-                        const created = await createSharedPlant(this.client, this.userId, plantData(live));
-                        live.sharedPlantId = created.id;
-                        this.sync.adopt(created);
-                        await this.app.saveGardenData();
-                        await renewPlantInvite(this.client, created.id);
-                        await this.showPlant(project.id, 'Link ready.');
-                    } catch (e) {
-                        status.setText(`Could not share: ${(e as Error).message}`);
-                    }
+                    await this.startSharing(project.id, (text) => status.setText(text));
                 }));
             }
         }
@@ -161,33 +147,15 @@ export class SharePlantModal extends Modal {
 
         const isOwner = owner === this.userId;
         if (isOwner) {
-            const token = await getPlantInvite(this.client, plantId).catch(() => null);
-            const link = new Setting(contentEl)
-                .setName('Invite link')
-                .setDesc(token ? 'Anyone with the link gets this plant in their garden and can edit it.' : 'No link.');
-            if (token) {
-                const url = plantInviteUrl(token);
-                const input = link.controlEl.createEl('input', { type: 'text', cls: 'share-link', value: url });
-                input.readOnly = true;
-                input.addEventListener('focus', () => input.select());
-                link.addButton((b) => b.setButtonText('Copy').setCta().onClick(async () => {
-                    say(await copyText(url, input) ? 'Link copied.' : 'Select the link and copy it.');
-                }));
-                new Setting(contentEl)
-                    .addButton((b) => b.setButtonText('New link').onClick(() => void attempt('make a link', async () => {
-                        await renewPlantInvite(this.client, plantId);
-                        await this.showPlant(projectId, 'New link made. The old one stops working.');
-                    })))
-                    .addButton((b) => b.setButtonText('Turn off link').setWarning().onClick(() => void attempt('turn it off', async () => {
-                        await clearPlantInvite(this.client, plantId);
-                        await this.showPlant(projectId, 'Link turned off. People who have it keep it.');
-                    })));
-            } else {
-                link.addButton((b) => b.setButtonText('Create link').setCta().onClick(() => void attempt('make a link', async () => {
-                    await renewPlantInvite(this.client, plantId);
-                    await this.showPlant(projectId, 'Link ready.');
-                })));
-            }
+            inviteSection(contentEl, {
+                token: await getPlantInvite(this.client, plantId).catch(() => null),
+                url: plantInviteUrl,
+                desc: 'Anyone with the link gets this plant in their garden and can edit it.',
+                say,
+                renew: () => renewPlantInvite(this.client, plantId),
+                clear: () => clearPlantInvite(this.client, plantId),
+                again: (message) => this.showPlant(projectId, message),
+            });
         }
 
         const people = contentEl.createDiv('share-people');
