@@ -1193,24 +1193,16 @@ export class GardenView extends View {
 
                             const scrollContainer = this.contentEl.querySelector('.kanban-scroll-container') as HTMLElement;
                             if (scrollContainer) {
-                                // Open on the middle plant, and land on a column edge: a board
-                                // only wide enough for one plant (a phone) would otherwise open
-                                // parked between two, with neither of them whole.
                                 const middle = (scrollContainer.scrollWidth - scrollContainer.clientWidth) / 2;
                                 const cols = scrollContainer.querySelectorAll('.project-column');
                                 const firstCol = cols[0] as HTMLElement | undefined;
                                 const secondCol = cols[1] as HTMLElement | undefined;
-                                // One plant to the next, gap included.
                                 const columnStep = firstCol && secondCol
                                     ? secondCol.offsetLeft - firstCol.offsetLeft
                                     : (firstCol?.offsetWidth ?? 0);
                                 scrollContainer.scrollLeft = columnStep > 0
                                     ? Math.round(middle / columnStep) * columnStep
                                     : middle;
-                                // The board opens at the top, on the flowers. Centring it on the
-                                // seed row only ever cut the top off: a board shorter than its
-                                // pane is already whole, and a taller one lost its first
-                                // flowers to make room for roots nobody had asked to see.
                             }
                             this.saveViewState();
                         });
