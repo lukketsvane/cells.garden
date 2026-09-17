@@ -15,5 +15,7 @@
     "noEmit": true,
     "useDefineForClassFields": false
   },
-  "include": ["src"]
+  // The unit tests import node:test and run under tsconfig.test.json.
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
 }

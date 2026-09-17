@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Node types stay out of the app's tsconfig on purpose: with them in scope a
+    // bare setTimeout returns NodeJS.Timeout, and the garden stores timer ids as
+    // numbers. The tests are the only files that may see them.
+    "types": ["node", "vite/client"],
+    // Node runs the .ts files directly; scripts/ts-resolve.mjs fills in the
+    // extension the same way Vite does, so imports stay as the core writes them.
+    "allowImportingTsExtensions": false
+  },
+  "include": ["src/**/*.test.ts", "src/core/**/*.ts"]
+}

@@ -25,7 +25,7 @@ export interface UseStoreOptions {
 }
 
 /**
- * The app shell — what `GardenPlugin` was in Obsidian. Owns the data, the
+ * The app shell, what `GardenPlugin` was in Obsidian. Owns the data, the
  * settings, the asset manager and the store; mounts the GardenView.
  */
 export class GardenApp {
@@ -194,6 +194,17 @@ export class GardenApp {
             settings: this.settings,
             updatedAt: this.updatedAt,
         };
+    }
+
+    /**
+     * Swap in a whole garden, which is what importing a vault or a backup does. The
+     * result is saved immediately, so it carries a fresh `updatedAt` and wins
+     * over whatever the cloud is holding.
+     */
+    async replaceGarden(garden: Garden): Promise<void> {
+        this.applyGarden(garden);
+        this.view?.scheduleRender();
+        await this.saveGardenData();
     }
 
     private persist(): Promise<void> {
