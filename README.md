@@ -85,7 +85,7 @@ The `.env` file carries the Supabase URL and publishable key on purpose; both ar
 
 ## Assets
 
-Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell is the path relative to `src/assets/pack/`, e.g. `plant_1/stem/plant_1_part3.png`, so it survives markdown export unchanged. The pack only has `plant_1` (stems + flowers) today. Roots, minerals and seeds have no art yet and render invisibly, exactly as in Obsidian without `Garden-Assets/`.
+Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell is the path relative to `src/assets/pack/`, e.g. `plant_1/stem/plant_1_part3.png`, so it survives markdown export unchanged. The pack only has `plant_1` (stems + flowers) today. Roots, minerals and seeds are generated placeholders (`npm run art:placeholders`, from `scripts/make-placeholder-art.mjs`) until real art lands; drop real PNGs into `pack/roots/`, `pack/minerals/` and `pack/seeds/` and delete the `placeholder_*` files.
 
 ## Milestones
 
