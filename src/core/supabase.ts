@@ -16,7 +16,7 @@ import { createClient, type RealtimeChannel, type SupabaseClient } from '@supaba
 import { mergeGardens } from './merge';
 import type { Garden } from './model';
 import { emptyGarden } from './model';
-import { GardenGoneError, LOCAL_KEY, type GardenStore } from './store';
+import { GardenGoneError, snapshot, LOCAL_KEY, type GardenStore } from './store';
 
 export function supabaseConfig(): { url: string; key: string } | null {
     const url = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
@@ -62,11 +62,6 @@ function rowToGarden(row: GardenRow): Garden {
         settings: { ...base.settings, ...(data.settings ?? {}) },
         updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : row.updated_at,
     };
-}
-
-/** A deep copy that shares nothing with the view, which edits plants in place. */
-function snapshot(garden: Garden): Garden {
-    return JSON.parse(JSON.stringify(garden)) as Garden;
 }
 
 export interface GardenTarget {

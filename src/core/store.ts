@@ -37,6 +37,11 @@ export function gardenStoreKey(gardenId: string): string {
     return `${LOCAL_KEY}/garden/${gardenId}`;
 }
 
+/** A deep copy that shares nothing with the live data the view edits in place. */
+export function snapshot<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value)) as T;
+}
+
 /** The garden is gone for this account: deleted, or the owner removed them. */
 export class GardenGoneError extends Error {
     constructor() {

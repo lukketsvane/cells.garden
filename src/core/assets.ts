@@ -70,15 +70,10 @@ export class AssetManager {
         return paths[Math.floor(Math.random() * paths.length)];
     }
 
-    async getImageUrl(path: string): Promise<string | null> {
-        return this.getImageUrlSync(path);
-    }
-
     getImageUrlSync(path: string): string | null {
         const url = PACK.get(path);
         if (url) return url;
         const legacy = legacyImagePath(path);
         return (legacy && PACK.get(legacy)) ?? null;
     }
-
 }
