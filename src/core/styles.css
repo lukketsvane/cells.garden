@@ -189,6 +189,46 @@
     pointer-events: none;
 }
 
+/* One art pixel each (4px is PIXEL_SCALE): a satellite crossing the sky, and
+   a firefly over the garden. Both are moved with transform; a firefly's
+   colour comes from --firefly-color, which the view sets on the layer. */
+.garden-satellite,
+.garden-firefly {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    z-index: 6;
+    pointer-events: none;
+    image-rendering: pixelated;
+}
+
+.garden-satellite {
+    background-color: rgba(255, 255, 255, 0.65);
+}
+
+.garden-firefly {
+    /* They fade in once, and drift between day and night colour over 30s. */
+    opacity: 0;
+    background-color: var(--firefly-color, #5e7e50);
+    transition: background-color 30s ease, opacity 2s ease-in;
+    will-change: transform, opacity;
+}
+
+/* The worm's squares, and the one box that catches the pointer over them. */
+.garden-worm-segment {
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    image-rendering: pixelated;
+}
+
+.garden-worm-hitbox {
+    position: absolute;
+    z-index: 2;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
 .garden-plants-layer {
     position: absolute;
     top: 0;
