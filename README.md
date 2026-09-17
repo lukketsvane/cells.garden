@@ -26,7 +26,7 @@ The tests use the repo's Playwright and a Chromium it can find; run `npx playwri
 
 The web app is the core. The extension and the PWA are shells around the same build.
 
-- **Web** — the garden at a URL, deployed by Vercel on every push to `main` (`cells.garden`).
+- **Web** — the garden at a URL, deployed by Vercel: `main` is `cells.garden`, `dev` is `dev.cells.garden`.
 - **PWA** — same app on a phone; service worker precaches the shell so it opens offline.
 - **Extension** — New Tab override and Side Panel, same core, same local storage.
 
@@ -78,7 +78,7 @@ interface GardenStore {
 - First sign-in on a device offers the anonymous garden to an account that has none yet, once.
 - Camera and kanban scroll are per surface (web, new tab, side panel) and stay on the device.
 
-The `.env` file carries the Supabase URL and publishable key on purpose; both are public by design and RLS protects the data. See `supabase/README.md` for the migrations and the dashboard settings.
+The `.env` file carries the Supabase URL and publishable key on purpose; both are public by design and RLS protects the data. Anything private for local tooling goes in `.env.local`, which git ignores. See `supabase/README.md` for the migrations and the dashboard settings.
 
 ## Assets
 
