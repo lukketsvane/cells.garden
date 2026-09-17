@@ -1,0 +1,29 @@
+/*
+ * Extension-only tweaks on top of src/web/app.css. Both pages boot the same
+ * core; <html data-context="newtab|sidepanel"> says which surface this is.
+ */
+
+/* The side panel is a 320-400px strip. The page itself must never scroll
+   sideways (the kanban strip scrolls on its own), and the chrome stays
+   compact so the pill covers as little of the sky as possible. */
+html[data-context="sidepanel"],
+html[data-context="sidepanel"] body {
+    overflow: hidden;
+    min-width: 0;
+}
+
+html[data-context="sidepanel"] .auth-pill {
+    top: 6px;
+    left: 6px;
+    max-width: 150px;
+    padding: 3px 8px 3px 5px;
+    font-size: 11px;
+}
+
+html[data-context="sidepanel"] .modal {
+    padding: 20px 16px 16px;
+}
+
+html[data-context="sidepanel"] .kanban-empty-message {
+    padding: 24px 16px;
+}

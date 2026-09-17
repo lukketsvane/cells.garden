@@ -3,7 +3,7 @@ import { emptyGarden } from './model';
 
 /**
  * Where the garden lives. The app only ever talks to this interface, so the
- * same UI runs on localStorage today and on Supabase (M1) tomorrow.
+ * same UI runs on localStorage and on Supabase.
  */
 export interface GardenStore {
     load(): Promise<Garden | null>;
@@ -15,11 +15,40 @@ export interface GardenStore {
     subscribe?(listener: (garden: Garden) => void): () => void;
 }
 
-const LOCAL_KEY = 'cells.garden/v1';
+/** The anonymous garden of this device (no account). */
+export const LOCAL_KEY = 'cells.garden/v1';
+
+/** The offline mirror of one account's garden on this device. */
+export function userStoreKey(userId: string): string {
+    return `${LOCAL_KEY}/user/${userId}`;
+}
+
+const CLAIM_KEY = `${LOCAL_KEY}/claimedBy`;
+
+/**
+ * Which account the anonymous garden was uploaded to. It is only ever offered
+ * to a fresh account once, so signing in with a second account on the same
+ * device never receives the first account's plants.
+ */
+export function anonymousGardenClaimedBy(): string | null {
+    try {
+        return localStorage.getItem(CLAIM_KEY);
+    } catch {
+        return null;
+    }
+}
+
+export function claimAnonymousGarden(userId: string): void {
+    try {
+        localStorage.setItem(CLAIM_KEY, userId);
+    } catch {
+        // storage blocked: nothing to remember
+    }
+}
 
 /** Works without login. One key in localStorage, the whole garden as JSON. */
 export class LocalStore implements GardenStore {
-    constructor(private readonly key: string = LOCAL_KEY) {}
+    constructor(readonly key: string = LOCAL_KEY) {}
 
     async load(): Promise<Garden | null> {
         let raw: string | null = null;
