@@ -2485,6 +2485,12 @@ export class GardenView extends View {
             if (block.imagePath) {
                 url = this.app.assetManager.getImageUrlSync(block.imagePath);
             }
+            // No art saved, or the saved file is gone from the pack: pick a stable one by id,
+            // the way stems and flowers fall back above ground.
+            if (!url) {
+                const category = block.type === 'root' ? 'roots' : block.type === 'mineral' ? 'minerals' : 'seeds';
+                url = this.app.assetManager.fallbackImageUrl(category, block.id);
+            }
 
             // Await dimensions
             const { width: scaledWidth, height: scaledHeight } = await this.getImageDimensions(url);
