@@ -98,7 +98,10 @@ export default defineConfig(({ mode }) => {
             chunkSizeWarningLimit: 1024,
         },
         server: {
-            port: 5173,
+            // Vite's CLI does not read PORT on its own. Honouring it lets a
+            // harness (or a second checkout) hand this server a free port
+            // instead of colliding on the default.
+            port: Number(process.env.PORT) || 5173,
         },
     };
 });
