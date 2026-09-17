@@ -30,7 +30,7 @@ interface PickedFile {
 // --- Export ---------------------------------------------------------------
 
 /** The current garden as a `.zip`, ready to be written to disk. */
-export async function gardenArchive(app: GardenApp): Promise<{ name: string; bytes: Uint8Array }> {
+async function gardenArchive(app: GardenApp): Promise<{ name: string; bytes: Uint8Array }> {
     const files = gardenToVaultFiles(app.toGarden());
     const bytes = await zip(files.map(f => ({ name: f.path, bytes: f.bytes })));
     return { name: archiveFileName(), bytes };
@@ -140,7 +140,7 @@ function countLine(n: number, one: string, many: string): string {
 }
 
 /** The plain-language version of an import, shown before anything is applied. */
-export function describeImport(result: ImportResult, unreadable: string[]): string[] {
+function describeImport(result: ImportResult, unreadable: string[]): string[] {
     const lines: string[] = [];
     lines.push(result.projects.length
         ? `Found ${countLine(result.projects.length, 'plant', 'plants')}.`
@@ -156,7 +156,7 @@ export function describeImport(result: ImportResult, unreadable: string[]): stri
 }
 
 /** Fold an import into the open garden and save the result. */
-export async function applyImport(app: GardenApp, result: ImportResult, mode: ImportMode): Promise<string> {
+async function applyImport(app: GardenApp, result: ImportResult, mode: ImportMode): Promise<string> {
     const { garden, summary } = mergeGarden(app.toGarden(), result, mode);
     await app.replaceGarden(garden);
 

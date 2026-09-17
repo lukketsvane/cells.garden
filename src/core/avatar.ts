@@ -29,7 +29,7 @@ function generator(seed: number) {
 const GRID = 7;
 
 /** The avatar as an SVG string, `size` pixels across. */
-export function avatarSvg(seed: string, size = 24): string {
+function avatarSvg(seed: string, size = 24): string {
     const rand = generator(hash(seed || 'someone'));
     const hue = Math.floor(rand() * 360);
     const accent = (hue + 40 + Math.floor(rand() * 80)) % 360;
