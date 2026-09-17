@@ -152,18 +152,16 @@ button {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 999px;
-    border: 1px solid var(--background-modifier-border);
-    background: color-mix(in srgb, var(--background-primary) 80%, transparent);
-    backdrop-filter: blur(6px);
-    color: var(--text-muted);
-    font-size: 14px;
-    line-height: 1;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #ffffff;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
     cursor: pointer;
     opacity: 0.85;
-    transition: opacity 0.15s ease, background 0.15s ease;
+    transition: opacity 0.15s ease;
 }
-.garden-board-toggle:hover { opacity: 1; background: var(--background-primary); color: var(--text-normal); }
+.garden-board-toggle:hover { opacity: 1; }
 
 .garden-files-modal hr {
     border: none;

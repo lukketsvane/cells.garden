@@ -12,6 +12,7 @@ import { PlantSync } from './plants';
 import { LeaveGardenModal, ShareGardenModal } from './share';
 import { SharePlantModal } from './share-plant';
 import { applyScene, sceneMenuItems } from './scene';
+import { ShortcutsModal } from './modals';
 import {
     GardenFullError,
     InvalidInviteError,
@@ -257,6 +258,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         const uid = currentUser;
         const common: MenuItem[] = [
             { label: 'Export or import', onClick: () => openGardenFiles(app) },
+            { label: 'Keyboard shortcuts', sub: '?', onClick: () => new ShortcutsModal().open() },
             ...sceneMenuItems(),
         ];
         if (!uid || !(await sharingAvailable(supabase))) return common;
