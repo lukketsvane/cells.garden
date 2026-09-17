@@ -1,0 +1,489 @@
+<title>Garden Cells Architecture</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root {
+    --paper: #f7f6f2;
+    --box: #ffffff;
+    --ink: #161614;
+    --muted: #66655f;
+    --accent: #2f7a33;
+    --rule: #d9d7d0;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --paper: #141412;
+        --box: #1c1c1a;
+        --ink: #e8e6df;
+        --muted: #9c9a92;
+        --accent: #8cc46c;
+        --rule: #33322e;
+    }
+}
+:root[data-theme="dark"] {
+    --paper: #141412;
+    --box: #1c1c1a;
+    --ink: #e8e6df;
+    --muted: #9c9a92;
+    --accent: #8cc46c;
+    --rule: #33322e;
+}
+
+body {
+    margin: 0;
+    padding-block: 36px 48px;
+    padding-inline: 20px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.5;
+}
+main { max-width: 1560px; margin: 0 auto; }
+
+header { margin-bottom: 28px; }
+h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+}
+.sub { margin: 4px 0 0; color: var(--muted); }
+.legend { margin: 14px 0 0; font-size: 12px; color: var(--muted); }
+.legend span { white-space: nowrap; }
+
+figure { margin: 0 0 44px; }
+figure h2 {
+    margin: 0 0 10px;
+    font-size: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.scroll { overflow-x: auto; padding-bottom: 4px; }
+svg {
+    display: block;
+    width: 100%;
+    min-width: 1180px;
+    height: auto;
+    font-family: var(--mono);
+    color: var(--ink);
+}
+figcaption { margin-top: 10px; max-width: 80ch; font-size: 12.5px; color: var(--muted); }
+
+/* SVG parts */
+.bx { fill: var(--box); stroke: currentColor; stroke-width: 1.5; }
+.bx.fut { stroke-dasharray: 5 4; }
+.bx.acc { stroke: var(--accent); stroke-width: 2; }
+.gp { fill: none; stroke: currentColor; stroke-width: 1.75; }
+.gp.dash { stroke-dasharray: 7 5; }
+.t { font-size: 13px; fill: currentColor; }
+.t.s { font-size: 11px; fill: var(--muted); }
+.t.xs { font-size: 10.5px; fill: var(--muted); }
+.t.h { font-size: 14px; font-weight: 600; }
+.t.b { font-weight: 600; }
+.t.c { font-size: 12.5px; fill: var(--accent); }
+.ln { stroke: currentColor; stroke-width: 1.5; fill: none; }
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 1100px;
+    font-size: 13px;
+}
+th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 8px 12px 8px 0;
+    border-bottom: 1px solid var(--rule);
+}
+th { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+td.st { white-space: nowrap; width: 10ch; }
+.done { color: var(--accent); font-weight: 600; }
+.now { font-weight: 600; }
+.later { color: var(--muted); }
+</style>
+
+<main>
+<header>
+    <h1>Garden Cells — System architecture</h1>
+    <p class="sub">Same app. Several platforms. Your data.</p>
+    <p class="legend"><span>box = component</span> · <span>dashed = group or future</span> · <span>arrow = data flow, labelled with what flows</span> · <span>green = the storage interface and production</span></p>
+</header>
+
+<figure>
+    <h2>1 · System architecture</h2>
+    <div class="scroll">
+    <svg viewBox="0 0 1500 900" role="img" aria-label="Three clients (web, PWA, Chrome extension) and Obsidian meet one core, which talks to storage only through the GardenStore interface; LocalStore and SupabaseStore sit on either side of it, and Supabase holds the profiles and gardens tables under RLS.">
+        <defs>
+            <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+        </defs>
+
+        <!-- Clients -->
+        <rect class="gp" x="20" y="20" width="560" height="130"/>
+        <text class="t h" x="36" y="44">Clients (same build)</text>
+        <rect class="bx" x="40" y="62" width="160" height="62"/>
+        <text class="t" x="120" y="88" text-anchor="middle">Web</text>
+        <text class="t s" x="120" y="108" text-anchor="middle">(Vercel · cells.garden)</text>
+        <rect class="bx" x="220" y="62" width="150" height="62"/>
+        <text class="t" x="295" y="88" text-anchor="middle">PWA</text>
+        <text class="t s" x="295" y="108" text-anchor="middle">(mobile · offline)</text>
+        <rect class="bx" x="390" y="62" width="170" height="62"/>
+        <text class="t" x="475" y="88" text-anchor="middle">Chrome Extension</text>
+        <text class="t s" x="475" y="108" text-anchor="middle">(New Tab + Side Panel)</text>
+
+        <!-- User -->
+        <rect class="gp" x="620" y="20" width="300" height="130"/>
+        <text class="t h" x="636" y="44">User</text>
+        <rect class="bx" x="640" y="62" width="260" height="62"/>
+        <text class="t" x="770" y="88" text-anchor="middle">Build / Edit / Observe</text>
+        <text class="t s" x="770" y="108" text-anchor="middle">(mouse, touch, pinch)</text>
+
+        <!-- Obsidian -->
+        <rect class="gp" x="960" y="20" width="520" height="130"/>
+        <text class="t h" x="976" y="44">Obsidian (optional · M3)</text>
+        <rect class="bx" x="980" y="62" width="240" height="62"/>
+        <text class="t" x="1100" y="88" text-anchor="middle">Importer</text>
+        <text class="t s" x="1100" y="108" text-anchor="middle">(Markdown → Garden)</text>
+        <rect class="bx" x="1240" y="62" width="220" height="62"/>
+        <text class="t" x="1350" y="88" text-anchor="middle">Exporter</text>
+        <text class="t s" x="1350" y="108" text-anchor="middle">(Garden → Markdown)</text>
+
+        <!-- connectors into the core -->
+        <polyline class="ln" points="120,124 120,190 475,190 475,124"/>
+        <line class="ln" x1="295" y1="124" x2="295" y2="190"/>
+        <line class="ln" x1="295" y1="190" x2="295" y2="248" marker-end="url(#ah1)"/>
+        <text class="t s" x="310" y="224">Same code (Vite + TS)</text>
+
+        <line class="ln" x1="770" y1="124" x2="770" y2="248" marker-end="url(#ah1)"/>
+        <text class="t s" x="785" y="214">Interaction</text>
+        <text class="t s" x="785" y="230">(UI / input)</text>
+
+        <polyline class="ln" points="1100,124 1100,190 1350,190 1350,124"/>
+        <line class="ln" x1="1225" y1="190" x2="1225" y2="248" marker-end="url(#ah1)"/>
+        <text class="t s" x="1240" y="214">Import / export</text>
+        <text class="t s" x="1240" y="230">(Obsidian format)</text>
+
+        <!-- Core -->
+        <rect class="gp dash" x="20" y="250" width="1460" height="270"/>
+        <text class="t h" x="36" y="274">Garden App (core) · src/core</text>
+
+        <rect class="bx" x="40" y="300" width="180" height="70"/>
+        <text class="t" x="130" y="330" text-anchor="middle">UI / Interaction</text>
+        <text class="t s" x="130" y="350" text-anchor="middle">(kanban, drag, touch)</text>
+
+        <rect class="bx" x="278" y="300" width="180" height="70"/>
+        <text class="t" x="368" y="330" text-anchor="middle">Data model</text>
+        <text class="t s" x="368" y="350" text-anchor="middle">(Garden → plants → layers)</text>
+
+        <rect class="bx" x="516" y="300" width="180" height="70"/>
+        <text class="t" x="606" y="330" text-anchor="middle">Rendering</text>
+        <text class="t s" x="606" y="350" text-anchor="middle">(DOM + CSS transforms)</text>
+
+        <rect class="bx" x="754" y="300" width="180" height="70"/>
+        <text class="t" x="844" y="330" text-anchor="middle">Effects</text>
+        <text class="t s" x="844" y="350" text-anchor="middle">(ant, worm, fireflies, sky)</text>
+
+        <rect class="bx" x="992" y="300" width="180" height="70"/>
+        <text class="t" x="1082" y="330" text-anchor="middle">Modals + menus</text>
+        <text class="t s" x="1082" y="350" text-anchor="middle">(ui.ts: Modal, Setting)</text>
+
+        <rect class="bx" x="1230" y="300" width="180" height="70"/>
+        <text class="t" x="1320" y="330" text-anchor="middle">Boot + Auth</text>
+        <text class="t s" x="1320" y="350" text-anchor="middle">(bootGarden · AuthPill)</text>
+
+        <line class="ln" x1="220" y1="338" x2="276" y2="338" marker-end="url(#ah1)"/>
+        <text class="t xs" x="249" y="330" text-anchor="middle">edits</text>
+        <line class="ln" x1="458" y1="338" x2="514" y2="338" marker-end="url(#ah1)"/>
+        <text class="t xs" x="487" y="330" text-anchor="middle">draws</text>
+        <line class="ln" x1="696" y1="338" x2="752" y2="338" marker-end="url(#ah1)"/>
+        <text class="t xs" x="725" y="330" text-anchor="middle">animates</text>
+
+        <rect class="bx" x="40" y="420" width="180" height="70"/>
+        <text class="t" x="130" y="450" text-anchor="middle">Shim</text>
+        <text class="t s" x="130" y="470" text-anchor="middle">(Obsidian DOM helpers)</text>
+        <line class="ln" x1="130" y1="420" x2="130" y2="372" marker-end="url(#ah1)"/>
+        <text class="t xs" x="140" y="400">createDiv, addClass …</text>
+
+        <rect class="bx" x="278" y="420" width="180" height="70"/>
+        <text class="t" x="368" y="450" text-anchor="middle">Importer / Exporter</text>
+        <text class="t s" x="368" y="470" text-anchor="middle">(markdown.ts)</text>
+        <line class="ln" x1="368" y1="418" x2="368" y2="372" marker-start="url(#ah1)" marker-end="url(#ah1)"/>
+        <text class="t xs" x="378" y="400">Markdown ⇄ Garden</text>
+
+        <rect class="bx" x="516" y="420" width="180" height="70"/>
+        <text class="t" x="606" y="450" text-anchor="middle">Asset pack</text>
+        <text class="t s" x="606" y="470" text-anchor="middle">(pack/&lt;type&gt;/&lt;category&gt;)</text>
+        <line class="ln" x1="606" y1="420" x2="606" y2="372" marker-end="url(#ah1)"/>
+        <text class="t xs" x="616" y="400">sprites (data URLs)</text>
+
+        <rect class="bx fut" x="1230" y="420" width="180" height="70"/>
+        <text class="t" x="1320" y="450" text-anchor="middle">Obsidian plugin (M3)</text>
+        <text class="t s" x="1320" y="470" text-anchor="middle">(obsidian/ on top of core)</text>
+
+        <!-- core -> store interface -->
+        <line class="ln" x1="650" y1="520" x2="650" y2="588" marker-end="url(#ah1)"/>
+        <text class="t s" x="662" y="550">Storage interface</text>
+        <text class="t s" x="662" y="566">(GardenStore)</text>
+
+        <!-- Local storage -->
+        <rect class="gp" x="90" y="570" width="320" height="230"/>
+        <text class="t h" x="106" y="594">Local storage</text>
+        <rect class="bx" x="110" y="612" width="280" height="40"/>
+        <text class="t" x="250" y="637" text-anchor="middle">LocalStore → localStorage</text>
+        <rect class="bx" x="110" y="664" width="280" height="40"/>
+        <text class="t" x="250" y="689" text-anchor="middle">Works without sign-in</text>
+        <rect class="bx" x="110" y="716" width="280" height="40"/>
+        <text class="t" x="250" y="741" text-anchor="middle">storage event: tabs in step</text>
+
+        <!-- GardenStore interface -->
+        <rect class="bx acc" x="470" y="590" width="360" height="150"/>
+        <text class="t c" x="490" y="618">interface GardenStore {</text>
+        <text class="t c" x="490" y="640">  load(): Promise&lt;Garden | null&gt;</text>
+        <text class="t c" x="490" y="662">  save(garden: Garden): Promise&lt;void&gt;</text>
+        <text class="t c" x="490" y="684">  subscribe?(l): () =&gt; void</text>
+        <text class="t c" x="490" y="706">}</text>
+        <text class="t xs" x="650" y="728" text-anchor="middle">subscribe: storage event locally, realtime in the cloud</text>
+
+        <line class="ln" x1="412" y1="665" x2="468" y2="665" marker-start="url(#ah1)" marker-end="url(#ah1)"/>
+        <text class="t xs" x="440" y="652" text-anchor="middle">LocalStore</text>
+        <line class="ln" x1="832" y1="665" x2="888" y2="665" marker-start="url(#ah1)" marker-end="url(#ah1)"/>
+        <text class="t xs" x="860" y="652" text-anchor="middle">SupabaseStore</text>
+
+        <!-- Supabase -->
+        <rect class="gp" x="890" y="570" width="320" height="230"/>
+        <text class="t h" x="906" y="594">Supabase (cloud)</text>
+        <rect class="bx" x="910" y="612" width="280" height="36"/>
+        <text class="t" x="1050" y="635" text-anchor="middle">Auth (magic link · 6-digit code)</text>
+        <rect class="bx" x="910" y="658" width="280" height="36"/>
+        <text class="t" x="1050" y="681" text-anchor="middle">Postgres (gardens.data jsonb)</text>
+        <rect class="bx" x="910" y="704" width="280" height="36"/>
+        <text class="t" x="1050" y="727" text-anchor="middle">Realtime (postgres_changes)</text>
+        <rect class="bx" x="910" y="750" width="280" height="36"/>
+        <text class="t" x="1050" y="773" text-anchor="middle">Last write wins (updatedAt)</text>
+
+        <line class="ln" x1="1210" y1="685" x2="1248" y2="685" marker-end="url(#ah1)"/>
+
+        <!-- Data model -->
+        <rect class="gp dash" x="1250" y="545" width="230" height="320"/>
+        <text class="t h" x="1266" y="569">Data model (Supabase)</text>
+        <rect class="bx" x="1266" y="585" width="198" height="78"/>
+        <text class="t b" x="1280" y="606">profiles</text>
+        <text class="t s" x="1280" y="622">id (uuid)</text>
+        <text class="t s" x="1280" y="638">display_name</text>
+        <text class="t s" x="1280" y="654">created_at</text>
+        <rect class="bx" x="1266" y="678" width="198" height="126"/>
+        <text class="t b" x="1280" y="699">gardens</text>
+        <text class="t s" x="1280" y="715">id (uuid)</text>
+        <text class="t s" x="1280" y="731">user_id (uuid)</text>
+        <text class="t s" x="1280" y="747">name</text>
+        <text class="t s" x="1280" y="763">data (jsonb)</text>
+        <text class="t s" x="1280" y="779">created_at</text>
+        <text class="t s" x="1280" y="795">updated_at</text>
+        <rect class="bx" x="1266" y="818" width="198" height="40"/>
+        <text class="t s" x="1365" y="843" text-anchor="middle">RLS: user_id = auth.uid()</text>
+
+        <!-- mirror note -->
+        <text class="t s" x="650" y="830" text-anchor="middle">Signed in: SupabaseStore is primary, LocalStore is the mirror (offline copy).</text>
+        <text class="t s" x="650" y="848" text-anchor="middle">Signed out: LocalStore only. The garden never leaves the device.</text>
+    </svg>
+    </div>
+    <figcaption>The core only knows GardenStore. Web, PWA and the extension are the same Vite build around it; Obsidian talks to it through the markdown format. The cloud holds one row per garden, the whole garden as JSON, and RLS keeps each row with its owner.</figcaption>
+</figure>
+
+<figure>
+    <h2>2 · Sign-in and sync</h2>
+    <div class="scroll">
+    <svg viewBox="0 0 1500 540" role="img" aria-label="The app starts locally, switches to SupabaseStore on sign-in and compares updatedAt to decide which side wins; a save goes to localStorage and Supabase, and realtime carries it to other devices.">
+        <defs>
+            <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+        </defs>
+
+        <text class="t h" x="30" y="30">Start-up and sign-in</text>
+
+        <rect class="bx" x="30" y="56" width="140" height="56"/>
+        <text class="t" x="100" y="89" text-anchor="middle">App starts</text>
+        <line class="ln" x1="170" y1="84" x2="203" y2="84" marker-end="url(#ah2)"/>
+
+        <rect class="bx" x="205" y="56" width="190" height="56"/>
+        <text class="t" x="300" y="89" text-anchor="middle">LocalStore.load()</text>
+        <line class="ln" x1="395" y1="84" x2="428" y2="84" marker-end="url(#ah2)"/>
+
+        <rect class="bx" x="430" y="56" width="150" height="56"/>
+        <text class="t" x="505" y="89" text-anchor="middle">Render garden</text>
+        <line class="ln" x1="580" y1="84" x2="613" y2="84" marker-end="url(#ah2)"/>
+
+        <rect class="bx" x="615" y="56" width="210" height="56"/>
+        <text class="t" x="720" y="89" text-anchor="middle">onAuthStateChange</text>
+
+        <line class="ln" x1="825" y1="84" x2="863" y2="84" marker-end="url(#ah2)"/>
+        <text class="t xs" x="845" y="48" text-anchor="middle">signed in (uid)</text>
+
+        <line class="ln" x1="720" y1="112" x2="720" y2="148" marker-end="url(#ah2)"/>
+        <text class="t xs" x="730" y="136">signed out</text>
+        <rect class="bx" x="615" y="150" width="210" height="44"/>
+        <text class="t" x="720" y="177" text-anchor="middle">Stays local</text>
+
+        <rect class="bx" x="865" y="56" width="330" height="56"/>
+        <text class="t" x="1030" y="79" text-anchor="middle">useStore(SupabaseStore,</text>
+        <text class="t s" x="1030" y="99" text-anchor="middle">mirror = LocalStore)</text>
+        <line class="ln" x1="1195" y1="84" x2="1228" y2="84" marker-end="url(#ah2)"/>
+        <text class="t xs" x="1212" y="48" text-anchor="middle">load</text>
+
+        <rect class="bx" x="1230" y="56" width="180" height="56"/>
+        <text class="t" x="1320" y="89" text-anchor="middle">remote = load()</text>
+
+        <polyline class="ln" points="1320,112 1320,190 1030,190" />
+        <line class="ln" x1="1030" y1="190" x2="1030" y2="212" marker-end="url(#ah2)"/>
+        <text class="t xs" x="1175" y="182" text-anchor="middle">compare updatedAt</text>
+
+        <rect class="bx" x="865" y="214" width="330" height="44"/>
+        <text class="t s" x="1030" y="241" text-anchor="middle">remote empty, local has plants → upload local</text>
+        <rect class="bx" x="865" y="266" width="330" height="44"/>
+        <text class="t s" x="1030" y="293" text-anchor="middle">remote newer → use remote, mirror to localStorage</text>
+        <rect class="bx" x="865" y="318" width="330" height="44"/>
+        <text class="t s" x="1030" y="345" text-anchor="middle">local newer → save() to Supabase</text>
+
+        <line class="ln" x1="1195" y1="288" x2="1248" y2="288" marker-end="url(#ah2)"/>
+        <rect class="bx" x="1250" y="266" width="220" height="44"/>
+        <text class="t" x="1360" y="293" text-anchor="middle">Subscribe: postgres_changes</text>
+        <text class="t xs" x="1470" y="326" text-anchor="end">filter user_id = uid</text>
+
+        <polyline class="ln" points="1300,310 1300,380 1380,380" />
+        <line class="ln" x1="1380" y1="380" x2="1380" y2="428" marker-end="url(#ah2)"/>
+        <text class="t xs" x="1290" y="372" text-anchor="end">the subscription delivers here</text>
+
+        <text class="t h" x="30" y="400">One save, and how other devices get it</text>
+
+        <rect class="bx" x="30" y="430" width="200" height="56"/>
+        <text class="t" x="130" y="463" text-anchor="middle">User edits a cell</text>
+        <line class="ln" x1="230" y1="458" x2="263" y2="458" marker-end="url(#ah2)"/>
+
+        <rect class="bx" x="265" y="430" width="230" height="56"/>
+        <text class="t" x="380" y="463" text-anchor="middle">persist(): updatedAt = now</text>
+        <line class="ln" x1="495" y1="458" x2="528" y2="458" marker-end="url(#ah2)"/>
+
+        <rect class="bx" x="530" y="430" width="200" height="56"/>
+        <text class="t" x="630" y="463" text-anchor="middle">mirror → localStorage</text>
+        <line class="ln" x1="730" y1="458" x2="763" y2="458" marker-end="url(#ah2)"/>
+
+        <rect class="bx" x="765" y="430" width="230" height="56"/>
+        <text class="t" x="880" y="453" text-anchor="middle">SupabaseStore.save()</text>
+        <text class="t s" x="880" y="473" text-anchor="middle">(update gardens.data)</text>
+        <line class="ln" x1="995" y1="458" x2="1028" y2="458" marker-end="url(#ah2)"/>
+        <text class="t xs" x="880" y="506" text-anchor="middle">sync dot: yellow → green, red on error</text>
+
+        <rect class="bx" x="1030" y="430" width="220" height="56"/>
+        <text class="t" x="1140" y="453" text-anchor="middle">Realtime</text>
+        <text class="t s" x="1140" y="473" text-anchor="middle">(to other devices)</text>
+        <line class="ln" x1="1250" y1="458" x2="1283" y2="458" marker-end="url(#ah2)"/>
+
+        <rect class="bx" x="1285" y="430" width="190" height="56"/>
+        <text class="t" x="1380" y="463" text-anchor="middle">applyGarden + render</text>
+        <text class="t xs" x="1380" y="506" text-anchor="middle">own writes ignored:</text>
+        <text class="t xs" x="1380" y="520" text-anchor="middle">updatedAt ≤ lastSeen</text>
+    </svg>
+    </div>
+    <figcaption>The first render always comes from localStorage, so the garden is on screen before the network answers. On sign-in, updatedAt decides which side wins, and an empty cloud account receives the device's garden. Every save goes to both stores; realtime carries it to the other devices, which ignore their own writes.</figcaption>
+</figure>
+
+<figure>
+    <h2>3 · Build and deploy</h2>
+    <div class="scroll">
+    <svg viewBox="0 0 1500 340" role="img" aria-label="src/web and src/core are built into dist/ and deployed by Vercel to cells.garden, which also installs as a PWA; src/core and ext/ are built into dist-ext/ and loaded as an unpacked Chrome extension.">
+        <defs>
+            <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+        </defs>
+
+        <rect class="bx" x="30" y="40" width="150" height="44"/>
+        <text class="t" x="105" y="67" text-anchor="middle">src/web</text>
+        <rect class="bx" x="30" y="120" width="150" height="44"/>
+        <text class="t" x="105" y="147" text-anchor="middle">src/core</text>
+        <rect class="bx" x="30" y="200" width="150" height="44"/>
+        <text class="t" x="105" y="227" text-anchor="middle">ext/</text>
+
+        <line class="ln" x1="180" y1="62" x2="298" y2="62" marker-end="url(#ah3)"/>
+        <polyline class="ln" points="180,142 240,142 240,90"/>
+        <line class="ln" x1="240" y1="90" x2="298" y2="90" marker-end="url(#ah3)"/>
+        <polyline class="ln" points="240,142 240,250"/>
+        <line class="ln" x1="240" y1="250" x2="298" y2="250" marker-end="url(#ah3)"/>
+        <line class="ln" x1="180" y1="222" x2="298" y2="222" marker-end="url(#ah3)"/>
+
+        <rect class="bx" x="300" y="40" width="330" height="64"/>
+        <text class="t" x="465" y="66" text-anchor="middle">npm run build</text>
+        <text class="t s" x="465" y="86" text-anchor="middle">(tsc · vite · vite-plugin-pwa)</text>
+
+        <rect class="bx" x="300" y="132" width="330" height="40"/>
+        <text class="t s" x="465" y="157" text-anchor="middle">.env: VITE_SUPABASE_URL + publishable key</text>
+        <line class="ln" x1="465" y1="132" x2="465" y2="106" marker-end="url(#ah3)"/>
+        <text class="t xs" x="475" y="122">loadEnv</text>
+        <line class="ln" x1="465" y1="172" x2="465" y2="198" marker-end="url(#ah3)"/>
+        <text class="t xs" x="475" y="190">loadEnv</text>
+
+        <rect class="bx" x="300" y="200" width="330" height="64"/>
+        <text class="t" x="465" y="226" text-anchor="middle">npm run build:ext</text>
+        <text class="t s" x="465" y="246" text-anchor="middle">(vite.ext.config.ts)</text>
+
+        <line class="ln" x1="630" y1="72" x2="678" y2="72" marker-end="url(#ah3)"/>
+        <rect class="bx" x="680" y="40" width="300" height="64"/>
+        <text class="t" x="830" y="66" text-anchor="middle">dist/</text>
+        <text class="t s" x="830" y="86" text-anchor="middle">(index.html · assets/ · sw.js · manifest)</text>
+
+        <line class="ln" x1="980" y1="72" x2="1028" y2="72" marker-end="url(#ah3)"/>
+        <text class="t xs" x="1004" y="62" text-anchor="middle">push</text>
+        <rect class="bx" x="1030" y="40" width="200" height="64"/>
+        <text class="t" x="1130" y="66" text-anchor="middle">Vercel</text>
+        <text class="t s" x="1130" y="86" text-anchor="middle">(builds every push to main)</text>
+
+        <line class="ln" x1="1230" y1="72" x2="1278" y2="72" marker-end="url(#ah3)"/>
+        <rect class="bx acc" x="1280" y="40" width="190" height="64"/>
+        <text class="t b" x="1375" y="66" text-anchor="middle">cells.garden</text>
+        <text class="t s" x="1375" y="86" text-anchor="middle">(production)</text>
+
+        <line class="ln" x1="1375" y1="104" x2="1375" y2="130" marker-end="url(#ah3)"/>
+        <rect class="bx" x="1280" y="132" width="190" height="56"/>
+        <text class="t" x="1375" y="155" text-anchor="middle">Add to home screen</text>
+        <text class="t s" x="1375" y="175" text-anchor="middle">(PWA · offline via sw.js)</text>
+
+        <line class="ln" x1="630" y1="232" x2="678" y2="232" marker-end="url(#ah3)"/>
+        <rect class="bx" x="680" y="200" width="300" height="64"/>
+        <text class="t" x="830" y="226" text-anchor="middle">dist-ext/</text>
+        <text class="t s" x="830" y="246" text-anchor="middle">(manifest · newtab · sidepanel · background)</text>
+
+        <line class="ln" x1="980" y1="232" x2="1028" y2="232" marker-end="url(#ah3)"/>
+        <rect class="bx" x="1030" y="200" width="200" height="64"/>
+        <text class="t" x="1130" y="226" text-anchor="middle">chrome://extensions</text>
+        <text class="t s" x="1130" y="246" text-anchor="middle">(Load unpacked)</text>
+
+        <line class="ln" x1="1230" y1="232" x2="1278" y2="232" marker-end="url(#ah3)"/>
+        <rect class="bx" x="1280" y="200" width="190" height="64"/>
+        <text class="t" x="1375" y="226" text-anchor="middle">New Tab + Side Panel</text>
+        <text class="t s" x="1375" y="246" text-anchor="middle">(same garden, same store)</text>
+
+        <rect class="bx fut" x="30" y="290" width="600" height="36"/>
+        <text class="t s" x="330" y="313" text-anchor="middle">obsidian/ — Max's plugin, untouched (esbuild). Hooks into src/core in M3.</text>
+    </svg>
+    </div>
+    <figcaption>One core, two Vite configs. The web build gets its service worker and manifest from vite-plugin-pwa and is deployed by Vercel on every push to main. The extension build is the same modules packaged as Manifest V3 with a generated manifest.json. Only the public Supabase values go into the builds.</figcaption>
+</figure>
+
+<figure>
+    <h2>4 · Roadmap</h2>
+    <table>
+        <thead><tr><th>Milestone</th><th>Status</th><th>Scope</th></tr></thead>
+        <tbody>
+            <tr><td>M0</td><td class="st done">done</td><td>Runs in a browser, localStorage, deployed on Vercel. Friends and family can use it without Obsidian.</td></tr>
+            <tr><td>M1</td><td class="st done">done</td><td>Supabase auth (magic link + code) and sync, local mirror, realtime. Same garden on phone and desktop. Custom SMTP (e.g. Resend) is needed before anyone outside the Supabase team receives email.</td></tr>
+            <tr><td>M2</td><td class="st now">in progress</td><td>Chrome extension (New Tab + Side Panel) and PWA with a service worker. PNG icons, adversarial review before merge.</td></tr>
+            <tr><td>M3</td><td class="st later">planned</td><td>Import/export of the Obsidian format in the UI, custom images for roots/minerals/seeds, an Obsidian plugin on top of the core syncing to the same backend.</td></tr>
+        </tbody>
+    </table>
+</figure>
+</main>
