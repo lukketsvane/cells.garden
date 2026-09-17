@@ -50,7 +50,7 @@ export default defineConfig(({ mode }) => {
                     display: 'standalone',
                     orientation: 'any',
                     background_color: '#1e1e1e',
-                    theme_color: '#87CEEB',
+                    theme_color: '#1e1e1e',
                     icons: [
                         { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
                         { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

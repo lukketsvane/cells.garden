@@ -1812,7 +1812,6 @@ export class GardenView extends View {
         });
 
         const scrollContainer = bottomHalf.createDiv("kanban-scroll-container");
-        scrollContainer.style.cssText = 'display: flex; gap: 12px; align-items: stretch;';
         
         // Attach the pan listener
         scrollContainer.addEventListener('mousedown', this.handleKanbanMouseDown);
@@ -1834,7 +1833,6 @@ export class GardenView extends View {
                 }
             });
 
-            this.alignSeedCells(scrollContainer);
             
             
         }
@@ -2616,62 +2614,6 @@ export class GardenView extends View {
         }
     }
 
-    /**
-     * Align seed cells across all columns by padding the outer column wrapper.
-     * Uses double-requestAnimationFrame to ensure layout is settled before measuring.
-     */
-    private alignSeedCells(container?: HTMLElement) {
-        const scrollContainer = container ?? this.containerEl.querySelector('.kanban-scroll-container');
-        if (!scrollContainer) return;
-        
-        const win = this.containerEl.ownerDocument.defaultView || window;
-        // Double rAF: first frame lets the browser lay out, second frame measures the settled layout
-        win.requestAnimationFrame(() => {
-            win.requestAnimationFrame(() => {
-                const columns = scrollContainer.querySelectorAll('.project-column');
-                
-                if (columns.length < 2) return;
-                let maxTopH = 0, maxBotH = 0;
-                columns.forEach((colEl) => {
-                    const col = colEl as HTMLElement;
-                    const topH = (col.querySelector('.column-top-half') as HTMLElement)?.offsetHeight ?? 0;
-                    const botH = (col.querySelector('.column-bottom-half') as HTMLElement)?.offsetHeight ?? 0;
-                    if (topH > maxTopH) maxTopH = topH;
-                    if (botH > maxBotH) maxBotH = botH;
-                });
-                columns.forEach((colEl) => {
-                    const col = colEl as HTMLElement;
-                    const topHalf = col.querySelector('.column-top-half') as HTMLElement;
-                    const botHalf = col.querySelector('.column-bottom-half') as HTMLElement;
-                    let padTop = 0, padBot = 0;
-                    if (topHalf) {
-                        const diff = maxTopH - topHalf.offsetHeight;
-                        if (diff > 0) padTop = diff;
-                    }
-                    if (botHalf) {
-                        const diff = maxBotH - botHalf.offsetHeight;
-                        if (diff > 0) padBot = diff;
-                    }
-                    col.style.paddingTop = `${padTop}px`;
-                    col.style.paddingBottom = `${padBot}px`;
-                });
-                // Also align the add-column buttons (+) to vertically center on the seed row
-                // Pad the inner span so the button stays full-height with the + centered via CSS
-                const firstSeed = scrollContainer.querySelector('.seed-cell') as HTMLElement;
-                if (firstSeed) {
-                    const seedRect = firstSeed.getBoundingClientRect();
-                    const containerRect = scrollContainer.getBoundingClientRect();
-                    const seedCenterY = seedRect.top - containerRect.top + seedRect.height / 2;
-                    const addBtns = scrollContainer.querySelectorAll('.add-column-btn-inner');
-                    addBtns.forEach((innerEl) => {
-                        const inner = innerEl as HTMLElement;
-                        inner.style.top = `${Math.max(0, seedCenterY)}px`;
-                        inner.style.transform = 'translateY(-50%)';
-                    });
-                }
-            });
-        });
-    }
 
 // --- Divider ratio saves after edit ---
 private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
@@ -2791,22 +2733,16 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
 
         const column = parent.createDiv({ cls: "project-column" });
         column.dataset.projectId = project.id;
-        // The width is a variable so a narrow surface can widen the column to its
-        // own width (styles.css, THE BOARD ON A NARROW SURFACE). An inline width
-        // would otherwise beat any stylesheet rule.
-        column.style.cssText = 'display: flex; flex-direction: column; width: var(--garden-column-width, 230px); flex-shrink: 0;';
 
         const columnCard = column.createDiv("column-card");
         const columnBody = columnCard.createDiv("column-body");
-        columnBody.style.cssText = 'display: flex; flex-direction: column;';
 
         // --- TOP HALF (Flowers, Stem) ---
         const topHalf = columnBody.createDiv("column-top-half");
-        topHalf.style.cssText = 'display: flex; flex-direction: column; flex-shrink: 0;';
 
         const flowerZone = topHalf.createDiv("garden-zone flowers-zone");
         const flowerLabel = flowerZone.createDiv("garden-zone-label-row");
-        flowerLabel.style.cssText = 'display: flex; align-items: center; position: relative;';
+        flowerLabel.style.cssText = 'display: flex; align-items: center;';
         flowerLabel.createDiv({ text: "⚘✽ Flowers", cls: "zone-label" });
         const flowerSpacer = flowerLabel.createDiv();
         flowerSpacer.style.flex = '1';
@@ -2818,7 +2754,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
 
         const stemZone = topHalf.createDiv("garden-zone stem-zone");
         const stemLabel = stemZone.createDiv("garden-zone-label-row");
-        stemLabel.style.cssText = 'display: flex; align-items: center; position: relative;';
+        stemLabel.style.cssText = 'display: flex; align-items: center;';
         stemLabel.createDiv({ text: "𖣂 Stem", cls: "zone-label" });
         const stemSpacer = stemLabel.createDiv();
         stemSpacer.style.flex = '1';
@@ -2940,11 +2876,10 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
 
         // --- BOTTOM HALF (Roots, Minerals) ---
         const bottomHalf = columnBody.createDiv("column-bottom-half");
-        bottomHalf.style.cssText = 'display: flex; flex-direction: column; flex-shrink: 0;';
 
         const rootZone = bottomHalf.createDiv("garden-zone roots-zone");
         const rootLabel = rootZone.createDiv("garden-zone-label-row");
-        rootLabel.style.cssText = 'display: flex; align-items: center; position: relative;';
+        rootLabel.style.cssText = 'display: flex; align-items: center;';
         rootLabel.createDiv({ text: "⫛ Roots", cls: "zone-label" });
         const rootSpacer = rootLabel.createDiv();
         rootSpacer.style.flex = '1';
@@ -2956,7 +2891,7 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
 
         const mineralZone = bottomHalf.createDiv("garden-zone minerals-zone");
         const mineralLabel = mineralZone.createDiv("garden-zone-label-row");
-        mineralLabel.style.cssText = 'display: flex; align-items: center; position: relative;';
+        mineralLabel.style.cssText = 'display: flex; align-items: center;';
         mineralLabel.createDiv({ text: "₊⊹˖ Minerals", cls: "zone-label" });
         const mineralSpacer = mineralLabel.createDiv();
         mineralSpacer.style.flex = '1';

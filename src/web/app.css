@@ -1,41 +1,13 @@
 /*
  * Theme tokens. The garden CSS was written against Obsidian's theme
- * variables, so we define the same names here (values from Obsidian's
- * default light/dark themes) and everything renders as it did in the vault.
+ * variables, so we define the same names here and everything renders as it
+ * did in the vault. The garden is dark: the sky above it carries its own
+ * colour through the day, and a light board beside it never sat right.
+ * There is no light theme and nothing follows the system setting.
  */
 :root {
-    color-scheme: light dark;
+    color-scheme: dark;
 
-    --background-primary: #ffffff;
-    --background-primary-alt: #fafafa;
-    --background-secondary: #f6f6f6;
-    --background-modifier-border: #e0e0e0;
-    --background-modifier-hover: rgba(0, 0, 0, 0.075);
-    --text-normal: #222222;
-    --text-muted: #5c5c5c;
-    --text-faint: #8a8a8a;
-    --interactive-accent: #7c5cd6;
-    --text-on-accent: #ffffff;
-
-    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-        --background-primary: #1e1e1e;
-        --background-primary-alt: #242424;
-        --background-secondary: #262626;
-        --background-modifier-border: #363636;
-        --background-modifier-hover: rgba(255, 255, 255, 0.075);
-        --text-normal: #dadada;
-        --text-muted: #b3b3b3;
-        --text-faint: #666666;
-        --interactive-accent: #a88bfa;
-        --text-on-accent: #ffffff;
-    }
-}
-
-:root[data-theme="dark"] {
     --background-primary: #1e1e1e;
     --background-primary-alt: #242424;
     --background-secondary: #262626;
@@ -46,6 +18,8 @@
     --text-faint: #666666;
     --interactive-accent: #a88bfa;
     --text-on-accent: #ffffff;
+
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
