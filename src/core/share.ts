@@ -1,6 +1,7 @@
 /**
  * The owner's Share garden modal and the member's Leave confirmation (M4).
  */
+import { avatarEl } from './avatar';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
     clearInvite,
@@ -122,8 +123,9 @@ export class ShareGardenModal extends Modal {
             people.createDiv({ cls: 'setting-item-description', text: 'No one yet.' });
         }
         for (const member of members) {
-            new Setting(people)
-                .setName(member.name)
+            const row = new Setting(people).setName(member.name);
+            row.nameEl.prepend(avatarEl(member.avatar, 20));
+            row
                 .addButton((b) => b.setButtonText('Remove').onClick(async () => {
                     try {
                         await removeMember(this.client, this.gardenId, member.userId);

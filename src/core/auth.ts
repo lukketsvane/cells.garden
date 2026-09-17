@@ -17,6 +17,7 @@
  *  2. Typing the 6-digit code. Works anywhere, no redirect needed. Needs
  *     `{{ .Token }}` in the Supabase "Magic Link" email template.
  */
+import { avatarEl } from './avatar';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { Modal, Setting } from './ui';
 
@@ -322,6 +323,14 @@ export class AuthPill {
         this.buildMenu = build;
     }
 
+    private avatar: string | null = null;
+
+    /** The seed of the signed-in user's picture, once the profile is loaded. */
+    setAvatar(seed: string | null) {
+        this.avatar = seed;
+        this.render();
+    }
+
     /** Shown instead of the email, e.g. the name of a shared garden. null: the email. */
     setLabel(label: string | null) {
         this.label = label;
@@ -342,8 +351,7 @@ export class AuthPill {
         this.el.empty();
         if (this.session) {
             const email = this.session.user.email ?? '';
-            const initial = (email[0] ?? '•').toUpperCase();
-            this.el.createSpan({ cls: 'auth-pill-avatar', text: initial });
+            this.el.appendChild(avatarEl(this.avatar ?? this.session.user.id, 18, 'auth-pill-avatar'));
             this.el.createSpan({ cls: 'auth-pill-label', text: this.label ?? email });
             this.el.toggleClass('is-shared', this.label !== null);
             this.el.addClass('is-signed-in');
