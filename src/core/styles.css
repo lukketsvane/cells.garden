@@ -967,3 +967,60 @@
 .settings-avatar .garden-avatar {
     margin-right: 0;
 }
+
+/* A plant's card floating over the garden while the board is hidden. */
+.garden-peek-card {
+    position: absolute;
+    z-index: 40;
+    width: 230px;
+    max-height: calc(100% - 16px);
+    overflow: hidden;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--background-secondary) 94%, transparent);
+    border: 1px solid var(--background-modifier-border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    color: var(--text-normal);
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+    transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.garden-peek-card.is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+.garden-peek-seed {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.garden-peek-zone {
+    padding-top: 5px;
+    margin-top: 5px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.garden-peek-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-faint);
+    margin-bottom: 3px;
+}
+
+.garden-peek-item {
+    padding: 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.garden-peek-more {
+    color: var(--text-faint);
+    font-size: 11px;
+}
