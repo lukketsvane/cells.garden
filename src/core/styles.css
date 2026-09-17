@@ -423,12 +423,13 @@
     padding: 0;
     font-size: 15px;
     line-height: 1;
-    border-radius: 50%;
-    border: 1px solid var(--background-modifier-border);
-    background: var(--background-primary);
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
     color: var(--text-faint);
     cursor: pointer;
-    margin-top: 3px;
+    margin: 0;
     flex-shrink: 0;
     transition: all 0.15s ease;
     display: flex;
@@ -436,10 +437,16 @@
     justify-content: center;
 }
 
+/* A cell being written straight into its zone. */
+.garden-item.is-draft:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-faint);
+    pointer-events: none;
+}
+
 .zone-add-btn:hover {
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border-color: var(--interactive-accent);
+    background: none;
+    color: var(--text-normal);
 }
 
 /* Scrollbars */
@@ -916,4 +923,9 @@
         background: var(--text-faint);
         transform: translate(-50%, -50%);
     }
+}
+
+/* The Mountains scene leaves the tree line out (scene.ts). */
+:root[data-scene="mountains"] .garden-bg-layer {
+    display: none;
 }

@@ -141,8 +141,8 @@ button {
     margin: 4px 0 8px;
 }
 
-/* --- Garden files: export / import (M3) --- */
-.garden-files-button {
+/* --- The corner button: show or hide the board --- */
+.garden-board-toggle {
     position: fixed;
     top: 8px;
     right: 8px;
@@ -163,7 +163,7 @@ button {
     opacity: 0.85;
     transition: opacity 0.15s ease, background 0.15s ease;
 }
-.garden-files-button:hover { opacity: 1; background: var(--background-primary); color: var(--text-normal); }
+.garden-board-toggle:hover { opacity: 1; background: var(--background-primary); color: var(--text-normal); }
 
 .garden-files-modal hr {
     border: none;
@@ -214,7 +214,7 @@ button {
     left: calc(8px + env(safe-area-inset-left, 0px));
 }
 
-.garden-files-button {
+.garden-board-toggle {
     top: calc(8px + env(safe-area-inset-top, 0px));
     right: calc(8px + env(safe-area-inset-right, 0px));
 }
@@ -230,11 +230,11 @@ button {
 
 @media (pointer: coarse) {
     .auth-pill,
-    .garden-files-button {
+    .garden-board-toggle {
         opacity: 1;
     }
 
-    .garden-files-button {
+    .garden-board-toggle {
         width: 34px;
         height: 34px;
     }
@@ -257,4 +257,29 @@ button {
     html, body {
         background: var(--background-primary);
     }
+}
+
+/* Without an account: export and import where the pill would be. */
+.garden-files-button {
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    left: calc(8px + env(safe-area-inset-left, 0px));
+    z-index: 50;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--background-modifier-border);
+    background: color-mix(in srgb, var(--background-primary) 80%, transparent);
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* The board hidden: the garden takes the whole page. */
+:root[data-board="hidden"] .garden-resizer,
+:root[data-board="hidden"] .garden-bottom-half {
+    display: none !important;
+}
+
+:root[data-board="hidden"] .garden-canvas-area {
+    flex: 1 1 auto !important;
 }
