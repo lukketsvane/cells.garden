@@ -8,14 +8,18 @@
 import './shim';
 import { GardenApp } from './app';
 import { AuthPill, type MenuItem } from './auth';
+import { PlantSync } from './plants';
 import { LeaveGardenModal, ShareGardenModal } from './share';
+import { SharePlantModal } from './share-plant';
 import {
     GardenFullError,
     InvalidInviteError,
     inviteTokenFromHash,
     joinGarden,
+    joinPlant,
     listSharedGardens,
     ownGardenId,
+    plantTokenFromHash,
     removeMember,
     sharingAvailable,
     SharingUnavailableError,
@@ -71,22 +75,30 @@ function writeJson(key: string, value: unknown) {
  * take it out of the address so it is not bookmarked or passed on by accident.
  * Kept in localStorage because the emailed sign-in link opens a new tab.
  */
+type InviteKind = 'garden' | 'plant';
+
 function stashInviteFromUrl() {
     if (typeof location === 'undefined') return;
-    const token = inviteTokenFromHash(location.hash);
+    const garden = inviteTokenFromHash(location.hash);
+    const plant = plantTokenFromHash(location.hash);
+    const token = garden ?? plant;
     if (!token) return;
-    writeJson(PENDING_JOIN_KEY, { token, at: Date.now() });
+    writeJson(PENDING_JOIN_KEY, { token, kind: garden ? 'garden' : 'plant', at: Date.now() });
     history.replaceState(null, '', location.pathname + location.search);
 }
 
-function takePendingJoin(): string | null {
-    const pending = readJson<{ token?: string; at?: number }>(PENDING_JOIN_KEY);
+function peekPendingJoin(): { token: string; kind: InviteKind } | null {
+    const pending = readJson<{ token?: string; kind?: InviteKind; at?: number }>(PENDING_JOIN_KEY);
     if (!pending?.token || typeof pending.at !== 'number') return null;
     if (Date.now() - pending.at > PENDING_JOIN_TTL) {
         writeJson(PENDING_JOIN_KEY, null);
         return null;
     }
-    return pending.token;
+    return { token: pending.token, kind: pending.kind === 'plant' ? 'plant' : 'garden' };
+}
+
+function takePendingJoin(): string | null {
+    return peekPendingJoin()?.token ?? null;
 }
 
 /** A one-line notice over the garden that goes away by itself. */
@@ -137,6 +149,8 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
     let currentUser: string | null = null;
     /** The shared garden on screen, or null for the user's own. */
     let shared: OpenGarden | null = null;
+    /** Keeps collaborative plants in step while someone is signed in. */
+    let plants: PlantSync | null = null;
 
     const openGarden = async (uid: string, target: OpenGarden | null): Promise<void> => {
         shared = target;
@@ -179,8 +193,9 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
 
     /** Use a waiting invite, if there is one. Returns the garden it opened. */
     const joinPending = async (uid: string): Promise<OpenGarden | null> => {
-        const token = takePendingJoin();
-        if (!token) return null;
+        const pending = peekPendingJoin();
+        if (!pending || pending.kind !== 'garden') return null;
+        const token = pending.token;
         writeJson(PENDING_JOIN_KEY, null);
         try {
             const garden = await joinGarden(supabase, token);
@@ -202,6 +217,38 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         }
     };
 
+    /** Use a waiting plant invite: the plant is added to the user's own garden. */
+    const joinPendingPlant = async (uid: string, sync: PlantSync) => {
+        const pending = peekPendingJoin();
+        if (!pending || pending.kind !== 'plant') return;
+        writeJson(PENDING_JOIN_KEY, null);
+        try {
+            if (shared) await openGarden(uid, null);
+            const row = await joinPlant(supabase, pending.token);
+            if (app.gardenData.some(p => p.sharedPlantId === row.id)) {
+                notify(host, 'That plant is already in your garden.');
+                return;
+            }
+            const data = row.data;
+            const taken = app.gardenData.some(p => p.id === data.id);
+            sync.adopt(row);
+            await app.addProject({
+                ...data,
+                id: taken ? `proj_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` : data.id,
+                order: app.gardenData.length,
+                sharedPlantId: row.id,
+            });
+            notify(host, `Planted ${data.seed || data.name}.`);
+        } catch (e) {
+            if (e instanceof InvalidInviteError || e instanceof GardenFullError || e instanceof SharingUnavailableError) {
+                notify(host, e.message.replace('garden', 'plant'));
+            } else {
+                console.error('Garden Cells: could not use the plant link', e);
+                notify(host, 'Could not open that link. Try it again.');
+            }
+        }
+    };
+
     pill.setMenu(async (): Promise<MenuItem[]> => {
         const uid = currentUser;
         if (!uid || !(await sharingAvailable(supabase))) return [];
@@ -219,6 +266,12 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
                 });
             }
         }
+        items.push({
+            label: 'Share a plant',
+            onClick: () => {
+                if (plants) new SharePlantModal(supabase, uid, app, plants).open();
+            },
+        });
         if (!shared) {
             items.push({
                 label: 'Share garden',
@@ -268,11 +321,17 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         currentUser = uid;
         // Supabase asks that other client calls run outside this callback.
         setTimeout(() => {
+            plants?.stop();
+            plants = null;
             if (uid) {
+                const sync = new PlantSync(supabase, uid, app);
+                plants = sync;
                 void (async () => {
                     const joined = await joinPending(uid);
                     const remembered = joined ?? readJson<OpenGarden>(activeKey(uid));
                     await openGarden(uid, remembered && remembered.id ? remembered : null);
+                    sync.start();
+                    await joinPendingPlant(uid, sync);
                 })().catch(fail);
             } else {
                 shared = null;

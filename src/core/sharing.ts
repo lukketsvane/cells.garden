@@ -153,3 +153,95 @@ export async function renameGarden(client: SupabaseClient, gardenId: string, nam
     const { error } = await client.from('gardens').update({ name }).eq('id', gardenId);
     if (error) fail(error);
 }
+
+// --- Collaborative plants (migration 0007) -----------------------------------
+
+/** The token in a `#plant=<uuid>` hash, or null. */
+export function plantTokenFromHash(hash: string): string | null {
+    const match = /(?:^#|&)plant=([^&]+)/.exec(hash);
+    const token = match ? decodeURIComponent(match[1]) : '';
+    return UUID.test(token) ? token.toLowerCase() : null;
+}
+
+export function plantInviteUrl(token: string): string {
+    return `${APP_URL}#plant=${token}`;
+}
+
+export interface SharedPlantRow {
+    id: string;
+    owner_id: string;
+    data: import('./merge').PlantData;
+    rev: number;
+}
+
+/** Make a plants row from a plant in this garden. The caller links it with sharedPlantId. */
+export async function createSharedPlant(client: SupabaseClient, userId: string, data: import('./merge').PlantData): Promise<SharedPlantRow> {
+    const { data: row, error } = await client
+        .from('plants')
+        .insert({ owner_id: userId, data })
+        .select('id, owner_id, data, rev')
+        .single();
+    if (error) fail(error);
+    return row as unknown as SharedPlantRow;
+}
+
+/** Present a plant invite; the user becomes a member. Returns the plant row. */
+export async function joinPlant(client: SupabaseClient, token: string): Promise<SharedPlantRow> {
+    const { data, error } = await client.rpc('join_plant', { invite: token });
+    if (error) {
+        if (error.code === 'P0002') throw new InvalidInviteError();
+        if (error.code === '53400') throw new GardenFullError();
+        fail(error);
+    }
+    const row = ((data ?? []) as { plant_id: string; data: import('./merge').PlantData; rev: number }[])[0];
+    if (!row) throw new InvalidInviteError();
+    const { data: owner } = await client.from('plants').select('owner_id').eq('id', row.plant_id).limit(1);
+    const ownerId = ((owner ?? []) as { owner_id: string }[])[0]?.owner_id ?? '';
+    return { id: row.plant_id, owner_id: ownerId, data: row.data, rev: row.rev };
+}
+
+export async function plantOwner(client: SupabaseClient, plantId: string): Promise<string | null> {
+    const { data, error } = await client.from('plants').select('owner_id').eq('id', plantId).limit(1);
+    if (error) fail(error);
+    return ((data ?? []) as { owner_id: string }[])[0]?.owner_id ?? null;
+}
+
+export async function getPlantInvite(client: SupabaseClient, plantId: string): Promise<string | null> {
+    const { data, error } = await client.from('plant_invites').select('token').eq('plant_id', plantId).limit(1);
+    if (error) fail(error);
+    return ((data ?? []) as { token: string }[])[0]?.token ?? null;
+}
+
+export async function renewPlantInvite(client: SupabaseClient, plantId: string): Promise<string> {
+    const token = crypto.randomUUID();
+    const { error } = await client.from('plant_invites').upsert({ plant_id: plantId, token, created_at: new Date().toISOString() });
+    if (error) fail(error);
+    return token;
+}
+
+export async function clearPlantInvite(client: SupabaseClient, plantId: string): Promise<void> {
+    const { error } = await client.from('plant_invites').delete().eq('plant_id', plantId);
+    if (error) fail(error);
+}
+
+export async function listPlantMembers(client: SupabaseClient, plantId: string): Promise<GardenMember[]> {
+    const { data, error } = await client
+        .from('plant_members')
+        .select('user_id, created_at, profiles(display_name)')
+        .eq('plant_id', plantId)
+        .order('created_at');
+    if (error) fail(error);
+    return ((data ?? []) as unknown as { user_id: string; profiles: { display_name: string | null } | null }[])
+        .map(m => ({ userId: m.user_id, name: m.profiles?.display_name || 'someone' }));
+}
+
+export async function removePlantMember(client: SupabaseClient, plantId: string, userId: string): Promise<void> {
+    const { error } = await client.from('plant_members').delete().eq('plant_id', plantId).eq('user_id', userId);
+    if (error) fail(error);
+}
+
+/** The owner stops sharing: the row goes, everyone keeps their own copy. */
+export async function deleteSharedPlant(client: SupabaseClient, plantId: string): Promise<void> {
+    const { error } = await client.from('plants').delete().eq('id', plantId);
+    if (error) fail(error);
+}
