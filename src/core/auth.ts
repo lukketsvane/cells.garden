@@ -17,6 +17,7 @@
  *  2. Typing the 6-digit code. Works anywhere, no redirect needed. Needs
  *     `{{ .Token }}` in the Supabase "Magic Link" email template.
  */
+import type { SyncState } from './app';
 import { avatarEl } from './avatar';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { openMenu, type MenuItem } from './menu';
@@ -327,7 +328,7 @@ export class AuthPill {
         this.render();
     }
 
-    setSyncState(state: 'local' | 'syncing' | 'synced' | 'error') {
+    setSyncState(state: SyncState) {
         this.el.dataset.sync = state;
         this.el.title = {
             local: 'Sign in to sync your garden',
