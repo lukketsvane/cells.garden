@@ -59,7 +59,7 @@ ext/           Chrome extension (Manifest V3): newtab.html, sidepanel.html, back
 public/        icons (SVG + PNG); the web manifest is generated at build time
 scripts/       make-icons.mjs, test-web.mjs, test-ext.mjs
 supabase/      migrations + README (auth, RLS, SMTP)
-docs/          architecture diagrams
+docs/          architecture diagrams, and github-desktop.md for contributing without a terminal
 obsidian/      Max's plugin, untouched. Hooks into the core later.
 dist/          web build (ignored)
 dist-ext/      extension build (ignored)
