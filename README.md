@@ -44,6 +44,7 @@ src/core/      the core (independent of web, extension and Obsidian)
   auth.ts        sign-in pill, magic link + 6-digit code
   boot.ts        bootGarden(host): mounts the garden and wires sign-in/sync
   assets.ts      AssetManager over the bundled asset pack in src/assets/pack/
+  asset-paths.ts the pack's path rules, including the sprite names of the first build
   modals.ts      Max's three modals
   garden.ts      GardenView, Max's main.ts ported
   app.ts         GardenApp, owns data, settings, the store switch
@@ -87,7 +88,21 @@ The `.env` file carries the Supabase URL and publishable key on purpose; both ar
 
 ## Assets
 
-Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell is the path relative to `src/assets/pack/`, e.g. `plant_1/stem/plant_1_part3.png`, so it survives markdown export unchanged. The pack only has `plant_1` (stems + flowers) today. Roots, minerals and seeds have no art yet and render invisibly, exactly as in Obsidian without `Garden-Assets/`.
+Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell is the path relative to `src/assets/pack/`, e.g. `plant_1/stem/stem3.png`, so it survives markdown export unchanged.
+
+The pack is a copy of Max's `Garden-Assets/` vault folder, filenames and all, so a garden exported from Obsidian resolves here and back:
+
+```
+pack/plant_1 … plant_8/stem/stem<n>.png        19, 11, 7, 8, 5, 10, 7, 3 stems
+pack/plant_1 … plant_8/flowers/flower<n>.png    9,  3, 2, 2, 3,  2, 5, 3 flowers
+pack/roots/root<n>.png                         14
+pack/minerals/mineral<n>.png                  100
+pack/seeds/seed<n>.png                         27
+```
+
+`PLANT_TYPES` in `assets.ts` is whatever the pack holds, so a new plant folder is a new plant type with no code change. Sprite sizes are per plant (35×7 for `plant_1`, roots, minerals and seeds; 45×7 for `plant_3`; down to 15×8 for a `plant_7` stem) and the view reads each one's natural size before scaling it by `PIXEL_SCALE`, so a folder can hold whatever the drawing needs.
+
+The first web build carried the twelve `plant_1` sprites bundled with the plugin, under their names there (`plant_1_part3.png`, `plant_1_flower2.png`). Gardens saved then still hold those paths, so `asset-paths.ts` maps them onto the same ordinal in the vault naming and they keep rendering.
 
 ## Milestones
 
