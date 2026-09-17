@@ -366,17 +366,15 @@ async function scenario(browser, errors) {
         await mpage.waitForFunction((t) => [...document.querySelectorAll('.garden-item')].some((el) => el.textContent === t), text);
     }
 
-    // One surface: no card backgrounds or column borders in the board.
+    // A card per plant on the board, a line between plants.
     const surface = await mpage.evaluate(() => {
         const bg = (sel) => getComputedStyle(document.querySelector(sel)).backgroundColor;
         const col = getComputedStyle(document.querySelector('.project-column'));
-        return { card: bg('.column-card'), top: bg('.column-top-half'), bottom: bg('.column-bottom-half'), colBorder: col.borderRightWidth, board: bg('.kanban-scroll-container') };
+        return { card: bg('.flowers-zone'), seed: bg('.seed-cell'), colBorder: col.borderRightWidth, board: bg('.kanban-scroll-container') };
     });
     console.log('board surface:', surface);
-    const clear = (c) => c === 'rgba(0, 0, 0, 0)' || c === 'transparent';
-    assert(clear(surface.card) && clear(surface.top) && clear(surface.bottom), `the columns still draw cards: ${JSON.stringify(surface)}`);
-    assert(surface.colBorder === '0px', 'the columns still draw borders');
-    assert(!clear(surface.board), 'the board itself should carry the surface colour');
+    assert(surface.card !== surface.board, `the plants should be cards on the board: ${JSON.stringify(surface)}`);
+    assert(surface.colBorder === '1px', 'a line should run between plants');
 
     // Tap selects, a second tap edits, at 16px so iOS does not zoom.
     await tapAt('.garden-item >> nth=0');
