@@ -1108,7 +1108,20 @@ export class GardenView extends View {
         if (this._renderDebounce) clearTimeout(this._renderDebounce);
         const win = this.containerEl.ownerDocument.defaultView || window;
         // Cast to any to bridge the gap between Node's Timeout and Browser's number
-        this._renderDebounce = win.setTimeout(() => { this.onOpen(); }, 80) as any;
+        this._renderDebounce = win.setTimeout(() => {
+            // A sync from another tab or device must not throw away a cell being
+            // written: wait until the typing is done, then render.
+            if (this.isTyping()) {
+                this.scheduleRender();
+                return;
+            }
+            this.onOpen();
+        }, 80) as any;
+    }
+
+    private isTyping(): boolean {
+        const active = this.containerEl.ownerDocument.activeElement as HTMLElement | null;
+        return !!active && this.contentEl.contains(active) && active.isContentEditable;
     }
 
     async onOpen() {
