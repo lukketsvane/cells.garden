@@ -17,20 +17,20 @@ import cloudUrl from '../assets/cloud.png';
 import mountainsUrl from '../assets/mountains.png';
 import groundUrl from '../assets/ground_tile.png';
 import starsPatternUrl from '../assets/stars_pattern.gif';
-import flower1Url from '../assets/pack/plant_1/flowers/plant_1_flower1.png';
-import flower2Url from '../assets/pack/plant_1/flowers/plant_1_flower2.png';
+import flower1Url from '../assets/pack/plant_1/flowers/flower1.png';
+import flower2Url from '../assets/pack/plant_1/flowers/flower2.png';
 
 import ant1Url from '../assets/ant_walk_1.png';
 import ant2Url from '../assets/ant_walk_2.png';
 
-import stem1Url from '../assets/pack/plant_1/stem/plant_1_part1.png';
-import stem2Url from '../assets/pack/plant_1/stem/plant_1_part2.png';
-import stem3Url from '../assets/pack/plant_1/stem/plant_1_part3.png';
-import stem4Url from '../assets/pack/plant_1/stem/plant_1_part4.png';
-import stem5Url from '../assets/pack/plant_1/stem/plant_1_part5.png';
-import stem6Url from '../assets/pack/plant_1/stem/plant_1_part6.png';
-import stem7Url from '../assets/pack/plant_1/stem/plant_1_part7.png';
-import stem8Url from '../assets/pack/plant_1/stem/plant_1_part8.png';
+import stem1Url from '../assets/pack/plant_1/stem/stem1.png';
+import stem2Url from '../assets/pack/plant_1/stem/stem2.png';
+import stem3Url from '../assets/pack/plant_1/stem/stem3.png';
+import stem4Url from '../assets/pack/plant_1/stem/stem4.png';
+import stem5Url from '../assets/pack/plant_1/stem/stem5.png';
+import stem6Url from '../assets/pack/plant_1/stem/stem6.png';
+import stem7Url from '../assets/pack/plant_1/stem/stem7.png';
+import stem8Url from '../assets/pack/plant_1/stem/stem8.png';
 
 /** Empty world on each side of the plants, in world px. Also where the first plant stands. */
 const WORLD_PADDING = 320;

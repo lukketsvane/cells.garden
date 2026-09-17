@@ -11,6 +11,8 @@
  * through the markdown export unchanged. User uploads come later (M3).
  */
 
+import { legacyImagePath } from './asset-paths';
+
 const PACK_PREFIX = '../assets/pack/';
 
 const packFiles = import.meta.glob('../assets/pack/**/*.{png,gif,webp,jpg,jpeg,svg}', {
@@ -73,7 +75,10 @@ export class AssetManager {
     }
 
     getImageUrlSync(path: string): string | null {
-        return PACK.get(path) ?? null;
+        const url = PACK.get(path);
+        if (url) return url;
+        const legacy = legacyImagePath(path);
+        return (legacy && PACK.get(legacy)) ?? null;
     }
 
 }
