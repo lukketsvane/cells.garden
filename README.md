@@ -28,7 +28,7 @@ The web app is the core. The extension and the PWA are shells around the same bu
 
 - **Web**: the garden at a URL, deployed by Vercel: `main` is `cells.garden`, `dev` is `dev.cells.garden`.
 - **PWA**: same app on a phone; service worker precaches the shell so it opens offline.
-- **Extension**: New Tab override and Side Panel, same core, same local storage.
+- **Extension**: New Tab override, Side Panel and a popup that shows one plant at a time, same core, same local storage.
 
 Same code, three distributions. Diagrams: `docs/architecture.html` (and the PNG next to it).
 
@@ -92,4 +92,5 @@ Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell 
 - **M0**: runs in a browser, localStorage, deployed on Vercel. Done.
 - **M1**: Supabase auth + sync, PWA. Same garden on phone and desktop. Done.
 - **M2**: Chrome extension (new tab + side panel), service worker, per-surface camera, hardened sync. Done.
-- **M3**: Obsidian import/export in the UI. Done. Custom images and an Obsidian plugin on top of the core, syncing to the same backend, are still open.
+- **M3**: Obsidian import/export in the UI, and the extension popup (one plant at a time). Done. An Obsidian plugin on top of the core, syncing to the same backend, is still open. Custom images are out of scope for now.
+- **M4**: shared gardens (invite by link, live co-editing) and placeholder art for roots, minerals and seeds. In progress.
