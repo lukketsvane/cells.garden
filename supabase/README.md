@@ -33,6 +33,8 @@ Run them in order in the SQL editor. Each one is safe to run more than once.
 | `migrations/0004_harden_functions.sql` | keeps `handle_new_user` off the REST surface and pins both trigger functions to an empty `search_path` |
 | `migrations/0005_shared_gardens.sql` | `gardens.rev` bumped by a trigger that also freezes `user_id`, `garden_members`, `garden_invites`, `join_garden(token)`, member policies |
 | `migrations/0006_private_policy_helpers.sql` | moves the policy helpers to a `private` schema so they are not API endpoints; `(select auth.uid())` in the older owner policies |
+| `migrations/0007_shared_plants.sql` | `plants` (one shared plant, server revision), `plant_members`, `plant_invites`, `join_plant(token)`, policies, realtime |
+| `migrations/0008_owner_rows_visible_on_insert.sql` | lets an owner read back a garden or plant row inside the insert that creates it |
 
 ## Custom art (M3)
 
@@ -56,6 +58,12 @@ An owner shares their one garden by link. The link is `https://cells.garden/#joi
 In the app: the pill menu lists shared gardens and offers Share garden (owner) or Leave garden (member). The chosen garden is remembered per account on each device. A garden that is no longer reachable falls back to the user's own with a notice.
 
 Saves are compare-and-swap on `rev`. When someone wrote first, the client fetches their version and merges by plant and cell id (`src/core/merge.ts`), then retries. Still lost: the same field of the same cell changed by two people at once (the later save wins), and two different reorders of the same list.
+
+## Collaborative plants
+
+One plant shared by link (`https://cells.garden/#plant=<token>`) into other people's own gardens. The plant keeps its cells in a `plants` row; each garden that holds it keeps a copy in its blob, marked with `sharedPlantId`, so it still works offline. Everyone who has it edits the same row: compare-and-swap on `rev`, merged by cell id, pushed to the others over realtime. Where the plant stands is each garden's own.
+
+In the app: pill menu, Share a plant. The owner gets a link, sees who has the plant, can remove people or stop sharing. Someone who joined can leave. Leaving or stopping keeps every copy.
 
 ## Sync model
 

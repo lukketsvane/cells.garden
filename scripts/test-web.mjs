@@ -294,6 +294,16 @@ async function scenario(browser, errors) {
         } else {
             assert(pending === null, 'without Supabase config the invite is dropped');
         }
+        // A plant link waits the same way, marked as a plant.
+        await ipage.evaluate(() => localStorage.removeItem('cells.garden/v1/pendingJoin'));
+        await ipage.goto('about:blank');
+        await ipage.goto(`${BASE}#plant=${token}`, { waitUntil: 'networkidle' });
+        assert(!ipage.url().includes('#plant='), `the plant token must leave the address bar: ${ipage.url()}`);
+        const pendingPlant = await ipage.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1/pendingJoin') || 'null'));
+        if (hasPill) {
+            assert(pendingPlant && pendingPlant.token === token && pendingPlant.kind === 'plant', `the plant invite should wait for sign-in: ${JSON.stringify(pendingPlant)}`);
+            await ipage.waitForSelector('.modal .auth-note', { timeout: 5000 });
+        }
         // A malformed token is ignored and stays in the address.
         await ipage.goto(`${BASE}#join=nope`, { waitUntil: 'networkidle' });
         assert(ipage.url().endsWith('#join=nope'), 'a malformed token must be left alone');
