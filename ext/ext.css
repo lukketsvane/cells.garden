@@ -35,3 +35,119 @@ html[data-context="sidepanel"] .modal {
 html[data-context="sidepanel"] .kanban-empty-message {
     padding: 24px 16px;
 }
+
+/* The popup is a fixed small window: the canvas cutout of one plant on top,
+   the controls below. The kanban half of the view is not shown. */
+html[data-context="popup"],
+html[data-context="popup"] body {
+    width: 320px;
+    height: 440px;
+    margin: 0;
+    overflow: hidden;
+}
+
+html[data-context="popup"] body {
+    display: flex;
+    flex-direction: column;
+    background: var(--background-primary);
+}
+
+html[data-context="popup"] #app {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+}
+
+html[data-context="popup"] .garden-canvas-area {
+    flex: 1 1 auto !important;
+}
+
+html[data-context="popup"] .garden-resizer,
+html[data-context="popup"] .garden-bottom-half,
+html[data-context="popup"] .garden-files-button {
+    display: none !important;
+}
+
+html[data-context="popup"].popup-aimed .garden-world {
+    transition: transform 220ms ease;
+}
+
+html[data-context="popup"] .auth-pill {
+    top: 6px;
+    left: 6px;
+    max-width: 140px;
+    padding: 3px 8px 3px 5px;
+    font-size: 11px;
+}
+
+.popup-footer {
+    flex: 0 0 auto;
+    padding: 8px 10px 10px;
+    border-top: 1px solid var(--background-modifier-border);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.popup-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.popup-label {
+    flex: 1 1 auto;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.popup-name {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 1.2em;
+}
+
+.popup-arrow,
+.popup-action {
+    font: inherit;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--text-normal);
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.popup-arrow {
+    width: 36px;
+    height: 30px;
+    font-weight: 700;
+}
+
+.popup-arrow:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.popup-arrow:not(:disabled):hover,
+.popup-action:hover {
+    background: var(--background-modifier-hover, var(--background-secondary));
+}
+
+.popup-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.popup-action {
+    flex: 1 1 0;
+    padding: 6px 0;
+}

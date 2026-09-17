@@ -63,6 +63,7 @@ export default defineConfig(({ mode }) => {
                 input: {
                     newtab: fromRoot('./ext/newtab.html'),
                     sidepanel: fromRoot('./ext/sidepanel.html'),
+                    popup: fromRoot('./ext/popup.html'),
                     background: fromRoot('./ext/background.ts'),
                 },
                 output: {

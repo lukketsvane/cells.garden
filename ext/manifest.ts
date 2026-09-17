@@ -32,14 +32,17 @@ export function buildManifest(env: ManifestEnv): chrome.runtime.ManifestV3 {
         description: env.description,
         icons: { ...ICONS },
         action: {
-            default_title: 'Open the garden in the side panel',
+            default_title: 'cells.garden',
             default_icon: { ...ICONS },
+            // One plant at a time; the popup opens the side panel or a new tab on request.
+            default_popup: 'popup.html',
         },
         chrome_url_overrides: { newtab: 'newtab.html' },
         side_panel: { default_path: 'sidepanel.html' },
         background: { service_worker: 'background.js', type: 'module' },
         permissions: ['sidePanel'],
-        minimum_chrome_version: '114',
+        // 116: chrome.sidePanel.open(), which the popup uses.
+        minimum_chrome_version: '116',
     };
 
     // A magic link is a redirect from the auth server to
