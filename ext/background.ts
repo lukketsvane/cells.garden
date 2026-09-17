@@ -1,13 +1,14 @@
 /**
- * MV3 module service worker. Its one job: make a click on the toolbar icon
- * open the side panel. Chrome stores the behavior per install, but setting it
- * again on every start is cheap and also covers updates and profile restores.
+ * MV3 module service worker. The toolbar icon shows the popup (one plant at a
+ * time), so the side panel must not also claim the click. Chrome stores the
+ * behavior per install; setting it on every start also covers updates and
+ * profile restores.
  */
-function openPanelOnActionClick(): Promise<void> {
+function popupOwnsActionClick(): Promise<void> {
     return chrome.sidePanel
-        .setPanelBehavior({ openPanelOnActionClick: true })
+        .setPanelBehavior({ openPanelOnActionClick: false })
         .catch((e: unknown) => console.error('cells.garden: could not set the side panel behavior', e));
 }
 
-chrome.runtime.onInstalled.addListener(() => { void openPanelOnActionClick(); });
-void openPanelOnActionClick();
+chrome.runtime.onInstalled.addListener(() => { void popupOwnsActionClick(); });
+void popupOwnsActionClick();

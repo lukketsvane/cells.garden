@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // End-to-end check of the Chrome extension build in dist-ext/. Builds it when
 // it is stale, loads it into Chromium with Playwright, exercises the New Tab
-// page and the Side Panel page, and fails on any console error or page error
+// page, the Side Panel page and the popup, and fails on any console error or page error
 // that is not a plain network failure (the app tolerates being offline).
 // Run with "npm run test:ext".
 //
@@ -30,6 +30,7 @@ const MANIFEST = join(DIST, 'manifest.json');
 const SCREENSHOT_DIR = process.env.EXT_TEST_SCREENSHOTS || '';
 
 const SEED = 'Port the garden to the extension';
+const SEED_2 = 'Show one plant in the popup';
 const STEM = 'Scaffold + shim';
 const FLOWER = 'Side panel works';
 
@@ -86,12 +87,13 @@ assert(manifest.background?.service_worker === 'background.js' && manifest.backg
 assert(existsSync(join(DIST, 'background.js')), 'dist-ext/background.js is missing');
 assert(manifest.chrome_url_overrides?.newtab === 'newtab.html', 'chrome_url_overrides.newtab must be newtab.html');
 assert(manifest.side_panel?.default_path === 'sidepanel.html', 'side_panel.default_path must be sidepanel.html');
-assert(manifest.minimum_chrome_version === '114', 'minimum_chrome_version must be 114');
+assert(manifest.action?.default_popup === 'popup.html', 'action.default_popup must be popup.html');
+assert(manifest.minimum_chrome_version === '116', 'minimum_chrome_version must be 116 (chrome.sidePanel.open)');
 for (const size of [16, 32, 48, 128]) {
     assert(existsSync(join(DIST, manifest.icons?.[size] ?? '')), `icons.${size} must point at a file in dist-ext/`);
     assert(existsSync(join(DIST, manifest.action?.default_icon?.[size] ?? '')), `action.default_icon.${size} must point at a file in dist-ext/`);
 }
-for (const page of ['newtab.html', 'sidepanel.html']) {
+for (const page of ['newtab.html', 'sidepanel.html', 'popup.html']) {
     const html = readFileSync(join(DIST, page), 'utf8');
     // MV3's content security policy forbids inline scripts on extension pages.
     assert(!/<script\b(?![^>]*\bsrc=)[^>]*>/i.test(html), `${page} contains an inline <script>`);
@@ -170,14 +172,14 @@ try {
     assert(worker.url() === `chrome-extension://${extId}/background.js`, `unexpected service worker url ${worker.url()}`);
     console.log(`test-ext: extension loaded as ${extId}`);
 
-    // The toolbar icon opens the side panel. The worker sets this at startup,
-    // so give it a moment.
+    // The toolbar icon shows the popup; the side panel must not claim the click.
+    // The worker sets this at startup, so give it a moment.
     let behavior = null;
-    for (let i = 0; i < 20 && behavior?.openPanelOnActionClick !== true; i++) {
+    for (let i = 0; i < 20 && behavior === null; i++) {
         behavior = await worker.evaluate(() => chrome.sidePanel.getPanelBehavior());
-        if (behavior?.openPanelOnActionClick !== true) await new Promise((r) => setTimeout(r, 100));
+        if (behavior === null) await new Promise((r) => setTimeout(r, 100));
     }
-    assert(behavior?.openPanelOnActionClick === true, `openPanelOnActionClick is not set: ${JSON.stringify(behavior)}`);
+    assert(behavior && behavior.openPanelOnActionClick !== true, `the side panel must not open on the action click: ${JSON.stringify(behavior)}`);
 
     // --- New Tab: plant, add a stem cell, reload, still there. ---
     const newtab = await context.newPage();
@@ -243,6 +245,66 @@ try {
     await newtab.reload();
     await newtab.waitForSelector('.project-column');
     assert((await newtab.$$eval('.garden-item', (els) => els.map((e) => e.textContent))).includes(FLOWER), 'a cell added in the side panel is missing from the new tab page');
+
+    // --- Popup: one plant at a time, no kanban, arrows cycle. ---
+    const popup = await context.newPage();
+    await popup.setViewportSize({ width: 320, height: 440 });
+    watch(popup, 'popup');
+    await popup.goto(`chrome-extension://${extId}/popup.html`);
+    await popup.waitForSelector('.garden-canvas-viewport');
+    assert(await popup.getAttribute('html', 'data-context') === 'popup', 'popup.html must set data-context="popup"');
+    await popup.waitForFunction(() => document.querySelector('.popup-label')?.textContent === 'Plant 1/1');
+    assert(await popup.textContent('.popup-name') === SEED, 'the popup does not name the plant by its seed');
+    // The camera glides between plants; measure once it has settled.
+    const settled = () => popup.waitForFunction(() => !document.querySelector('.garden-world')?.getAnimations().length);
+    await settled();
+    const popupLayout = await popup.evaluate(() => {
+        const hidden = (sel) => { const el = document.querySelector(sel); return !el || getComputedStyle(el).display === 'none'; };
+        const rect = (sel) => document.querySelector(sel)?.getBoundingClientRect();
+        const world = document.querySelector('.garden-world');
+        return {
+            kanbanHidden: hidden('.garden-bottom-half') && hidden('.garden-resizer') && hidden('.garden-files-button'),
+            canvas: rect('.garden-canvas-viewport'),
+            footer: rect('.popup-footer'),
+            transform: world ? world.style.transform : '',
+            plant: rect('.garden-plant-wrapper'),
+            scrollWidth: document.documentElement.scrollWidth,
+            scrollHeight: document.documentElement.scrollHeight,
+        };
+    });
+    assert(popupLayout.kanbanHidden, 'the popup must hide the kanban, the resizer and the files button');
+    assert(popupLayout.canvas.height >= 200, `the popup canvas is too small: ${JSON.stringify(popupLayout.canvas)}`);
+    assert(popupLayout.footer.y + popupLayout.footer.height <= 440 && popupLayout.scrollWidth <= 320 && popupLayout.scrollHeight <= 440, `the popup overflows its window: ${JSON.stringify(popupLayout)}`);
+    assert(/scale\(/.test(popupLayout.transform), `the popup camera was not aimed: transform "${popupLayout.transform}"`);
+    // The plant's anchor (its horizon point) must be inside the canvas, roughly centred.
+    const anchorX = popupLayout.plant.x - popupLayout.canvas.x;
+    assert(anchorX > popupLayout.canvas.width * 0.3 && anchorX < popupLayout.canvas.width * 0.7, `the plant is not centred in the popup: anchor x ${anchorX} of ${popupLayout.canvas.width}`);
+    assert(await popup.$eval('.popup-arrow >> nth=0', (b) => b.disabled), 'with one plant the arrows should be disabled');
+    // Arrow keys and buttons wrap around; with one plant the label does not change.
+    await popup.keyboard.press('ArrowRight');
+    assert(await popup.textContent('.popup-label') === 'Plant 1/1', 'cycling past the last plant must wrap');
+    assert(await popup.textContent('.popup-action >> nth=0') === 'Garden' && await popup.textContent('.popup-action >> nth=1') === 'Side panel', 'the popup must offer Garden and Side panel');
+    await screenshot(popup, 'popup');
+
+    // A second plant added elsewhere shows up in the popup's count.
+    await newtab.click('.add-column-btn-inner >> nth=1');
+    await newtab.waitForSelector('.modal textarea');
+    await newtab.fill('.modal textarea', SEED_2);
+    await newtab.keyboard.press('Enter');
+    await newtab.waitForFunction((t) => (localStorage.getItem('cells.garden/v1') ?? '').includes(t), SEED_2);
+    await popup.waitForFunction(() => document.querySelector('.popup-label')?.textContent === 'Plant 1/2', null, { timeout: 5000 });
+    await popup.click('.popup-arrow >> nth=1');
+    await popup.waitForFunction(() => document.querySelector('.popup-label')?.textContent === 'Plant 2/2');
+    assert(await popup.textContent('.popup-name') === SEED_2, 'the next arrow did not move to the second plant');
+    await settled();
+    const secondAnchor = await popup.evaluate(() => {
+        const canvas = document.querySelector('.garden-canvas-viewport').getBoundingClientRect();
+        const plants = [...document.querySelectorAll('.garden-plant-wrapper')].map((el) => el.getBoundingClientRect().x - canvas.x);
+        return { width: canvas.width, plants };
+    });
+    assert(secondAnchor.plants[1] > secondAnchor.width * 0.3 && secondAnchor.plants[1] < secondAnchor.width * 0.7, `the second plant is not centred: ${JSON.stringify(secondAnchor)}`);
+    assert(await popup.evaluate(() => localStorage.getItem('cells.garden/popup/index')) === '1', 'the popup must remember the plant it shows');
+    await screenshot(popup, 'popup-2');
 
     // --- Sign-in pill: present exactly when the build has Supabase config. ---
     for (const [page, label, width] of [[newtab, 'newtab', 1280], [panel, 'sidepanel', 360]]) {
