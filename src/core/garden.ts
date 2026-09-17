@@ -1187,10 +1187,7 @@ export class GardenView extends View {
             // load, then a jump back to the scroll position: the board shook on
             // every edit.
             if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
-            const stage = document.createElement('div');
-            stage.className = 'garden-render-stage';
-            stage.style.cssText = 'position: absolute; inset: 0; visibility: hidden; pointer-events: none;';
-            container.appendChild(stage);
+                const stage = container.createDiv('garden-render-stage');
             try {
                 await this.renderGarden(stage);
             } catch (e) {
@@ -1283,7 +1280,6 @@ export class GardenView extends View {
             }
             
 
-            console.log("Garden Cells: Render finished successfully!");
             this.startAnt();
             this.startWorm();
             this.startFireflies();
@@ -2036,18 +2032,13 @@ export class GardenView extends View {
 
         container.empty();
         const splitContainer = container.createDiv("garden-split-container");
-        splitContainer.style.cssText = 'display: flex; flex-direction: column; height: 100%; overflow: hidden;';
 
         const canvasParent = splitContainer.createDiv("garden-canvas-area");
-        canvasParent.style.cssText = `flex: 0 0 ${this._splitRatio * 100}%; min-height: 100px; overflow: hidden; position: relative;`;
+        canvasParent.style.flex = `0 0 ${this._splitRatio * 100}%`;
         await this.renderGardenCanvas(canvasParent);
 
-        // --- Draggable Resizer ---
         const resizer = splitContainer.createDiv("garden-resizer");
-        resizer.style.cssText = 'flex: 0 0 4px; cursor: row-resize; background: var(--background-modifier-border); z-index: 15;';
-
         const bottomHalf = splitContainer.createDiv("garden-bottom-half");
-        bottomHalf.style.cssText = 'flex: 1 1 auto; min-height: 100px; overflow: hidden; display: flex; flex-direction: column;';
 
         // --- Resizer Drag Logic ---
         resizer.addEventListener('mousedown', (e) => {
@@ -2136,12 +2127,7 @@ export class GardenView extends View {
         this._viewportObserver?.disconnect();
         this._viewportObserver = null;
         const viewport = parent.createDiv("garden-canvas-viewport");
-        viewport.style.cssText = 'width: 100%; height: 100%; overflow: hidden; position: relative; cursor: grab; background-color: var(--background-primary);';
         const world = viewport.createDiv("garden-world");
-        world.style.background = 'transparent';
-        
-        // Camera coordinates are stored in the class instance and persist automatically!
-        // We just apply them here.
 
         const calculatedWidth = Math.max(600, this.app.gardenData.length * PLANT_SPACING + WORLD_PADDING * 2);
         world.style.width = `${calculatedWidth}px`;
@@ -3102,10 +3088,8 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         // --- SEED (Now acts as the header) ---
         const seedCell = columnBody.createDiv("garden-zone seed-cell");
         
-        const dragHandle = seedCell.createDiv({ cls: "column-drag-handle", text: "⠿" });
-        dragHandle.style.cssText = 'margin-right: 4px;';
-        
-const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content draggable-cell", attr: { tabindex: "0" } });
+        seedCell.createDiv({ cls: "column-drag-handle", text: "⠿" });
+        const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content draggable-cell", attr: { tabindex: "0" } });
         seedContent.dataset.id = project.id;
         seedContent.contentEditable = "false";
         
