@@ -1,9 +1,15 @@
 import './shim';
 import { AssetManager } from './assets';
 import { GardenView } from './garden';
+import { mergeGardens } from './merge';
 import type { Garden, GardenSettings, ProjectData } from './model';
 import { DEFAULT_SETTINGS, emptyGarden } from './model';
-import type { GardenStore } from './store';
+import { GardenGoneError, type GardenStore } from './store';
+
+/** A copy that shares nothing with the live data the view edits in place. */
+function snapshot(garden: Garden): Garden {
+    return JSON.parse(JSON.stringify(garden)) as Garden;
+}
 
 export type SyncState = 'local' | 'syncing' | 'synced' | 'error';
 
@@ -35,8 +41,15 @@ export class GardenApp {
     view: GardenView | null = null;
     /** Called when a save starts/finishes; the auth pill shows it. */
     onSyncState: ((state: SyncState) => void) | null = null;
+    /** Called when the open garden is no longer reachable (a shared garden left or revoked). */
+    onGone: (() => void) | null = null;
 
     private mirror: GardenStore | null = null;
+    /**
+     * The last garden the store is known to hold. An incoming change is merged
+     * against it, so edits made here and not saved yet survive the arrival.
+     */
+    private synced: Garden | null = null;
     private updatedAt = emptyGarden().updatedAt;
     private _unsubscribe: (() => void) | null = null;
     private _persistQueue: Promise<void> = Promise.resolve();
@@ -97,12 +110,13 @@ export class GardenApp {
             // Keep the current store working (and listening) and try again when the network returns.
             this.subscribeStore();
             this.onSyncState?.('error');
-            this.retryWhenOnline(next, options);
+            if (!(e instanceof GardenGoneError)) this.retryWhenOnline(next, options);
             throw e;
         }
 
         this.store = next;
         this.mirror = options.mirror ?? null;
+        this.synced = remote ? snapshot(remote) : null;
 
         if (options.reconcile === false) {
             this.applyGarden(remote ?? emptyGarden());
@@ -113,8 +127,9 @@ export class GardenApp {
             let pushToRemote = false;
 
             if (remote && mine && mine.updatedAt > remote.updatedAt) {
-                // This device edited the account's garden offline: it is the newest copy.
-                chosen = mine;
+                // This device edited the garden offline. Combine it with what others
+                // saved meanwhile, when the store can; otherwise it is the newest copy.
+                chosen = next.mergeOffline ? await next.mergeOffline(mine) : mine;
                 pushToRemote = true;
             } else if (remote) {
                 chosen = remote;
@@ -163,7 +178,10 @@ export class GardenApp {
         this._unsubscribe?.();
         // Another tab / device changed the garden: reload and re-render.
         // (Was the vault `modify` listener in Obsidian.)
-        this._unsubscribe = this.store.subscribe?.((garden) => {
+        this._unsubscribe = this.store.subscribe?.((incoming) => {
+            // With nothing unsaved here this is just `incoming`; otherwise both sides' work is kept.
+            const garden = this.synced ? mergeGardens(this.synced, this.toGarden(), incoming) : incoming;
+            this.synced = snapshot(incoming);
             this.applyGarden(garden);
             if (this.mirror) void this.mirror.save(garden).catch(() => {});
             this.view?.scheduleRender();
@@ -209,14 +227,33 @@ export class GardenApp {
 
     private persist(): Promise<void> {
         this.updatedAt = new Date().toISOString();
-        const garden = this.toGarden();
         const run = async () => {
+            // Read the garden when this save runs, not when it was queued: a merge that
+            // landed in between is then part of what gets written.
+            const garden = snapshot(this.toGarden());
+            const store = this.store;
             if (this.mirror) await this.mirror.save(garden).catch(() => {});
             this.onSyncState?.(this.mirror ? 'syncing' : 'local');
             try {
-                await this.store.save(garden);
+                const written = await store.save(garden);
+                if (store !== this.store) return; // switched gardens while saving
+                if (written) {
+                    // The store merged in someone else's work. Keep anything edited here since.
+                    const current = mergeGardens(garden, this.toGarden(), written);
+                    this.synced = snapshot(written);
+                    this.applyGarden(current);
+                    if (this.mirror) await this.mirror.save(current).catch(() => {});
+                    this.view?.scheduleRender();
+                } else {
+                    this.synced = garden;
+                }
                 this.onSyncState?.(this.mirror ? 'synced' : 'local');
             } catch (e) {
+                if (e instanceof GardenGoneError) {
+                    this.onSyncState?.('error');
+                    this.onGone?.();
+                    return;
+                }
                 console.error('Garden Cells: save failed', e);
                 this.onSyncState?.('error');
             }

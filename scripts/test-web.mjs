@@ -333,6 +333,31 @@ async function scenario(browser, errors) {
     await ctx.setOffline(false);
     await ctx.close();
 
+    // Invite link, signed out: the token leaves the address, waits in storage, and
+    // sign-in is asked for with a note. (Only when the build carries Supabase config.)
+    {
+        const ictx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        const ipage = await ictx.newPage();
+        watchErrors(ipage, 'invite', errors);
+        const token = '3f2c9a1e-5b7d-4c8e-9f10-2a3b4c5d6e7f';
+        await ipage.goto(`${BASE}#join=${token}`, { waitUntil: 'networkidle' });
+        await ipage.waitForSelector('.garden-canvas-viewport');
+        const hasPill = (await ipage.$('.auth-pill')) !== null;
+        assert(!ipage.url().includes('#join='), `the invite token must leave the address bar: ${ipage.url()}`);
+        const pending = await ipage.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1/pendingJoin') || 'null'));
+        if (hasPill) {
+            assert(pending && pending.token === token, `the invite should wait for sign-in: ${JSON.stringify(pending)}`);
+            await ipage.waitForSelector('.modal .auth-note', { timeout: 5000 });
+            console.log('invite note:', await ipage.textContent('.modal .auth-note'));
+        } else {
+            assert(pending === null, 'without Supabase config the invite is dropped');
+        }
+        // A malformed token is ignored and stays in the address.
+        await ipage.goto(`${BASE}#join=nope`, { waitUntil: 'networkidle' });
+        assert(ipage.url().endsWith('#join=nope'), 'a malformed token must be left alone');
+        await ictx.close();
+    }
+
     // Mobile viewport
     const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: 'dark' });
     const mpage = await mctx.newPage();

@@ -31,6 +31,8 @@ Run them in order in the SQL editor. Each one is safe to run more than once.
 | `migrations/0002_gardens_unique_user.sql` | removes duplicate garden rows and adds a unique index on `gardens(user_id)` |
 | `migrations/0003_garden_assets_bucket.sql` | private `garden-assets` Storage bucket plus per-user RLS, for custom cell art |
 | `migrations/0004_harden_functions.sql` | keeps `handle_new_user` off the REST surface and pins both trigger functions to an empty `search_path` |
+| `migrations/0005_shared_gardens.sql` | `gardens.rev` bumped by a trigger that also freezes `user_id`, `garden_members`, `garden_invites`, `join_garden(token)`, member policies |
+| `migrations/0006_private_policy_helpers.sql` | moves the policy helpers to a `private` schema so they are not API endpoints; `(select auth.uid())` in the older owner policies |
 
 ## Custom art (M3)
 
@@ -41,6 +43,19 @@ garden-assets/<uid>/custom/<hash>.png
 ```
 
 The part after `<uid>/` is the `imagePath` a cell carries, so the same string works in the app, in a signed URL and in the markdown export. Reads go through signed URLs; the bucket is never public. Uploads are capped at 5 MB and limited to png, jpeg, gif, webp and svg.
+
+## Shared gardens (M4)
+
+An owner shares their one garden by link. The link is `https://cells.garden/#join=<token>`; the token is a uuid stored in `garden_invites`, one per garden. `join_garden(token)` is the only way to become a member; it refuses a bad token, caps a garden at 20 members, and is a no-op for the owner.
+
+- Members read and update the owner's row. Only the owner inserts or deletes it, makes or turns off the link, and removes people. A member can leave.
+- `user_id` cannot change and `rev` cannot be forged: the update trigger sets both.
+- People who share a garden can read each other's `profiles.display_name`, nothing else.
+- Checked with simulated users against the live project: outsiders and anon see nothing, direct membership inserts and ownership changes are refused, members never see invite tokens.
+
+In the app: the pill menu lists shared gardens and offers Share garden (owner) or Leave garden (member). The chosen garden is remembered per account on each device. A garden that is no longer reachable falls back to the user's own with a notice.
+
+Saves are compare-and-swap on `rev`. When someone wrote first, the client fetches their version and merges by plant and cell id (`src/core/merge.ts`), then retries. Still lost: the same field of the same cell changed by two people at once (the later save wins), and two different reorders of the same list.
 
 ## Sync model
 

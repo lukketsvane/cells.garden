@@ -119,3 +119,49 @@
     border-color: #E91E63;
     color: #fff;
 }
+
+/* --- Shared gardens (M4) --- */
+
+/* A one-line notice over the garden, gone after a few seconds. */
+.garden-notice {
+    position: absolute;
+    left: 50%;
+    top: calc(52px + env(safe-area-inset-top, 0px));
+    transform: translateX(-50%);
+    max-width: calc(100% - 32px);
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    color: var(--text-normal);
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 30;
+    pointer-events: none;
+}
+
+.auth-note {
+    font-weight: 600;
+}
+
+.share-modal .share-link {
+    width: 100%;
+    min-width: 0;
+    font-size: 12px;
+}
+
+.share-modal .setting-item-control:has(.share-link) {
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.share-people {
+    margin-top: 12px;
+}
+
+.auth-pill.is-shared .auth-pill-label {
+    font-weight: 600;
+}
