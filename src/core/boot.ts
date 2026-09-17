@@ -11,14 +11,18 @@ import { AuthPill, type MenuItem } from './auth';
 import { PlantSync } from './plants';
 import { LeaveGardenModal, ShareGardenModal } from './share';
 import { SharePlantModal } from './share-plant';
-import { applyScene, sceneMenuItems } from './scene';
-import { ShortcutsModal } from './modals';
+import { FriendsModal } from './friends';
+import { applyScene } from './scene';
+import { SettingsModal } from './settings';
 import {
     GardenFullError,
     InvalidInviteError,
     inviteTokenFromHash,
     joinGarden,
+    getProfile,
     joinPlant,
+    listPlantOffers,
+    type SharedPlantRow,
     listSharedGardens,
     ownGardenId,
     plantTokenFromHash,
@@ -222,6 +226,42 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         }
     };
 
+    /** Put a plant someone shared into the user's own garden. */
+    const plantShared = async (row: SharedPlantRow, sync: PlantSync) => {
+        if (app.gardenData.some(p => p.sharedPlantId === row.id)) return;
+        const data = row.data;
+        const taken = app.gardenData.some(p => p.id === data.id);
+        sync.adopt(row);
+        await app.addProject({
+            ...data,
+            id: taken ? `proj_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` : data.id,
+            order: app.gardenData.length,
+            sharedPlantId: row.id,
+        });
+    };
+
+    const plantOffered = async (row: SharedPlantRow) => {
+        const uid = currentUser;
+        if (!uid || !plants) return;
+        if (shared) await openGarden(uid, null);
+        await plantShared(row, plants);
+    };
+
+    // The share icon on a plant's card.
+    app.onSharePlant = (projectId: string) => {
+        const uid = currentUser;
+        if (!uid || !plants) {
+            pill.signIn('Sign in to share a plant.');
+            return;
+        }
+        if (shared) {
+            notify(host, 'Open your own garden to share its plants.');
+            return;
+        }
+        new SharePlantModal(supabase, uid, app, plants, projectId).open();
+    };
+    app.view?.scheduleRender();
+
     /** Use a waiting plant invite: the plant is added to the user's own garden. */
     const joinPendingPlant = async (uid: string, sync: PlantSync) => {
         const pending = peekPendingJoin();
@@ -258,8 +298,10 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         const uid = currentUser;
         const common: MenuItem[] = [
             { label: 'Export or import', onClick: () => openGardenFiles(app) },
-            { label: 'Keyboard shortcuts', sub: '?', onClick: () => new ShortcutsModal().open() },
-            ...sceneMenuItems(),
+            {
+                label: 'Settings',
+                onClick: () => new SettingsModal(uid ? { client: supabase, userId: uid, onAvatar: (seed) => pill.setAvatar(seed) } : null).open(),
+            },
         ];
         if (!uid || !(await sharingAvailable(supabase))) return common;
         const gardens = await listSharedGardens(supabase, uid);
@@ -276,11 +318,11 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
                 });
             }
         }
+        const offers = await listPlantOffers(supabase).catch(() => []);
         items.push({
-            label: 'Share a plant',
-            onClick: () => {
-                if (plants) new SharePlantModal(supabase, uid, app, plants).open();
-            },
+            label: 'Friends',
+            sub: offers.length ? `${offers.length} new` : undefined,
+            onClick: () => new FriendsModal(supabase, uid, plantOffered).open(),
         });
         if (!shared) {
             items.push({
@@ -342,10 +384,15 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
                     await openGarden(uid, remembered && remembered.id ? remembered : null);
                     sync.start();
                     await joinPendingPlant(uid, sync);
+                    getProfile(supabase, uid).then((p) => pill.setAvatar(p.avatar)).catch(() => {});
+                    const offers = await listPlantOffers(supabase).catch(() => []);
+                    if (offers.length === 1) notify(host, `${offers[0].fromName} sent you ${offers[0].seed}. Open Friends to plant it.`);
+                    else if (offers.length > 1) notify(host, `${offers.length} plants are waiting for you in Friends.`);
                 })().catch(fail);
             } else {
                 shared = null;
                 pill.setLabel(null);
+                pill.setAvatar(null);
                 // Sign-out: show the anonymous garden again, never write the account's data into it.
                 app.useStore(anonymous, { reconcile: false }).catch(fail);
             }
