@@ -142,3 +142,34 @@ export class AddItemModal extends Modal {
         this.contentEl.empty();
     }
 }
+
+/** The keyboard shortcuts, opened with ? or from the pill menu. */
+export class ShortcutsModal extends Modal {
+    onOpen() {
+        const { contentEl } = this;
+        this.modalEl.addClass('garden-shortcuts-modal');
+        contentEl.createEl('h2', { text: 'Keyboard shortcuts' });
+        const rows: [string, string][] = [
+            ['N', 'New plant'],
+            ['F  S  R  M', 'New flower, stem, root, mineral'],
+            ['Arrows', 'Move between cells'],
+            ['Enter', 'Edit the selected cell'],
+            ['Delete', 'Delete the selected cells'],
+            ['Shift D', 'Duplicate'],
+            ['Ctrl C  X  V', 'Copy, cut, paste'],
+            ['Ctrl A', 'Select the whole zone'],
+            ['B', 'Show or hide the board'],
+            ['Esc', 'Deselect'],
+            ['?', 'This list'],
+        ];
+        const table = contentEl.createDiv('garden-shortcuts');
+        for (const [keys, what] of rows) {
+            table.createEl('kbd', { text: keys });
+            table.createSpan({ text: what });
+        }
+    }
+
+    onClose() {
+        this.contentEl.empty();
+    }
+}

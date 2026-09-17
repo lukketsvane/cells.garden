@@ -2,9 +2,9 @@ import './shim';
 import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
 import { PLANT_TYPES } from './assets';
-import { ConfirmDeleteModal, CreateProjectModal } from './modals';
+import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
-import type { LayerItem, ProjectData, ViewState } from './model';
+import type { LayerItem, LayerName, ProjectData, ViewState } from './model';
 import {
     simpleHash,
     PIXEL_SCALE, PLANT_SPACING, CLOUD_SCROLL_DURATION,
@@ -1104,6 +1104,7 @@ export class GardenView extends View {
     }
 
     async onOpen() {
+        this.installShortcuts();
         const thisGeneration = ++this._renderGeneration;
         try {
             // Stop animations BEFORE destroying the DOM to prevent stale intervals
@@ -1502,6 +1503,7 @@ export class GardenView extends View {
     private _viewportObserver: ResizeObserver | null = null;
 
     async onClose() {
+        this.removeShortcuts();
         this._viewportObserver?.disconnect();
         this._viewportObserver = null;
         this.cancelSettle();
@@ -2626,6 +2628,217 @@ export class GardenView extends View {
     }
 
     private _highlightedItemId: string | null = null;
+
+    // --- Keyboard shortcuts ---
+    // On the document, so they work wherever focus is, and ignored while
+    // typing into a field or a cell, or while a dialog is open.
+
+    private _shortcutsInstalled = false;
+    /** Cells copied or cut here, so a paste keeps their art and state. */
+    private _clipboardItems: LayerItem[] = [];
+
+    private installShortcuts() {
+        if (this._shortcutsInstalled) return;
+        this._shortcutsInstalled = true;
+        document.addEventListener('keydown', this.handleShortcut);
+        document.addEventListener('copy', this.handleCopy);
+        document.addEventListener('cut', this.handleCut);
+        document.addEventListener('paste', this.handlePaste);
+    }
+
+    private removeShortcuts() {
+        this._shortcutsInstalled = false;
+        document.removeEventListener('keydown', this.handleShortcut);
+        document.removeEventListener('copy', this.handleCopy);
+        document.removeEventListener('cut', this.handleCut);
+        document.removeEventListener('paste', this.handlePaste);
+    }
+
+    private shortcutsBlocked(target: EventTarget | null): boolean {
+        if (document.documentElement.dataset.context === 'popup') return true;
+        if (document.querySelector('.modal-container')) return true;
+        const el = target as HTMLElement | null;
+        if (!el || !el.closest) return false;
+        return !!el.closest('input, textarea, select, [contenteditable="true"]');
+    }
+
+    /** Where a cell element lives in the garden. */
+    private locateCell(el: HTMLElement) {
+        const projectId = el.parentElement?.dataset.projectId;
+        const arrayName = el.parentElement?.dataset.array as LayerName | undefined;
+        const project = this.app.gardenData.find(p => p.id === projectId);
+        if (!project || !arrayName || !el.dataset.id) return null;
+        const index = project[arrayName].findIndex(i => i.id === el.dataset.id);
+        if (index === -1) return null;
+        return { project, arrayName, index, item: project[arrayName][index] };
+    }
+
+    private selectedLocations() {
+        return this.selectedCells
+            .filter(el => el.isConnected)
+            .map(el => this.locateCell(el))
+            .filter((l): l is NonNullable<typeof l> => l !== null);
+    }
+
+    /** After a re-render, select the cells with these ids again. */
+    private async reselect(ids: string[]) {
+        await this.onOpen();
+        this.clearSelection();
+        for (const id of ids) {
+            const el = this.contentEl.querySelector(`.garden-item[data-id="${id}"]`) as HTMLElement | null;
+            if (!el) continue;
+            el.addClass('is-selected');
+            this.selectedCells.push(el);
+            this.highlightPlantPart(id);
+        }
+        this.selectedCells[this.selectedCells.length - 1]?.focus();
+    }
+
+    private copyOf(item: LayerItem, n: number): LayerItem {
+        return { ...item, id: `item_${Date.now()}_${n}` };
+    }
+
+    /** Insert copies of items right after the last selected cell, or at the top of its zone. */
+    private async insertItems(items: LayerItem[]) {
+        const anchor = this.selectedLocations().pop();
+        if (!anchor || items.length === 0) return;
+        const copies = items.map((item, n) => this.copyOf(item, n));
+        anchor.project[anchor.arrayName].splice(anchor.index + 1, 0, ...copies);
+        await this.app.saveGardenData();
+        await this.reselect(copies.map(c => c.id));
+    }
+
+    private handleCopy = (e: ClipboardEvent) => {
+        if (this.shortcutsBlocked(e.target)) return;
+        const locs = this.selectedLocations();
+        if (locs.length === 0) return;
+        e.preventDefault();
+        this._clipboardItems = locs.map(l => ({ ...l.item }));
+        e.clipboardData?.setData('text/plain', this._clipboardItems.map(i => i.content).join('\n'));
+    };
+
+    private handleCut = (e: ClipboardEvent) => {
+        if (this.shortcutsBlocked(e.target)) return;
+        if (this.selectedLocations().length === 0) return;
+        this.handleCopy(e);
+        void this.deleteSelectedCells();
+    };
+
+    private handlePaste = (e: ClipboardEvent) => {
+        if (this.shortcutsBlocked(e.target)) return;
+        if (this.selectedLocations().length === 0) return;
+        const text = e.clipboardData?.getData('text/plain') ?? '';
+        const ours = this._clipboardItems.map(i => i.content).join('\n');
+        let items: LayerItem[];
+        if (this._clipboardItems.length > 0 && text === ours) {
+            items = this._clipboardItems;
+        } else {
+            const anchor = this.selectedLocations().pop()!;
+            items = text.split(/\r?\n/).map(t => t.trim()).filter(Boolean).map((content, n) => ({
+                id: `item_${Date.now()}_${n}`,
+                content,
+                isComplete: anchor.arrayName === 'flowers',
+                imagePath: this.app.assetManager.assignRandomImage(anchor.arrayName, anchor.project.plantType) || undefined,
+            }));
+        }
+        if (items.length === 0) return;
+        e.preventDefault();
+        void this.insertItems(items);
+    };
+
+    /** Move the selection to the next cell up or down its zone, or across to the next plant. */
+    private moveSelection(key: string) {
+        const current = this.selectedCells[this.selectedCells.length - 1];
+        const all = Array.from(this.contentEl.querySelectorAll('.garden-item[data-id]')) as HTMLElement[];
+        if (all.length === 0) return;
+        if (!current || !current.isConnected) {
+            this.selectSingleCell(all[0]);
+            all[0].focus();
+            return;
+        }
+        let next: HTMLElement | undefined;
+        if (key === 'ArrowUp' || key === 'ArrowDown') {
+            const column = current.closest('.project-column');
+            const inColumn = all.filter(el => el.closest('.project-column') === column);
+            const i = inColumn.indexOf(current);
+            next = inColumn[key === 'ArrowUp' ? i - 1 : i + 1];
+        } else {
+            const columns = Array.from(this.contentEl.querySelectorAll('.project-column'));
+            const col = columns.indexOf(current.closest('.project-column')!);
+            const zone = current.parentElement?.dataset.array;
+            for (let c = col + (key === 'ArrowLeft' ? -1 : 1); c >= 0 && c < columns.length; c += key === 'ArrowLeft' ? -1 : 1) {
+                const cells = Array.from(columns[c].querySelectorAll('.garden-item[data-id]')) as HTMLElement[];
+                next = cells.find(el => el.parentElement?.dataset.array === zone) ?? cells[0];
+                if (next) break;
+            }
+        }
+        if (!next) return;
+        this.selectSingleCell(next);
+        next.focus();
+        next.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    /** The plant a shortcut acts on: the selected cell's, or the first one. */
+    private shortcutProject(): ProjectData | undefined {
+        return this.selectedLocations().pop()?.project ?? this.app.gardenData[0];
+    }
+
+    private handleShortcut = (e: KeyboardEvent) => {
+        if (this.shortcutsBlocked(e.target)) return;
+        const mod = e.ctrlKey || e.metaKey;
+        const key = e.key;
+
+        if (e.shiftKey && !mod && key.toLowerCase() === 'd') {
+            const locs = this.selectedLocations();
+            if (locs.length === 0) return;
+            e.preventDefault();
+            void this.insertItems(locs.map(l => l.item));
+            return;
+        }
+        if (mod && key.toLowerCase() === 'a') {
+            const current = this.selectedCells[this.selectedCells.length - 1];
+            const list = current?.parentElement;
+            if (!list) return;
+            e.preventDefault();
+            this.clearSelection();
+            (Array.from(list.querySelectorAll('.garden-item[data-id]')) as HTMLElement[]).forEach(el => {
+                el.addClass('is-selected');
+                this.selectedCells.push(el);
+            });
+            return;
+        }
+        if (mod || e.altKey) return;
+
+        if (key.startsWith('Arrow')) {
+            e.preventDefault();
+            this.moveSelection(key);
+            return;
+        }
+        if (key === 'Escape') {
+            this.clearSelection();
+            (document.activeElement as HTMLElement | null)?.blur?.();
+            return;
+        }
+        if (e.shiftKey && key !== '?') return;
+
+        const zones: Record<string, LayerName> = { f: 'flowers', s: 'stem', r: 'roots', m: 'minerals' };
+        const lower = key.toLowerCase();
+        if (zones[lower]) {
+            const project = this.shortcutProject();
+            if (!project) return;
+            e.preventDefault();
+            void this.addNewItem(project, zones[lower] as 'flowers' | 'stem' | 'roots' | 'minerals');
+        } else if (lower === 'n') {
+            e.preventDefault();
+            void this.createNewProject('right');
+        } else if (lower === 'b') {
+            e.preventDefault();
+            (document.querySelector('.garden-board-toggle') as HTMLElement | null)?.click();
+        } else if (key === '?') {
+            e.preventDefault();
+            new ShortcutsModal().open();
+        }
+    };
 
     private selectedCells: HTMLElement[] = [];
 
