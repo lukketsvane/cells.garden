@@ -32,6 +32,9 @@ import stem6Url from '../assets/pack/plant_1/stem/plant_1_part6.png';
 import stem7Url from '../assets/pack/plant_1/stem/plant_1_part7.png';
 import stem8Url from '../assets/pack/plant_1/stem/plant_1_part8.png';
 
+/** Empty world on each side of the plants, in world px. Also where the first plant stands. */
+const WORLD_PADDING = 320;
+
 const stemParts: string[] = [
     stem1Url, stem2Url, stem3Url, stem4Url,
     stem5Url, stem6Url, stem7Url, stem8Url
@@ -40,6 +43,8 @@ const stemParts: string[] = [
 
 export class GardenView extends View {
     app: GardenApp;
+    /** Called after every render, once the DOM is in place. The popup re-aims its camera here. */
+    onRendered: (() => void) | null = null;
     private _hasLoadedInitialState = false;
     private _viewStateSaveTimeout: number | null = null;
     
@@ -1200,6 +1205,7 @@ export class GardenView extends View {
             this.startWorm();
             this.startFireflies();
             this.startShootingStars();
+            this.onRendered?.();
             
 
 
@@ -1663,6 +1669,40 @@ export class GardenView extends View {
 
 
 
+    /**
+     * Aim the camera at one plant so it fills the viewport: as wide as one
+     * plant slot, or smaller when the plant is tall or deep. Used by the popup.
+     * Returns false when there is nothing to show yet.
+     */
+    focusProject(index: number): boolean {
+        const viewport = this.contentEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
+        const world = this.contentEl.querySelector('.garden-world') as HTMLElement | null;
+        const count = this.app.gardenData.length;
+        if (!viewport || !world || count === 0) return false;
+        const i = Math.max(0, Math.min(count - 1, index));
+        const project = this.app.gardenData[i];
+        const vw = viewport.offsetWidth || 320;
+        const vh = viewport.offsetHeight || 320;
+        const extents = this.calculateProjectExtents(project);
+        const margin = 48;
+        const above = extents.aboveHeight + margin;
+        const below = extents.undergroundDepth + margin;
+        // Width: the sprite itself (renderPlantSprite leaves it on the wrapper) plus room on each side.
+        const wrapper = this.contentEl.querySelector(`.garden-plant-wrapper[data-project-id="${project.id}"]`) as HTMLElement | null;
+        const spriteWidth = Number(wrapper?.dataset.width) || STEM_ORIGIN_WIDTH * PIXEL_SCALE;
+        const widthBasis = Math.max(spriteWidth + 2 * margin, 180);
+        const fit = Math.min(vw / widthBasis, vh / (above + below));
+        this.zoom = Math.max(this.zoomMin, Math.min(this.zoomMax, fit));
+        const plantX = WORLD_PADDING + i * PLANT_SPACING + PLANT_SPACING / 2;
+        // Horizon sits so the visible part of the plant is centred vertically.
+        const centreY = this._dynamicGroundLineY - (above - below) / 2;
+        this.currentTranslateX = vw / 2 - plantX * this.zoom;
+        this.currentTranslateY = vh / 2 - centreY * this.zoom;
+        this.applyWorldTransform(world, viewport);
+        this.scheduleViewStateSave();
+        return true;
+    }
+
     private applyWorldTransform(world: HTMLElement, viewport: HTMLElement) {
         // Standard 2D camera math: origin at top-left makes centering predictable
         world.style.transformOrigin = '0 0';
@@ -1811,7 +1851,6 @@ export class GardenView extends View {
         // Camera coordinates are stored in the class instance and persist automatically!
         // We just apply them here.
 
-        const WORLD_PADDING = 320; // ~10x eraser diameter on each side
         const calculatedWidth = Math.max(600, this.app.gardenData.length * PLANT_SPACING + WORLD_PADDING * 2);
         world.style.width = `${calculatedWidth}px`;
 

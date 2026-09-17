@@ -3,7 +3,8 @@
 The same garden as the web app, packaged as a Manifest V3 extension with two surfaces around one build of `src/core`:
 
 - **New Tab** (`newtab.html`): the garden replaces Chrome's new tab page, so it is the start page.
-- **Side Panel** (`sidepanel.html`): the garden in a strip along the window while you work. Clicking the toolbar icon opens it (the service worker in `background.ts` sets `openPanelOnActionClick`).
+- **Side Panel** (`sidepanel.html`): the garden in a strip along the window while you work.
+- **Popup** (`popup.html`): click the toolbar icon for one plant at a time, a 320x440 cutout of the same canvas. Left and right (buttons or arrow keys) cycle through the plants; the popup remembers which one it showed. Buttons open the full garden in a new tab or the side panel (`chrome.sidePanel.open`, Chrome 116+).
 
 Both pages share the extension's origin, so they share the same `localStorage` garden, and the same Supabase session once you sign in.
 
@@ -24,7 +25,7 @@ The manifest is generated from `ext/manifest.ts` by the small plugin in `vite.ex
 1. Open `chrome://extensions`.
 2. Turn on **Developer mode** (top right).
 3. **Load unpacked** and pick the `dist-ext/` folder.
-4. Open a new tab: the garden. Click the toolbar icon (pin it from the puzzle-piece menu): the side panel.
+4. Open a new tab: the garden. Click the toolbar icon (pin it from the puzzle-piece menu): the popup, with a button for the side panel.
 
 After a rebuild, press the reload icon on the extension's card.
 
@@ -34,9 +35,11 @@ After a rebuild, press the reload icon on the extension's card.
 ext/
   newtab.html      <html data-context="newtab">, mounts #app
   sidepanel.html   <html data-context="sidepanel">, mounts #app
+  popup.html       <html data-context="popup">, mounts #app; popup.ts adds the plant controls
   main.ts          shared entry: imports the core CSS, calls bootGarden() with the magic-link landing page
-  ext.css          extension-only tweaks (compact pill, no sideways scroll in the panel)
-  background.ts    module service worker: toolbar icon opens the side panel
+  popup.ts         popup entry: bootGarden() plus prev/next, plant label, Garden and Side panel buttons
+  ext.css          extension-only tweaks (compact pill, no sideways scroll in the panel, popup layout)
+  background.ts    module service worker: keeps the side panel off the toolbar click, which the popup owns
   manifest.ts      buildManifest(env) -> manifest.json, emitted at build time
   public/icons/    16, 32, 48, 128 px PNGs
 vite.ext.config.ts   root ext/, base ./, outDir dist-ext/, background.js unhashed, everything else under assets/
