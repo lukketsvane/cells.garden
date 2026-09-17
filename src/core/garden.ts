@@ -2,6 +2,7 @@ import './shim';
 import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
 import { PLANT_TYPES } from './assets';
+import { ICONS } from './icons';
 import { openMenu, type MenuItem } from './menu';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
@@ -52,6 +53,22 @@ function stop(handle: number | null): null {
     }
     return null;
 }
+
+/**
+ * The sky through the day, as Scandinavia in July: a midnight sun that never
+ * goes properly dark, only dips through a short twilight around midnight.
+ * Each keyframe is the sky at that hour; in between, the two are mixed.
+ */
+const SKY: { hour: number; color: [number, number, number]; stars: number }[] = [
+    { hour: 0, color: [0, 0, 0], stars: 0.35 },          // twilight, holding
+    { hour: 2.5, color: [0, 0, 0], stars: 0.35 },        // the deepest it gets
+    { hour: 4, color: [137, 224, 155], stars: 0 },       // dawn
+    { hour: 6, color: [135, 206, 235], stars: 0 },       // clear sky
+    { hour: 18, color: [135, 206, 235], stars: 0 },      // twelve hours of it
+    { hour: 20, color: [232, 188, 95], stars: 0 },       // warm orange dusk
+    { hour: 22, color: [0, 0, 0], stars: 0.35 },         // back to twilight
+    { hour: 24, color: [0, 0, 0], stars: 0.35 },
+];
 
 /** An image, once the browser knows its size. A broken one resolves too, at 0x0. */
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -2356,68 +2373,25 @@ export class GardenView extends View {
         };
     }
 
+    /**
+     * The sky right now: a colour and how far the stars have come out. Read
+     * off SKY, one keyframe an hour, interpolated between the two the clock
+     * falls between.
+     */
     private getDayNightState(): { skyColor: string; starOpacity: number } {
         const now = new Date();
         const hour = now.getHours() + now.getMinutes() / 60;
-
-        // Scandinavia July — midnight sun: never truly dark, just a brief twilight dip around midnight
-        const duskColor = [232, 188, 95];      // warm orange dusk rgb(232, 188, 95)
-        const twilightColor = [0, 0, 0];    // night #000000 rgb(0,0,0)
-        const dawnColor = [137, 224, 155];     //  rgb(137, 224, 155)
-        const dayColor = [135, 206, 235];      // #87CEEB clear sky.  
-
-        const lerp = (a: number[], b: number[], t: number): string => {
-            const r = Math.round(a[0] + (b[0] - a[0]) * t);
-            const g = Math.round(a[1] + (b[1] - a[1]) * t);
-            const bl = Math.round(a[2] + (b[2] - a[2]) * t);
-            return `rgb(${r}, ${g}, ${bl})`;
+        const next = SKY.findIndex(k => k.hour > hour);
+        const to = SKY[next === -1 ? SKY.length - 1 : next];
+        const from = SKY[Math.max(0, (next === -1 ? SKY.length : next) - 1)];
+        const span = to.hour - from.hour;
+        const t = span > 0 ? (hour - from.hour) / span : 0;
+        const mix = (a: number, b: number) => a + (b - a) * t;
+        return {
+            skyColor: `rgb(${from.color.map((c, i) => Math.round(mix(c, to.color[i]))).join(', ')})`,
+            starOpacity: mix(from.stars, to.stars),
         };
-
-        let skyColor: string;
-        let starOpacity: number;
-
-        if (hour < 1) {
-            // Night -> twilight (heading toward midnight minimum)
-            const t = hour; // 0→1
-            skyColor = lerp(twilightColor, twilightColor, t);
-            starOpacity = 0.35;
-        } else if (hour < 2.5) {
-            // Deepest "night" — just a brief twilight dip, never dark
-            skyColor = `rgb(${twilightColor.join(', ')})`;
-            starOpacity = 0.35;
-        } else if (hour < 4) {
-            // Twilight -> dawn (sun rising again quickly)
-            const t = (hour - 2.5) / 1.5;
-            skyColor = lerp(twilightColor, dawnColor, t);
-            starOpacity = 0.35 * (1 - t);
-        } else if (hour < 6) {
-            // Dawn -> day
-            const t = (hour - 4) / 2;
-            skyColor = lerp(dawnColor, dayColor, t);
-            starOpacity = 0;
-        } else if (hour < 18) {
-            // Long day — 12 hours of full daylight
-            skyColor = `rgb(${dayColor.join(', ')})`;
-            starOpacity = 0;
-        } else if (hour < 20) {
-            // Day -> dusk
-            const t = (hour - 18) / 2;
-            skyColor = lerp(dayColor, duskColor, t);
-            starOpacity = 0;
-        } else if (hour < 22) {
-            // Dusk -> twilight
-            const t = (hour - 20) / 2;
-            skyColor = lerp(duskColor, twilightColor, t);
-            starOpacity = 0.35 * t;
-        } else {
-            // Twilight holding — never goes fully dark
-            skyColor = `rgb(${twilightColor.join(', ')})`;
-            starOpacity = 0.35;
-        }
-
-        return { skyColor, starOpacity };
     }
-
 
     /** A sprite's size on screen. A missing or unreadable one falls back to a stem's. */
     private async getImageDimensions(url: string | null): Promise<{ width: number; height: number }> {
@@ -2657,10 +2631,7 @@ export class GardenView extends View {
         this.clearSelection();
         for (const id of ids) {
             const el = this.shownEl(`.garden-item[data-id="${id}"]`);
-            if (!el) continue;
-            el.addClass('is-selected');
-            this.selectedCells.push(el);
-            this.highlightPlantPart(id);
+            if (el) this.select(el);
         }
         this.selectedCells[this.selectedCells.length - 1]?.focus();
     }
@@ -2772,10 +2743,7 @@ export class GardenView extends View {
             if (!list) return;
             e.preventDefault();
             this.clearSelection();
-            (Array.from(list.querySelectorAll('.garden-item[data-id]')) as HTMLElement[]).forEach(el => {
-                el.addClass('is-selected');
-                this.selectedCells.push(el);
-            });
+            (Array.from(list.querySelectorAll('.garden-item[data-id]')) as HTMLElement[]).forEach(el => this.select(el));
             return;
         }
         if (mod || e.altKey) return;
@@ -2825,6 +2793,20 @@ export class GardenView extends View {
             this.unhighlightPlantPart(this._highlightedItemId);
             this._highlightedItemId = null;
         }
+    }
+
+    /** Add a cell to the selection and light up the sprite it grew. */
+    private select(el: HTMLElement) {
+        if (el.hasClass('is-selected')) return;
+        el.addClass('is-selected');
+        this.selectedCells.push(el);
+        if (el.dataset.id) this.highlightPlantPart(el.dataset.id);
+    }
+
+    private unselect(el: HTMLElement) {
+        el.removeClass('is-selected');
+        this.selectedCells = this.selectedCells.filter(c => c !== el);
+        if (el.dataset.id) this.unhighlightPlantPart(el.dataset.id);
     }
 
     private selectSingleCell(el: HTMLElement) {
@@ -3022,48 +3004,40 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         seedContent.style.filter = `hue-rotate(${project.hue ?? 0}deg)`;
 
         seedContent.addEventListener("click", (e) => {
-            if (!seedContent.hasClass("is-editing")) {
-                e.stopPropagation();
-                this.selectCell(seedContent);
-            }
+            if (seedContent.hasClass("is-editing")) return;
+            e.stopPropagation();
+            this.selectCell(seedContent);
         });
 
-        seedContent.addEventListener("dblclick", () => {
-            this.startEditing(seedContent);
-        });
+        seedContent.addEventListener("dblclick", () => this.startEditing(seedContent));
 
         seedContent.addEventListener("blur", () => {
-            if (seedContent.hasClass("is-editing")) {
-                seedContent.removeClass("is-editing");
-                seedContent.contentEditable = "false";
-                const newSeed = seedContent.getText().trim();
-                
-                if (newSeed && newSeed !== project.seed) {
-                    const live = this.live(project);
-                    live.seed = newSeed;
-                    live.name = newSeed;
-                    project.seed = newSeed;
-                    project.name = newSeed;
-                    this.app.saveGardenData();
-                } else if (!newSeed) {
-                    seedContent.setText(project.seed);
-                }
-            } else {
+            if (!seedContent.hasClass("is-editing")) {
                 this.deselectCell(seedContent);
+                return;
             }
+            seedContent.removeClass("is-editing");
+            seedContent.contentEditable = "false";
+            const seed = seedContent.getText().trim();
+            // An emptied name is not a name: put the old one back.
+            if (!seed) {
+                seedContent.setText(project.seed);
+                return;
+            }
+            if (seed === project.seed) return;
+            const live = this.live(project);
+            live.seed = live.name = project.seed = project.name = seed;
+            void this.app.saveGardenData();
         });
 
         seedContent.addEventListener("keydown", (e: KeyboardEvent) => {
+            if (e.key !== "Enter") return;
             if (seedContent.hasClass("is-editing")) {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    seedContent.blur();
-                }
+                e.preventDefault();
+                seedContent.blur();
             } else if (seedContent.hasClass("is-selected")) {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    this.startEditing(seedContent);
-                }
+                e.preventDefault();
+                this.startEditing(seedContent);
             }
         });
 
@@ -3073,32 +3047,20 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 cls: 'seed-context-btn seed-share-btn',
                 attr: { type: 'button', title: 'Share this plant', 'aria-label': 'Share this plant' },
             });
-            shareBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg>`;
-            if (project.sharedPlantId) shareBtn.addClass('is-shared');
+            shareBtn.innerHTML = ICONS.share;
+            shareBtn.toggleClass('is-shared', !!project.sharedPlantId);
             shareBtn.onclick = (e) => {
                 e.stopPropagation();
                 this.app.onSharePlant?.(project.id);
             };
         }
 
-                // --- Standby / Context Menu Button ---
-        const menuBtn = seedCell.createEl('button', { cls: 'seed-context-btn' });
-        
-        const eyeClosedSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>`;
-        const eyeOpenSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
-        const dotsSvg = `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg>`;
-
-        // Function to update the button icon based on standby state
+        // --- Standby, and the menu ---
+        const menuBtn = seedCell.createEl('button', { cls: 'seed-context-btn', attr: { type: 'button' } });
         const updateMenuBtn = () => {
-            if (project.standby) {
-                menuBtn.innerHTML = eyeClosedSvg;
-                menuBtn.addClass('is-standby-eye');
-                column.addClass('is-standby');
-            } else {
-                menuBtn.innerHTML = dotsSvg;
-                menuBtn.removeClass('is-standby-eye');
-                column.removeClass('is-standby');
-            }
+            menuBtn.innerHTML = project.standby ? ICONS.eyeClosed : ICONS.dots;
+            menuBtn.toggleClass('is-standby-eye', !!project.standby);
+            column.toggleClass('is-standby', !!project.standby);
         };
 
         // Clicking the eye toggles standby off. Clicking the dots opens the menu.
@@ -3114,11 +3076,12 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         };
 
         // Hover effect: swap to open eye
+        // On a sleeping plant the shut eye opens under the pointer: click to wake it.
         menuBtn.addEventListener('mouseenter', () => {
-            if (project.standby) menuBtn.innerHTML = eyeOpenSvg;
+            if (project.standby) menuBtn.innerHTML = ICONS.eyeOpen;
         });
         menuBtn.addEventListener('mouseleave', () => {
-            if (project.standby) menuBtn.innerHTML = eyeClosedSvg;
+            if (project.standby) menuBtn.innerHTML = ICONS.eyeClosed;
         });
 
         // Right-click on seed text also opens the menu
@@ -3177,96 +3140,59 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
             });
 
             el.addEventListener("click", (e) => {
-                // Ignore the second click of a double-click so it doesn't mess with editing!
-                if (e.detail === 2) return; 
-                
-                    if (!el.hasClass("is-editing")) {
-                    e.stopPropagation();
-                    if (arrayName === 'stem' || arrayName === 'flowers') this.scareFireflies(project.id);
-                    const currentProjectId = el.parentElement?.dataset.projectId;
+                // The second click of a double-click belongs to editing, not selecting.
+                if (e.detail === 2 || el.hasClass("is-editing")) return;
+                e.stopPropagation();
+                if (arrayName === 'stem' || arrayName === 'flowers') this.scareFireflies(project.id);
 
-                    if (e.ctrlKey || e.metaKey) {
-                        if (this.selectedCells.length > 0 && this.selectedCells[0].parentElement?.dataset.projectId !== currentProjectId) {
-                            this.clearSelection();
-                        }
-                        
-                        const itemId = el.dataset.id;
-                        if (el.hasClass("is-selected")) {
-                            el.removeClass("is-selected");
-                            this.selectedCells = this.selectedCells.filter(c => c !== el);
-                            if (itemId) this.unhighlightPlantPart(itemId);
-                        } else {
-                            el.addClass("is-selected");
-                            this.selectedCells.push(el);
-                            if (itemId) this.highlightPlantPart(itemId);
-                        }
-                    } else if (e.shiftKey) {
-                        const list = el.parentElement;
-                        if (list && this.selectedCells.length > 0) {
-                            const lastEl = this.selectedCells[this.selectedCells.length - 1];
-                            if (lastEl.parentElement === list) {
-                                const items = Array.from(list.children).filter(c => c.hasClass('garden-item')) as HTMLElement[];
-                                const idx1 = items.indexOf(lastEl);
-                                const idx2 = items.indexOf(el);
-                                const [start, end] = [Math.min(idx1, idx2), Math.max(idx1, idx2)];
-                                for (let i = start; i <= end; i++) {
-                                    const cell = items[i];
-                                    if (!cell.hasClass("is-selected")) {
-                                        cell.addClass("is-selected");
-                                        this.selectedCells.push(cell);
-                                        const cItemId = cell.dataset.id;
-                                        if (cItemId) this.highlightPlantPart(cItemId);
-                                    }
-                                }
-                            } else {
-                                this.selectSingleCell(el);
-                            }
-                        } else {
-                            this.selectSingleCell(el);
-                        }
-                    } else {
-                        this.selectSingleCell(el);
-                    }
+                const list = el.parentElement;
+                const last = this.selectedCells[this.selectedCells.length - 1];
+
+                if (e.ctrlKey || e.metaKey) {
+                    // A selection never spans two plants.
+                    const open = this.selectedCells[0]?.parentElement?.dataset.projectId;
+                    if (open !== undefined && open !== list?.dataset.projectId) this.clearSelection();
+                    if (el.hasClass("is-selected")) this.unselect(el);
+                    else this.select(el);
+                    return;
                 }
+
+                if (e.shiftKey && list && last?.parentElement === list) {
+                    // Everything from the cell selected last to this one, in this zone.
+                    const cells = (Array.from(list.children) as HTMLElement[]).filter(c => c.hasClass('garden-item'));
+                    const [from, to] = [cells.indexOf(last), cells.indexOf(el)].sort((a, b) => a - b);
+                    for (const cell of cells.slice(from, to + 1)) this.select(cell);
+                    return;
+                }
+
+                this.selectSingleCell(el);
             });
 
-            el.addEventListener("dblclick", () => {
-                this.startEditing(el);
-            });
+            el.addEventListener("dblclick", () => this.startEditing(el));
 
             el.addEventListener("blur", () => {
-                if (el.hasClass("is-editing")) {
-                    this.stopEditing(el, item);
-                } else {
-                    this.deselectCell(el);
-                }
+                if (el.hasClass("is-editing")) this.stopEditing(el, item);
+                else this.deselectCell(el);
             });
 
             el.addEventListener("keydown", (e: KeyboardEvent) => {
-                if (el.hasClass("is-editing")) {
-                    if (e.key === "Enter") {
-                        e.preventDefault();
-                        this.stopEditing(el, item);
-                        el.blur();
-                    }
-                    if ((e.key === "Backspace" || e.key === "Delete") && el.getText().trim() === "") {
-                        e.preventDefault();
-                        this.deleteCell(el, item, project, arrayName);
-                    }
-                } else if (el.hasClass("is-selected")) {
-                    if (e.key === "Enter") {
-                        e.preventDefault();
-                        this.startEditing(el);
-                    }
-                    if (e.key === "Backspace" || e.key === "Delete") {
-                        e.preventDefault();
-                        if (this.selectedCells.length > 1) {
-                            this.deleteSelectedCells();
-                        } else {
-                            this.deleteCell(el, item, project, arrayName);
-                        }
-                    }
+                const erase = e.key === "Backspace" || e.key === "Delete";
+                if (e.key !== "Enter" && !erase) return;
+                const editing = el.hasClass("is-editing");
+                if (!editing && !el.hasClass("is-selected")) return;
+
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!editing) return this.startEditing(el);
+                    this.stopEditing(el, item);
+                    el.blur();
+                    return;
                 }
+                // Backspace in an emptied cell deletes it, as it does on the board.
+                if (editing && el.getText().trim() !== "") return;
+                e.preventDefault();
+                if (!editing && this.selectedCells.length > 1) void this.deleteSelectedCells();
+                else void this.deleteCell(el, item, project, arrayName);
             });
 
             el.addEventListener("contextmenu", (e: MouseEvent) => {
