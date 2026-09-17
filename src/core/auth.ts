@@ -32,14 +32,25 @@ function looksLikeEmail(value: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+/** What the owner has to fix, said once where the owner will see it. */
+const CONFIRMATION_IS_ON =
+    'Garden Cells: this sign-up tried to send a confirmation email. The app sends none of its own, ' +
+    'so "Confirm email" is still on in Supabase (Authentication, Email). Turn it off, or set up custom SMTP.';
+
+/** What a visitor sees when that happens. They cannot act on the cause. */
+const SIGN_UP_UNAVAILABLE = 'Sign-up is not working just now. Try the emailed link instead.';
+
 /**
  * Sign-up failures worth explaining. A rate limit here always means the project
  * is still trying to send a confirmation email: the app itself sends none, and
- * the free tier allows only a handful an hour.
+ * the built-in mail service allows only a handful an hour.
  */
 function signUpProblem(message: string): string {
     if (/already registered|already exists/i.test(message)) return 'That address already has an account. Sign in instead.';
-    if (/rate limit|too many requests/i.test(message)) return 'The project is still sending confirmation emails. Turn "Confirm email" off in Supabase.';
+    if (/rate limit|too many requests/i.test(message)) {
+        console.error(CONFIRMATION_IS_ON);
+        return SIGN_UP_UNAVAILABLE;
+    }
     return `Could not create the account: ${message}`;
 }
 
@@ -112,15 +123,16 @@ class SignInModal extends Modal {
                 return;
             }
             // No session and a real user means the project still has email
-            // confirmation switched on. Nothing is sent here, so try the
-            // password straight away; only a project misconfiguration lands
-            // below, and it is the owner's to fix, not the visitor's.
+            // confirmation switched on. The account exists either way, so try
+            // the password straight away; it works whenever confirmation was
+            // the only thing standing in the way.
             const retry = await this.client.auth.signInWithPassword({ email, password });
             if (!retry.error) {
                 this.close();
                 return;
             }
-            status.setText('This project still requires email confirmation. Turn it off in Supabase to sign up here.');
+            console.error(CONFIRMATION_IS_ON);
+            status.setText(SIGN_UP_UNAVAILABLE);
         };
 
         new Setting(contentEl)
