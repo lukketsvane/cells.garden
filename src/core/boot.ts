@@ -11,6 +11,7 @@ import { AuthPill, type MenuItem } from './auth';
 import { PlantSync } from './plants';
 import { LeaveGardenModal, ShareGardenModal } from './share';
 import { SharePlantModal } from './share-plant';
+import { applyScene, sceneMenuItems } from './scene';
 import {
     GardenFullError,
     InvalidInviteError,
@@ -35,7 +36,7 @@ import {
 } from './store';
 import { createSupabase, SupabaseStore } from './supabase';
 import { installTouchAdapter } from './touch';
-import { GardenFilesButton } from './transfer';
+import { BoardToggleButton, GardenFilesButton, openGardenFiles } from './transfer';
 
 export interface BootOptions {
     /** Where a magic link should land. Defaults to the current page. */
@@ -109,6 +110,7 @@ function notify(host: HTMLElement, text: string) {
 }
 
 export async function bootGarden(host: HTMLElement, options: BootOptions = {}): Promise<GardenApp> {
+    applyScene();
     // Extension pages never receive a link, so only the web app looks.
     const inExtension = !!(globalThis as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
     if (!inExtension) stashInviteFromUrl();
@@ -129,13 +131,15 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
     // Fingers: the view speaks mouse; the adapter translates taps, holds and the divider drag.
     installTouchAdapter(host);
 
-    // M3: export/import. On the host, not in the view, which rebuilds itself.
-    // Local-first, so it works signed out and without Supabase config too.
-    new GardenFilesButton(app, host);
+    // The corner button shows or hides the board. On the host, not in the view,
+    // which rebuilds itself.
+    new BoardToggleButton(host);
 
     // M1: when the build has Supabase config, offer sign-in and sync.
     const supabase = createSupabase();
     if (!supabase) {
+        // No pill menu to hold export and import, so they keep a button.
+        new GardenFilesButton(app, host);
         if (takePendingJoin()) {
             writeJson(PENDING_JOIN_KEY, null);
             notify(host, 'Sharing needs an account. This build has none.');
@@ -251,7 +255,11 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
 
     pill.setMenu(async (): Promise<MenuItem[]> => {
         const uid = currentUser;
-        if (!uid || !(await sharingAvailable(supabase))) return [];
+        const common: MenuItem[] = [
+            { label: 'Export or import', onClick: () => openGardenFiles(app) },
+            ...sceneMenuItems(),
+        ];
+        if (!uid || !(await sharingAvailable(supabase))) return common;
         const gardens = await listSharedGardens(supabase, uid);
         const items: MenuItem[] = [];
         if (gardens.length > 0) {
@@ -305,7 +313,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
                 }).open(),
             });
         }
-        return items;
+        return [...items, ...common];
     });
 
     let askedToSignIn = false;

@@ -302,8 +302,7 @@ export class AuthPill {
         this.el = host.createEl('button', { cls: 'auth-pill', attr: { type: 'button', title: 'Sign in to sync your garden' } });
         this.el.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (this.session) this.showMenu();
-            else new SignInModal(this.client, this.options).open();
+            this.showMenu();
         });
         this.render();
     }
@@ -367,10 +366,14 @@ export class AuthPill {
         menu.style.cssText = 'position: fixed; z-index: 10000; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 4px 0; min-width: 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
         const menuStyle = 'display: block; width: 100%; padding: 6px 16px; text-align: left; background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-normal);';
 
-        const who = document.createElement('div');
-        who.textContent = this.session?.user.email ?? '';
-        who.style.cssText = `${menuStyle} font-size: 11px; color: var(--text-faint); pointer-events: none; cursor: default;`;
-        menu.appendChild(who);
+        if (this.session) {
+            const who = document.createElement('div');
+            who.textContent = this.session.user.email ?? '';
+            who.style.cssText = `${menuStyle} font-size: 11px; color: var(--text-faint); pointer-events: none; cursor: default;`;
+            menu.appendChild(who);
+        } else {
+            items = [{ label: 'Sign in', onClick: () => new SignInModal(this.client, this.options).open() }, ...items];
+        }
 
         for (const item of items) {
             if (item.heading) {
@@ -408,6 +411,7 @@ export class AuthPill {
         const out = document.createElement('button');
         out.textContent = 'Sign out';
         out.style.cssText = menuStyle;
+        if (!this.session) out.style.display = 'none';
         out.onmouseenter = () => { out.style.background = 'var(--background-modifier-hover)'; };
         out.onmouseleave = () => { out.style.background = 'none'; };
         out.onclick = async () => {
