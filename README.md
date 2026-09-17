@@ -77,7 +77,8 @@ interface GardenStore {
 ```
 
 - Signed out: `LocalStore` (localStorage, key `cells.garden/v1`). Tabs stay in step through the `storage` event.
-- Signed in: `SupabaseStore` is primary and a per-user `LocalStore` mirrors every save, so the device keeps an offline copy and sign-out never loses anything. The whole garden is one JSON blob per user; the newest `updatedAt` wins; realtime pushes changes to the other devices.
+- Signed in: `SupabaseStore` is primary and a per-user `LocalStore` mirrors every save, so the device keeps an offline copy and sign-out never loses anything. The whole garden is one JSON blob per owner; saves are compare-and-swap on a server revision and merge by plant and cell id when someone wrote first; realtime pushes changes to the other devices.
+- Shared: an owner shares their garden by link (`#join=<token>`); members edit the same blob. See `supabase/README.md`.
 - First sign-in on a device offers the anonymous garden to an account that has none yet, once.
 - Camera, kanban scroll and the divider between them are per surface (web, new tab, side panel) and stay on the device.
 
@@ -93,4 +94,4 @@ Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell 
 - **M1**: Supabase auth + sync, PWA. Same garden on phone and desktop. Done.
 - **M2**: Chrome extension (new tab + side panel), service worker, per-surface camera, hardened sync. Done.
 - **M3**: Obsidian import/export in the UI, and the extension popup (one plant at a time). Done. An Obsidian plugin on top of the core, syncing to the same backend, is still open. Custom images are out of scope for now.
-- **M4**: shared gardens (invite by link, live co-editing) and placeholder art for roots, minerals and seeds. In progress.
+- **M4**: shared gardens (invite by link, live co-editing, merge on conflict) and placeholder art for roots, minerals and seeds. Done.

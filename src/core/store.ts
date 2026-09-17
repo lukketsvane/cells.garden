@@ -7,7 +7,16 @@ import { emptyGarden } from './model';
  */
 export interface GardenStore {
     load(): Promise<Garden | null>;
-    save(garden: Garden): Promise<void>;
+    /**
+     * Write the garden. A store that found newer work on the server merges it in
+     * and returns what it wrote, so the app can adopt it; otherwise nothing.
+     */
+    save(garden: Garden): Promise<Garden | void>;
+    /**
+     * Optional: combine an offline copy with what the server holds now, using the
+     * last version this device synced as the common base. Nothing is written.
+     */
+    mergeOffline?(local: Garden): Promise<Garden>;
     /**
      * Optional: be told when the garden changed somewhere else
      * (another tab, another device). Returns an unsubscribe function.
@@ -21,6 +30,19 @@ export const LOCAL_KEY = 'cells.garden/v1';
 /** The offline mirror of one account's garden on this device. */
 export function userStoreKey(userId: string): string {
     return `${LOCAL_KEY}/user/${userId}`;
+}
+
+/** The offline mirror of a garden someone shared with this account. */
+export function gardenStoreKey(gardenId: string): string {
+    return `${LOCAL_KEY}/garden/${gardenId}`;
+}
+
+/** The garden is gone for this account: deleted, or the owner removed them. */
+export class GardenGoneError extends Error {
+    constructor() {
+        super('This garden is no longer available.');
+        this.name = 'GardenGoneError';
+    }
 }
 
 const CLAIM_KEY = `${LOCAL_KEY}/claimedBy`;
