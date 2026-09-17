@@ -2,7 +2,7 @@
   "name": "cells.garden",
   "version": "0.1.0",
   "private": true,
-  "description": "A kanban-style project garden where tasks grow into plants. Web port of the Garden Cells Obsidian plugin.",
+  "description": "A kanban-style project garden where tasks grow into plants. Web app, PWA and Chrome extension around one core.",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
@@ -14,7 +14,8 @@
     "dev:ext": "vite build --config vite.ext.config.ts --watch --mode development",
     "icons": "node scripts/make-icons.mjs",
     "test:web": "node scripts/test-web.mjs",
-    "test:ext": "node scripts/test-ext.mjs"
+    "test:ext": "node scripts/test-ext.mjs",
+    "typecheck:ext": "tsc --noEmit -p tsconfig.ext.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
