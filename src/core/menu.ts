@@ -3,6 +3,7 @@
  * three copies of the same builder, each with its styles written into the
  * elements; they are all this now, and the look lives in styles.css.
  */
+import './shim';
 
 export interface MenuItem {
     label: string;
