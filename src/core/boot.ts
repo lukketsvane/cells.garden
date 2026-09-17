@@ -226,18 +226,22 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         }
     };
 
-    /** Put a plant someone shared into the user's own garden. */
-    const plantShared = async (row: SharedPlantRow, sync: PlantSync) => {
-        if (app.gardenData.some(p => p.sharedPlantId === row.id)) return;
-        const data = row.data;
-        const taken = app.gardenData.some(p => p.id === data.id);
+    /**
+     * Put a plant someone shared into the user's own garden. Returns false when
+     * it is already there. A plant whose id is taken here is given a new one, so
+     * two people's gardens never collide over it.
+     */
+    const plantShared = async (row: SharedPlantRow, sync: PlantSync): Promise<boolean> => {
+        if (app.gardenData.some(p => p.sharedPlantId === row.id)) return false;
+        const taken = app.gardenData.some(p => p.id === row.data.id);
         sync.adopt(row);
         await app.addProject({
-            ...data,
-            id: taken ? `proj_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` : data.id,
+            ...row.data,
+            id: taken ? `proj_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` : row.data.id,
             order: app.gardenData.length,
             sharedPlantId: row.id,
         });
+        return true;
     };
 
     const plantOffered = async (row: SharedPlantRow) => {
@@ -270,20 +274,8 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         try {
             if (shared) await openGarden(uid, null);
             const row = await joinPlant(supabase, pending.token);
-            if (app.gardenData.some(p => p.sharedPlantId === row.id)) {
-                notify(host, 'That plant is already in your garden.');
-                return;
-            }
-            const data = row.data;
-            const taken = app.gardenData.some(p => p.id === data.id);
-            sync.adopt(row);
-            await app.addProject({
-                ...data,
-                id: taken ? `proj_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` : data.id,
-                order: app.gardenData.length,
-                sharedPlantId: row.id,
-            });
-            notify(host, `Planted ${data.seed || data.name}.`);
+            const planted = await plantShared(row, sync);
+            notify(host, planted ? `Planted ${row.data.seed || row.data.name}.` : 'That plant is already in your garden.');
         } catch (e) {
             if (e instanceof InvalidInviteError || e instanceof GardenFullError || e instanceof SharingUnavailableError) {
                 notify(host, e.message.replace('garden', 'plant'));

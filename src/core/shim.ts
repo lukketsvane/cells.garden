@@ -41,14 +41,9 @@ declare global {
     }
     interface Element {
         addClass(...classes: string[]): void;
-        addClasses(classes: string[]): void;
         removeClass(...classes: string[]): void;
-        removeClasses(classes: string[]): void;
         toggleClass(classes: string | string[], value: boolean): void;
         hasClass(cls: string): boolean;
-        setAttr(name: string, value: string | number | boolean | null): void;
-        setAttrs(attrs: { [key: string]: string | number | boolean | null }): void;
-        getAttr(name: string): string | null;
         setText(val: string | DocumentFragment): void;
         getText(): string;
     }
@@ -65,9 +60,12 @@ function applyInfo(el: HTMLElement, o?: DomElementInfo | string) {
         el.addClass(o);
         return;
     }
-    if (o.cls) el.addClasses(splitClasses(o.cls));
+    if (o.cls) el.addClass(...splitClasses(o.cls));
     if (o.text !== undefined) el.setText(o.text);
-    if (o.attr) el.setAttrs(o.attr);
+    for (const [name, value] of Object.entries(o.attr ?? {})) {
+        if (value === null) el.removeAttribute(name);
+        else el.setAttribute(name, String(value));
+    }
     if (o.title !== undefined) el.title = o.title;
     if (o.placeholder !== undefined) (el as HTMLInputElement).placeholder = o.placeholder;
     if (o.href !== undefined) (el as HTMLAnchorElement).href = o.href;
@@ -115,13 +113,7 @@ install(Node.prototype, 'empty', function (this: Node) {
 install(Element.prototype, 'addClass', function (this: Element, ...classes: string[]) {
     this.classList.add(...splitClasses(classes));
 });
-install(Element.prototype, 'addClasses', function (this: Element, classes: string[]) {
-    this.classList.add(...splitClasses(classes));
-});
 install(Element.prototype, 'removeClass', function (this: Element, ...classes: string[]) {
-    this.classList.remove(...splitClasses(classes));
-});
-install(Element.prototype, 'removeClasses', function (this: Element, classes: string[]) {
     this.classList.remove(...splitClasses(classes));
 });
 install(Element.prototype, 'toggleClass', function (this: Element, classes: string | string[], value: boolean) {
@@ -129,16 +121,6 @@ install(Element.prototype, 'toggleClass', function (this: Element, classes: stri
 });
 install(Element.prototype, 'hasClass', function (this: Element, cls: string) {
     return this.classList.contains(cls);
-});
-install(Element.prototype, 'setAttr', function (this: Element, name: string, value: string | number | boolean | null) {
-    if (value === null) this.removeAttribute(name);
-    else this.setAttribute(name, String(value));
-});
-install(Element.prototype, 'setAttrs', function (this: Element, attrs: { [key: string]: string | number | boolean | null }) {
-    for (const [k, v] of Object.entries(attrs)) this.setAttr(k, v);
-});
-install(Element.prototype, 'getAttr', function (this: Element, name: string) {
-    return this.getAttribute(name);
 });
 install(Element.prototype, 'setText', function (this: Element, val: string | DocumentFragment) {
     if (typeof val === 'string') this.textContent = val;

@@ -29,11 +29,6 @@ export interface ProjectData {
 
 export type LayerName = 'stem' | 'flowers' | 'minerals' | 'roots';
 
-export interface SkyKeyframe {
-    time: number; // 0 to 24
-    color: string; // hex code
-}
-
 export interface ViewState {
     zoom: number;
     translateX: number;
@@ -42,12 +37,17 @@ export interface ViewState {
     kanbanScrollTop: number;
 }
 
+/**
+ * Carried through every save, sync and export, but nothing reads the four
+ * switches yet: the ant, the worm and the fireflies are always on. They stay
+ * because gardens in the wild hold them, and because a setting anyone's client
+ * does not know still has to survive a merge.
+ */
 export interface GardenSettings {
     enableAnt: boolean;
     enableWorm: boolean;
     enableFireflies: boolean;
     fireflyCount: number;
-    skyKeyframes: SkyKeyframe[];
     viewState?: ViewState;
 }
 
@@ -60,25 +60,18 @@ export interface Garden {
     updatedAt: string;
 }
 
-// --- THESE COLORS AREN'T IN USE. They're based on code I didn't implement for using hex and converting to something the math can use ---
 export const DEFAULT_SETTINGS: GardenSettings = {
     enableAnt: true,
     enableWorm: true,
     enableFireflies: true,
     fireflyCount: 9,
-    skyKeyframes: [
-        { time: 0, color: "#130c0c" },    // Night
-        { time: 6, color: "#960b9b" },    // Dawn
-        { time: 12, color: "#87CEEB" },   // Day
-        { time: 18, color: "#971ff3" }    // Dusk
-    ]
 };
 
 export function emptyGarden(): Garden {
     return {
         version: 1,
         projects: [],
-        settings: { ...DEFAULT_SETTINGS, skyKeyframes: DEFAULT_SETTINGS.skyKeyframes.map(k => ({ ...k })) },
+        settings: { ...DEFAULT_SETTINGS },
         updatedAt: new Date(0).toISOString(),
     };
 }
