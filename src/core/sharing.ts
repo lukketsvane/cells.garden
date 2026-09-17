@@ -44,6 +44,13 @@ function fail(error: PgError): never {
     throw new Error(error.message ?? 'Request failed');
 }
 
+/** Joining says the same two things whether it is a garden or a plant. */
+function failJoin(error: PgError): never {
+    if (error.code === 'P0002') throw new InvalidInviteError();
+    if (error.code === '53400') throw new GardenFullError();
+    fail(error);
+}
+
 let available: Promise<boolean> | null = null;
 
 /** True when the sharing tables exist. Asked once per page. */
@@ -57,16 +64,16 @@ export function sharingAvailable(client: SupabaseClient): Promise<boolean> {
     return available;
 }
 
-/** The token in a `#join=<uuid>` hash, or null. */
-export function inviteTokenFromHash(hash: string): string | null {
-    const match = /(?:^#|&)join=([^&]+)/.exec(hash);
+/** The uuid a `#join=` or `#plant=` hash carries, or null. */
+function tokenFromHash(hash: string, name: string): string | null {
+    const match = new RegExp(`(?:^#|&)${name}=([^&]+)`).exec(hash);
     const token = match ? decodeURIComponent(match[1]) : '';
     return UUID.test(token) ? token.toLowerCase() : null;
 }
 
-export function inviteUrl(token: string): string {
-    return `${APP_URL}#join=${token}`;
-}
+export const inviteTokenFromHash = (hash: string) => tokenFromHash(hash, 'join');
+
+export const inviteUrl = (token: string) => `${APP_URL}#join=${token}`;
 
 /** Gardens other people shared with this user. */
 export async function listSharedGardens(client: SupabaseClient, userId: string): Promise<SharedGarden[]> {
@@ -91,11 +98,7 @@ export async function listSharedGardens(client: SupabaseClient, userId: string):
 /** Present an invite token; the user becomes a member. Returns the garden. */
 export async function joinGarden(client: SupabaseClient, token: string): Promise<{ id: string; name: string }> {
     const { data, error } = await client.rpc('join_garden', { invite: token });
-    if (error) {
-        if (error.code === 'P0002') throw new InvalidInviteError();
-        if (error.code === '53400') throw new GardenFullError();
-        fail(error);
-    }
+    if (error) failJoin(error);
     const row = ((data ?? []) as { garden_id: string; name: string }[])[0];
     if (!row) throw new InvalidInviteError();
     return { id: row.garden_id, name: row.name };
@@ -114,31 +117,40 @@ export async function ownGardenId(client: SupabaseClient, userId: string): Promi
     return row ?? null;
 }
 
-export async function getInvite(client: SupabaseClient, gardenId: string): Promise<string | null> {
-    const { data, error } = await client.from('garden_invites').select('token').eq('garden_id', gardenId).limit(1);
+/**
+ * Gardens and plants are shared the same way: an invites table holding one
+ * token per thing, and a members table holding everyone who used it. Only the
+ * table and the column that names the thing differ.
+ */
+const GARDEN = { invites: 'garden_invites', members: 'garden_members', key: 'garden_id' } as const;
+const PLANT = { invites: 'plant_invites', members: 'plant_members', key: 'plant_id' } as const;
+type Shared = typeof GARDEN | typeof PLANT;
+
+async function invite(client: SupabaseClient, of: Shared, id: string): Promise<string | null> {
+    const { data, error } = await client.from(of.invites).select('token').eq(of.key, id).limit(1);
     if (error) fail(error);
     return ((data ?? []) as { token: string }[])[0]?.token ?? null;
 }
 
-/** Make a new link. Any older link for this garden stops working. */
-export async function renewInvite(client: SupabaseClient, gardenId: string): Promise<string> {
+/** Make a new link. Any older link for the same thing stops working. */
+async function renew(client: SupabaseClient, of: Shared, id: string): Promise<string> {
     const token = crypto.randomUUID();
-    const { error } = await client.from('garden_invites').upsert({ garden_id: gardenId, token, created_at: new Date().toISOString() });
+    const { error } = await client.from(of.invites).upsert({ [of.key]: id, token, created_at: new Date().toISOString() });
     if (error) fail(error);
     return token;
 }
 
 /** Turn the link off. People already in keep access. */
-export async function clearInvite(client: SupabaseClient, gardenId: string): Promise<void> {
-    const { error } = await client.from('garden_invites').delete().eq('garden_id', gardenId);
+async function clear(client: SupabaseClient, of: Shared, id: string): Promise<void> {
+    const { error } = await client.from(of.invites).delete().eq(of.key, id);
     if (error) fail(error);
 }
 
-export async function listMembers(client: SupabaseClient, gardenId: string): Promise<GardenMember[]> {
+async function members(client: SupabaseClient, of: Shared, id: string): Promise<GardenMember[]> {
     const { data, error } = await client
-        .from('garden_members')
+        .from(of.members)
         .select('user_id, created_at, profiles(*)')
-        .eq('garden_id', gardenId)
+        .eq(of.key, id)
         .order('created_at');
     if (error) fail(error);
     return ((data ?? []) as unknown as { user_id: string; profiles: { display_name: string | null; avatar_seed?: string | null } | null }[])
@@ -146,10 +158,16 @@ export async function listMembers(client: SupabaseClient, gardenId: string): Pro
 }
 
 /** The owner removing someone, or a member leaving: the same delete. */
-export async function removeMember(client: SupabaseClient, gardenId: string, userId: string): Promise<void> {
-    const { error } = await client.from('garden_members').delete().eq('garden_id', gardenId).eq('user_id', userId);
+async function removeFrom(client: SupabaseClient, of: Shared, id: string, userId: string): Promise<void> {
+    const { error } = await client.from(of.members).delete().eq(of.key, id).eq('user_id', userId);
     if (error) fail(error);
 }
+
+export const getInvite = (c: SupabaseClient, gardenId: string) => invite(c, GARDEN, gardenId);
+export const renewInvite = (c: SupabaseClient, gardenId: string) => renew(c, GARDEN, gardenId);
+export const clearInvite = (c: SupabaseClient, gardenId: string) => clear(c, GARDEN, gardenId);
+export const listMembers = (c: SupabaseClient, gardenId: string) => members(c, GARDEN, gardenId);
+export const removeMember = (c: SupabaseClient, gardenId: string, userId: string) => removeFrom(c, GARDEN, gardenId, userId);
 
 export async function renameGarden(client: SupabaseClient, gardenId: string, name: string): Promise<void> {
     const { error } = await client.from('gardens').update({ name }).eq('id', gardenId);
@@ -158,16 +176,9 @@ export async function renameGarden(client: SupabaseClient, gardenId: string, nam
 
 // --- Collaborative plants (migration 0007) -----------------------------------
 
-/** The token in a `#plant=<uuid>` hash, or null. */
-export function plantTokenFromHash(hash: string): string | null {
-    const match = /(?:^#|&)plant=([^&]+)/.exec(hash);
-    const token = match ? decodeURIComponent(match[1]) : '';
-    return UUID.test(token) ? token.toLowerCase() : null;
-}
+export const plantTokenFromHash = (hash: string) => tokenFromHash(hash, 'plant');
 
-export function plantInviteUrl(token: string): string {
-    return `${APP_URL}#plant=${token}`;
-}
+export const plantInviteUrl = (token: string) => `${APP_URL}#plant=${token}`;
 
 export interface SharedPlantRow {
     id: string;
@@ -190,11 +201,7 @@ export async function createSharedPlant(client: SupabaseClient, userId: string, 
 /** Present a plant invite; the user becomes a member. Returns the plant row. */
 export async function joinPlant(client: SupabaseClient, token: string): Promise<SharedPlantRow> {
     const { data, error } = await client.rpc('join_plant', { invite: token });
-    if (error) {
-        if (error.code === 'P0002') throw new InvalidInviteError();
-        if (error.code === '53400') throw new GardenFullError();
-        fail(error);
-    }
+    if (error) failJoin(error);
     const row = ((data ?? []) as { plant_id: string; data: import('./merge').PlantData; rev: number }[])[0];
     if (!row) throw new InvalidInviteError();
     const { data: owner } = await client.from('plants').select('owner_id').eq('id', row.plant_id).limit(1);
@@ -208,39 +215,11 @@ export async function plantOwner(client: SupabaseClient, plantId: string): Promi
     return ((data ?? []) as { owner_id: string }[])[0]?.owner_id ?? null;
 }
 
-export async function getPlantInvite(client: SupabaseClient, plantId: string): Promise<string | null> {
-    const { data, error } = await client.from('plant_invites').select('token').eq('plant_id', plantId).limit(1);
-    if (error) fail(error);
-    return ((data ?? []) as { token: string }[])[0]?.token ?? null;
-}
-
-export async function renewPlantInvite(client: SupabaseClient, plantId: string): Promise<string> {
-    const token = crypto.randomUUID();
-    const { error } = await client.from('plant_invites').upsert({ plant_id: plantId, token, created_at: new Date().toISOString() });
-    if (error) fail(error);
-    return token;
-}
-
-export async function clearPlantInvite(client: SupabaseClient, plantId: string): Promise<void> {
-    const { error } = await client.from('plant_invites').delete().eq('plant_id', plantId);
-    if (error) fail(error);
-}
-
-export async function listPlantMembers(client: SupabaseClient, plantId: string): Promise<GardenMember[]> {
-    const { data, error } = await client
-        .from('plant_members')
-        .select('user_id, created_at, profiles(*)')
-        .eq('plant_id', plantId)
-        .order('created_at');
-    if (error) fail(error);
-    return ((data ?? []) as unknown as { user_id: string; profiles: { display_name: string | null; avatar_seed?: string | null } | null }[])
-        .map(m => ({ userId: m.user_id, name: m.profiles?.display_name || 'someone', avatar: m.profiles?.avatar_seed || m.user_id }));
-}
-
-export async function removePlantMember(client: SupabaseClient, plantId: string, userId: string): Promise<void> {
-    const { error } = await client.from('plant_members').delete().eq('plant_id', plantId).eq('user_id', userId);
-    if (error) fail(error);
-}
+export const getPlantInvite = (c: SupabaseClient, plantId: string) => invite(c, PLANT, plantId);
+export const renewPlantInvite = (c: SupabaseClient, plantId: string) => renew(c, PLANT, plantId);
+export const clearPlantInvite = (c: SupabaseClient, plantId: string) => clear(c, PLANT, plantId);
+export const listPlantMembers = (c: SupabaseClient, plantId: string) => members(c, PLANT, plantId);
+export const removePlantMember = (c: SupabaseClient, plantId: string, userId: string) => removeFrom(c, PLANT, plantId, userId);
 
 /** The owner stops sharing: the row goes, everyone keeps their own copy. */
 export async function deleteSharedPlant(client: SupabaseClient, plantId: string): Promise<void> {
@@ -297,11 +276,7 @@ export async function listPlantOffers(client: SupabaseClient): Promise<PlantOffe
 /** Take an offered plant: the user becomes a member and gets the row back. */
 export async function acceptPlantOffer(client: SupabaseClient, plantId: string): Promise<SharedPlantRow> {
     const { data, error } = await client.rpc('accept_plant_offer', { pid: plantId });
-    if (error) {
-        if (error.code === 'P0002') throw new InvalidInviteError();
-        if (error.code === '53400') throw new GardenFullError();
-        fail(error);
-    }
+    if (error) failJoin(error);
     const row = ((data ?? []) as { plant_id: string; owner_id: string; data: import('./merge').PlantData; rev: number }[])[0];
     if (!row) throw new InvalidInviteError();
     return { id: row.plant_id, owner_id: row.owner_id, data: row.data, rev: row.rev };

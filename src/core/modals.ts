@@ -97,52 +97,6 @@ export class CreateProjectModal extends Modal {
     }
 }
 
-// --- The Add Item Modal ---
-
-export class AddItemModal extends Modal {
-    onSubmit: (content: string) => void;
-    title: string;
-    placeholder: string;
-
-    constructor(title: string, placeholder: string, onSubmit: (content: string) => void) {
-        super();
-        this.title = title;
-        this.placeholder = placeholder;
-        this.onSubmit = onSubmit;
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.createEl("h2", { text: this.title });
-
-        let itemContent = "";
-
-        new Setting(contentEl)
-            .addText((text) => {
-                text.setPlaceholder(this.placeholder);
-                text.onChange((value) => { itemContent = value; });
-
-                // --- THE SPELL ---
-                text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (itemContent.trim()) {
-                            this.close();
-                            this.onSubmit(itemContent);
-                        }
-                    }
-                });
-                // ----------------
-
-                setTimeout(() => text.inputEl.focus(), 50);
-            });
-    }
-
-    onClose() {
-        this.contentEl.empty();
-    }
-}
-
 /** The keyboard shortcuts, opened with ? or from the pill menu. */
 export class ShortcutsModal extends Modal {
     onOpen() {

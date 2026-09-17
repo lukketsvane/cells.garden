@@ -4,12 +4,7 @@ import { GardenView } from './garden';
 import { mergeGardens } from './merge';
 import type { Garden, GardenSettings, ProjectData } from './model';
 import { DEFAULT_SETTINGS, emptyGarden } from './model';
-import { GardenGoneError, type GardenStore } from './store';
-
-/** A copy that shares nothing with the live data the view edits in place. */
-function snapshot(garden: Garden): Garden {
-    return JSON.parse(JSON.stringify(garden)) as Garden;
-}
+import { GardenGoneError, snapshot, type GardenStore } from './store';
 
 export type SyncState = 'local' | 'syncing' | 'synced' | 'error';
 

@@ -18,7 +18,7 @@ import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import type { GardenApp } from './app';
 import { mergePlant, plantData, sameData, type PlantData } from './merge';
 import type { ProjectData } from './model';
-import { LOCAL_KEY } from './store';
+import { LOCAL_KEY, snapshot } from './store';
 
 interface PlantRow {
     id: string;
@@ -38,10 +38,6 @@ interface Tracked {
 
 const MAX_ROUNDS = 4;
 const baseKey = (plantId: string) => `${LOCAL_KEY}/plant/${plantId}`;
-
-function snapshot<T>(value: T): T {
-    return JSON.parse(JSON.stringify(value)) as T;
-}
 
 function remember(plantId: string, rev: number, base: PlantData) {
     try {
