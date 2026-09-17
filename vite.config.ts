@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
                 registerType: 'prompt',
                 injectRegister: false,
                 // public/ files to precache on top of the manifest icons.
-                includeAssets: ['icon.svg', 'icon-maskable.svg'],
+                includeAssets: ['icon.svg', 'icon-maskable.svg', 'icon-180.png'],
                 manifest: {
                     name: 'cells.garden',
                     short_name: 'Garden',

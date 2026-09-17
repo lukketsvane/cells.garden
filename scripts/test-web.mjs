@@ -300,12 +300,118 @@ async function scenario(browser, errors) {
         await ictx.close();
     }
 
-    // Mobile viewport
-    const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, colorScheme: 'dark' });
+    // iPhone: real touch input through the browser protocol.
+    const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3, colorScheme: 'dark' });
     const mpage = await mctx.newPage();
     watchErrors(mpage, 'mobile', errors);
     await mpage.goto(BASE, { waitUntil: 'networkidle' });
     await mpage.waitForSelector('.garden-canvas-viewport');
+    const cdp = await mctx.newCDPSession(mpage);
+    const touch = async (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    const center = async (sel) => {
+        const b = await (await mpage.$(sel)).boundingBox();
+        return [b.x + b.width / 2, b.y + b.height / 2];
+    };
+    const tapAt = async (sel) => {
+        const [x, y] = await center(sel);
+        await touch('touchStart', x, y);
+        await touch('touchEnd', x, y);
+        await mpage.waitForTimeout(120);
+    };
+    const holdAt = async (sel, ms = 600) => {
+        const [x, y] = await center(sel);
+        await touch('touchStart', x, y);
+        await mpage.waitForTimeout(ms);
+        await touch('touchEnd', x, y);
+        await mpage.waitForTimeout(150);
+    };
+
+    // The page never scrolls sideways; controls sit inside the screen.
+    const shell = await mpage.evaluate(() => ({
+        scrollW: document.documentElement.scrollWidth,
+        files: document.querySelector('.garden-files-button').getBoundingClientRect().toJSON(),
+        touchIcon: document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href'),
+        viewport: document.querySelector('meta[name="viewport"]').content,
+    }));
+    console.log('mobile shell:', shell);
+    assert(shell.scrollW <= 390, `the page scrolls sideways on a phone: ${shell.scrollW}`);
+    assert(shell.files.right <= 390 && shell.files.top >= 0, 'the files button is off screen');
+    assert(/icon-180\.png$/.test(shell.touchIcon), `iOS needs a PNG touch icon: ${shell.touchIcon}`);
+    assert(/viewport-fit=cover/.test(shell.viewport), 'viewport-fit=cover is missing');
+    assert((await fetch(new URL('icon-180.png', BASE))).ok, 'icon-180.png is not served');
+
+    // Plant a seed and two stem cells through Max's modals.
+    await tapAt('.add-column-btn-inner >> nth=1');
+    await mpage.waitForSelector('.modal textarea');
+    const modalFont = await mpage.$eval('.modal textarea', (el) => parseFloat(getComputedStyle(el).fontSize));
+    assert(modalFont >= 16, `iOS zooms into a field under 16px; the seed field is ${modalFont}px`);
+    await mpage.fill('.modal textarea', 'Phone plant');
+    await mpage.keyboard.press('Enter');
+    await mpage.waitForSelector('.project-column');
+    for (const text of ['First stem', 'Second stem']) {
+        await tapAt('.stem-zone .zone-add-btn');
+        await mpage.waitForSelector('.modal input[type=text]');
+        await mpage.fill('.modal input[type=text]', text);
+        await mpage.keyboard.press('Enter');
+        await mpage.waitForFunction((t) => [...document.querySelectorAll('.garden-item')].some((el) => el.textContent === t), text);
+    }
+
+    // One surface: no card backgrounds or column borders in the board.
+    const surface = await mpage.evaluate(() => {
+        const bg = (sel) => getComputedStyle(document.querySelector(sel)).backgroundColor;
+        const col = getComputedStyle(document.querySelector('.project-column'));
+        return { card: bg('.column-card'), top: bg('.column-top-half'), bottom: bg('.column-bottom-half'), colBorder: col.borderRightWidth, board: bg('.kanban-scroll-container') };
+    });
+    console.log('board surface:', surface);
+    const clear = (c) => c === 'rgba(0, 0, 0, 0)' || c === 'transparent';
+    assert(clear(surface.card) && clear(surface.top) && clear(surface.bottom), `the columns still draw cards: ${JSON.stringify(surface)}`);
+    assert(surface.colBorder === '0px', 'the columns still draw borders');
+    assert(!clear(surface.board), 'the board itself should carry the surface colour');
+
+    // Tap selects, a second tap edits, at 16px so iOS does not zoom.
+    await tapAt('.garden-item >> nth=0');
+    await mpage.waitForSelector('.garden-item.is-selected');
+    await tapAt('.garden-item.is-selected');
+    await mpage.waitForSelector('.garden-item.is-editing');
+    const editFont = await mpage.$eval('.garden-item.is-editing', (el) => parseFloat(getComputedStyle(el).fontSize));
+    assert(editFont >= 16, `the cell being edited is ${editFont}px; iOS would zoom`);
+    await mpage.keyboard.press('End');
+    await mpage.keyboard.type(' edited');
+    await mpage.keyboard.press('Enter');
+    await mpage.waitForFunction(() => [...document.querySelectorAll('.garden-item')].some((el) => el.textContent.endsWith(' edited')));
+
+    // Hold and let go: Max's cell menu.
+    await holdAt('.garden-item >> nth=1');
+    await mpage.waitForSelector('.garden-context-menu', { timeout: 3000 });
+    const menu = await mpage.$$eval('.garden-context-menu button', (els) => els.map((e) => e.textContent));
+    console.log('long-press menu:', menu);
+    assert(menu.some((t) => /highlight/i.test(t)), 'holding a cell should open its menu');
+    await mpage.evaluate(() => document.querySelector('.garden-context-menu')?.remove());
+
+    // Hold the seed: the seed menu.
+    await holdAt('.seed-content');
+    await mpage.waitForSelector('.garden-context-menu', { timeout: 3000 });
+    const seedMenu = await mpage.$$eval('.garden-context-menu button', (els) => els.map((e) => e.textContent));
+    assert(seedMenu.some((t) => /standby|wake/i.test(t)), `holding the seed should open the seed menu: ${JSON.stringify(seedMenu)}`);
+    await mpage.evaluate(() => document.querySelector('.garden-context-menu')?.remove());
+
+    // Drag the divider with a finger.
+    const before = await mpage.$eval('.garden-canvas-area', (el) => el.getBoundingClientRect().height);
+    const [rx, ry] = await center('.garden-resizer');
+    await touch('touchStart', rx, ry);
+    for (let i = 1; i <= 6; i++) await touch('touchMove', rx, ry + i * 20);
+    await touch('touchEnd', rx, ry + 120);
+    await mpage.waitForTimeout(150);
+    const after = await mpage.$eval('.garden-canvas-area', (el) => el.getBoundingClientRect().height);
+    console.log('divider drag:', Math.round(before), '->', Math.round(after));
+    assert(after > before + 60, `dragging the divider did not resize the canvas: ${before} -> ${after}`);
+
+    // Everything was saved.
+    await mpage.waitForTimeout(300);
+    const phoneSaved = await mpage.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')));
+    const stems = phoneSaved.projects[0].stem.map((s) => s.content);
+    console.log('phone stems:', stems);
+    assert(stems.length === 2 && stems.some((s) => s.endsWith(' edited')), `phone edits were not saved: ${JSON.stringify(stems)}`);
     await shot(mpage, '04-mobile-dark.png');
     await mctx.close();
 }

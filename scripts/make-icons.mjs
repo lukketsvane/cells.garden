@@ -5,7 +5,7 @@
 //
 // Outputs:
 //   ext/public/icons/icon-{16,32,48,128}.png   rounded corners, transparent outside
-//   public/icon-192.png, public/icon-512.png   square, sky full-bleed
+//   public/icon-{180,192,512}.png             square, sky full-bleed (180 is the iOS home screen icon)
 //   public/icon-maskable-512.png               full-bleed, artwork in the central 80%
 
 import { deflateSync } from 'node:zlib';
@@ -191,6 +191,9 @@ function encodePng(size, rgba) {
 
 const EXT_SIZES = [16, 32, 48, 128];
 const PWA_SIZES = [192, 512];
+// iOS home screen: 180 is not a multiple of 16, so 11 px cells, centred, sky around them.
+const APPLE_SIZE = 180;
+const APPLE_CELL = 11;
 const MASKABLE_SIZE = 512;
 // Cell size for the maskable icon: 16 * 24 = 384 px of artwork on a 512 px
 // canvas (75% of the width), so every drawn pixel sits inside the 80% safe
@@ -212,6 +215,11 @@ for (const size of PWA_SIZES) {
         opts: { cell: size / GRID_SIZE, offset: 0 },
     });
 }
+jobs.push({
+    path: join(ROOT, 'public', `icon-${APPLE_SIZE}.png`),
+    size: APPLE_SIZE,
+    opts: { cell: APPLE_CELL, offset: (APPLE_SIZE - GRID_SIZE * APPLE_CELL) / 2 },
+});
 jobs.push({
     path: join(ROOT, 'public', `icon-maskable-${MASKABLE_SIZE}.png`),
     size: MASKABLE_SIZE,
