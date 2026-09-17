@@ -30,25 +30,162 @@
 }
 
 /* The world's own width and height come from the view: they grow with the
-   plants. Its layers are placed inside it, so nothing here lays them out. */
+   plants, and with them --sky and --ground, which every layer below is placed
+   against. --bleed is how far past the garden the sky and the ground are
+   painted: the camera never zooms out past the garden filling the pane's
+   height, but a garden of a few plants is narrower than a wide pane, and this
+   covers the sides of it. */
 .garden-world {
+    --bleed: 6000px;
     position: absolute;
     top: 0;
     left: 0;
     background: transparent;
 }
 
+/*
+ * The scene, layer by layer. The view sets only what an image decides: its
+ * URL and its size.
+ *
+ * The z-index values are Max's, fractions and all. A fraction is not a valid
+ * z-index, so those layers stack in the order they are written instead, which
+ * is the order they are meant to be in; the numbers stay as a record of what
+ * was meant to sit above what.
+ */
+
+/* The sky layers, from the colour behind everything to the tree line. */
+.garden-sky-color-layer,
+.garden-shooting-star-layer,
+.garden-satellite-layer,
+.garden-stars-layer,
+.garden-mountains-layer,
+.garden-cloud-layer,
 .garden-bg-layer {
+    position: absolute;
+    top: 0;
+    left: calc(-1 * var(--bleed));
+    right: calc(-1 * var(--bleed));
+    height: var(--sky);
+}
+
+/* Nothing in the sky is ever clicked; the garden under it is. */
+.garden-shooting-star-layer,
+.garden-satellite-layer,
+.garden-stars-layer,
+.garden-mountains-layer,
+.garden-bg-layer {
+    pointer-events: none;
+}
+
+/* These three bleed upwards too: there is sky above the world's top edge. */
+.garden-sky-color-layer,
+.garden-stars-layer {
+    top: calc(-1 * var(--bleed));
+    height: calc(var(--sky) + var(--bleed));
+}
+
+.garden-sky-color-layer {
+    z-index: 0;
+    transition: background-color 30s ease;
+}
+
+/* The shooting stars and the satellites keep to the world, not the bleed. */
+.garden-shooting-star-layer,
+.garden-satellite-layer {
+    left: 0;
+    right: 0;
+}
+
+.garden-shooting-star-layer {
+    z-index: 1.45;
+}
+
+.garden-shooting-star-layer canvas {
+    position: absolute;
+    inset: 0;
     width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+.garden-satellite-layer {
+    z-index: 1.1;
+    /* Clipped, so a satellite can never leave the sky. */
+    overflow: hidden;
+}
+
+.garden-stars-layer {
+    z-index: 1.4;
+    background-repeat: repeat;
+    mix-blend-mode: screen;
+    image-rendering: pixelated;
+    transition: opacity 30s ease;
+}
+
+.garden-mountains-layer {
+    z-index: 1.6;
+    background-repeat: repeat-x;
+    background-position: var(--bleed) bottom;
+    image-rendering: pixelated;
+}
+
+.garden-bg-layer {
+    z-index: 2;
+    background-repeat: repeat-x;
+    background-position: var(--bleed) bottom;
+    image-rendering: pixelated;
+}
+
+.garden-cloud-layer {
+    z-index: 2;
+    opacity: 0.5;
+    background-repeat: repeat-x;
     background-position: bottom left;
+    image-rendering: pixelated;
+}
+
+/* The ground, bleeding down and to the sides. */
+.garden-ground-layer {
+    position: absolute;
+    bottom: calc(-1 * var(--bleed));
+    left: calc(-1 * var(--bleed));
+    right: calc(-1 * var(--bleed));
+    height: calc(var(--ground) + var(--bleed));
+    z-index: 2;
+    background-repeat: repeat;
+    background-position: var(--bleed) 0;
     image-rendering: pixelated;
     pointer-events: none;
 }
 
-.garden-ground-layer {
-    width: 100%;
-    background-position: top left;
-    image-rendering: pixelated;
+/* The worm's tunnels are drawn on the ground, so this starts at the horizon. */
+.garden-worm-trail-layer {
+    position: absolute;
+    top: var(--sky);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.garden-worm-trail-layer canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0.12;
+}
+
+.garden-worm-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+}
+
+.garden-firefly-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
     pointer-events: none;
 }
 
@@ -58,15 +195,16 @@
     left: 0;
     width: 100%;
     height: 100%;
+    z-index: 5;
     pointer-events: none;
 }
 
+/* An anchor with no size of its own, set on the horizon by the view. */
 .garden-plant-wrapper {
     position: absolute;
-    bottom: 35%; /* Exactly on the horizon line */
-    transform: translateX(-50%); 
-    width: 0; 
-    height: 0; /* Acts as an anchor point, so children can grow upwards */
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
 }
 
 /* The wrapper above is the anchor on the horizon; this box holds the parts and
@@ -288,16 +426,15 @@
 
 /* --- The Garden Ant --- */
 
+/* Sits on the horizon (the view sets `bottom` to the ground's height) and
+   walks along it; `transform` flips it when it turns around. */
 .garden-ant {
     position: absolute;
-    bottom: 35%;
     background-size: contain;
     background-repeat: no-repeat;
     image-rendering: pixelated;
     pointer-events: none;
-    z-index: 10; /* High z-index to guarantee it's on top */
-    transform: scaleX(1); /* Default direction */
-
+    z-index: 10;
 }
 
 .zone-label {
@@ -950,8 +1087,8 @@
 /* Your garden in the middle, your friends' plants at its borders (app.ts arrange). */
 .garden-friend-band {
     position: absolute;
-    top: -6000px;
-    bottom: -6000px;
+    top: calc(-1 * var(--bleed));
+    bottom: calc(-1 * var(--bleed));
     z-index: 2;
     background: rgba(255, 255, 255, 0.035);
     pointer-events: none;
@@ -959,8 +1096,8 @@
 
 .garden-section-border {
     position: absolute;
-    top: -6000px;
-    bottom: -6000px;
+    top: calc(-1 * var(--bleed));
+    bottom: calc(-1 * var(--bleed));
     width: 0;
     z-index: 4;
     border-left: 4px dashed rgba(255, 255, 255, 0.22);

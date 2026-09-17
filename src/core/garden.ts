@@ -36,14 +36,13 @@ import stem8Url from '../assets/pack/plant_1/stem/stem8.png';
 
 /** Empty world on each side of the plants, in world px. Also where the first plant stands. */
 const WORLD_PADDING = 320;
-// Sky and ground are painted this far past the garden on every side. The camera
-// never zooms out past the garden filling the pane's height, but a garden of a
-// few plants is narrower than a wide pane, and this covers the sides of it.
-const WORLD_BLEED = 6000;
 // How far past an edge a drag can stretch, in screen pixels, before it stops.
 const RUBBER_REACH = 120;
 // Frames a shooting star lives, long enough to fade in and out again.
 const STAR_LIFE = 25;
+// The smallest sky and ground the world ever has, whatever the plants do.
+const BASE_SKY = 520;
+const BASE_GROUND = 400;
 
 /** Cancel a timer or interval and hand back null, so `x = stop(x)` clears it. */
 function stop(handle: number | null): null {
@@ -2105,211 +2104,106 @@ export class GardenView extends View {
             maxUnderground = Math.max(maxUnderground, extents.undergroundDepth);
         }
 
-        const BASE_SKY_HEIGHT = 520;
-        const BASE_GROUND_HEIGHT = 400;
-
-        const skyPadding = 208;
-        const groundPadding = 160;
-        const skyHeight = Math.max(maxAbove + skyPadding, BASE_SKY_HEIGHT);
-        const groundHeight = Math.max(maxUnderground + groundPadding, BASE_GROUND_HEIGHT);
-        const totalHeight = skyHeight + groundHeight;
+        // The sky never drops below BASE_SKY, the ground never below BASE_GROUND,
+        // so a garden of seedlings still stands in a world with room around it.
+        const skyHeight = Math.max(maxAbove + 208, BASE_SKY);
+        const groundHeight = Math.max(maxUnderground + 160, BASE_GROUND);
         this._dynamicGroundLineY = skyHeight;
+        world.style.height = `${skyHeight + groundHeight}px`;
+        // Every layer's placement is written against these two (see styles.css).
+        world.style.setProperty('--sky', `${skyHeight}px`);
+        world.style.setProperty('--ground', `${groundHeight}px`);
 
-        world.style.height = `${totalHeight}px`;
-
-        // --- Sky color layer (day/night cycle) ---
         const { skyColor, starOpacity } = this.getDayNightState();
-        const skyColorLayer = world.createDiv("garden-sky-color-layer");
-        skyColorLayer.style.cssText = `
-            position: absolute; top: -${WORLD_BLEED}px; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
-            height: ${skyHeight + WORLD_BLEED}px; z-index: 0;
-            background-color: ${skyColor};
-            transition: background-color 30s ease;
-        `;
 
-        // --- Shooting Stars Canvas ---
+        const skyColorLayer = world.createDiv("garden-sky-color-layer");
+        skyColorLayer.style.backgroundColor = skyColor;
+
+        // The stars canvas is one screen pixel per art pixel; CSS scales it up.
         const shootingStarLayer = world.createDiv("garden-shooting-star-layer");
-        // z-index 1.45 puts it above stars (1.4) but behind satellites (1.5) and mountains (1.6)
-        shootingStarLayer.style.cssText = `position: absolute; top: 0; left: 0; right: 0; height: ${skyHeight}px; z-index: 1.45; pointer-events: none;`;
-        const ssCanvas = document.createElement('canvas');
-        // CSS scales it up to 100%, but internal resolution is 1x!
-        ssCanvas.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; image-rendering: pixelated;';
+        const ssCanvas = shootingStarLayer.createEl('canvas');
         ssCanvas.width = Math.floor(calculatedWidth / PIXEL_SCALE);
         ssCanvas.height = Math.floor(skyHeight / PIXEL_SCALE);
-        shootingStarLayer.appendChild(ssCanvas);
         this.shootingStarCanvas = ssCanvas;
 
-        // --- Satellite Layer (DOM Elements for smooth movement) ---
-        const satelliteLayer = world.createDiv("garden-satellite-layer");
-        // z-index 1.1 puts it behind stars (1.4), mountains (1.6), and plants (5).
-        // overflow: hidden clips them so they can never leave the sky frame!
-        satelliteLayer.style.cssText = `position: absolute; top: 0; left: 0; right: 0; height: ${skyHeight}px; z-index: 1.1; pointer-events: none; overflow: hidden;`;
-        this.satelliteLayer = satelliteLayer;
+        // Satellites are elements, not canvas, so they move smoothly.
+        this.satelliteLayer = world.createDiv("garden-satellite-layer");
 
-        // --- Stars layer (visible at night) ---
         const starsLayer = world.createDiv("garden-stars-layer");
-        starsLayer.style.cssText = `
-            position: absolute; top: -${WORLD_BLEED}px; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
-            height: ${skyHeight + WORLD_BLEED}px; z-index: 1.4;
-            opacity: ${starOpacity};
-            transition: opacity 30s ease;
-            pointer-events: none;
-            mix-blend-mode: screen;
-            image-rendering: pixelated;
-        `;
+        starsLayer.style.opacity = String(starOpacity);
         const starsImg = await loadImage(starsPatternUrl);
         starsLayer.style.backgroundImage = `url(${starsPatternUrl})`;
-        starsLayer.style.backgroundRepeat = 'repeat';
         starsLayer.style.backgroundSize = `${Math.round(starsImg.naturalWidth * PIXEL_SCALE)}px ${Math.round(starsImg.naturalHeight * PIXEL_SCALE)}px`;
 
-        // Update sky color every 60 seconds
+        const mountainsImg = await loadImage(mountainsUrl);
+        const mountainsLayer = world.createDiv("garden-mountains-layer");
+        mountainsLayer.style.backgroundImage = `url(${mountainsUrl})`;
+        mountainsLayer.style.backgroundSize = `auto ${Math.round(mountainsImg.naturalHeight * PIXEL_SCALE)}px`;
+
+        const cloudLayer = world.createDiv("garden-cloud-layer");
+        cloudLayer.style.backgroundImage = `url(${cloudUrl})`;
+        cloudLayer.style.backgroundSize = `${cloudScaledW}px ${cloudScaledH}px`;
+        cloudLayer.style.animation = `garden-cloud-scroll ${CLOUD_SCROLL_DURATION}s linear infinite`;
+        // The keyframes carry the cloud's own width, so they are written once it is known.
+        if (!document.getElementById('garden-cloud-keyframe')) {
+            const styleEl = document.head.createEl('style', { attr: { id: 'garden-cloud-keyframe' } });
+            styleEl.textContent = `@keyframes garden-cloud-scroll { from { background-position-x: 0; } to { background-position-x: ${cloudScaledW}px; } }`;
+        }
+
+        const bgLayer = world.createDiv("garden-bg-layer");
+        bgLayer.style.backgroundImage = `url(${bgImageUrl})`;
+        bgLayer.style.backgroundSize = `auto ${bgScaledH}px`;
+
+        const groundLayer = world.createDiv("garden-ground-layer");
+        const tile = Math.round(STEM_ORIGIN_WIDTH * PIXEL_SCALE / 3);
+        groundLayer.style.backgroundImage = `url(${groundUrl})`;
+        groundLayer.style.backgroundSize = `${tile}px ${tile}px`;
+
+        // The worm's tunnels, and whatever anyone drew: the ground only.
+        const trailLayer = world.createDiv("garden-worm-trail-layer");
+        const trailCanvas = trailLayer.createEl('canvas');
+        trailCanvas.width = calculatedWidth;
+        trailCanvas.height = groundHeight;
+        this.wormTrailCanvas = trailCanvas;
+
+        const wormLayer = world.createDiv("garden-worm-layer");
+        const plantsLayer = world.createDiv("garden-plants-layer");
+
+        const fireflyLayer = world.createDiv("garden-firefly-layer");
+        const night = starOpacity > 0.1;
+        fireflyLayer.style.setProperty('--firefly-color', night ? '#7eb357' : '#5e7e50');
+        fireflyLayer.style.setProperty('--glow-opacity', String(starOpacity));
+        this.createFireflies(fireflyLayer, skyHeight);
+
+        // The sky drifts through the day; a minute's resolution is plenty.
         this._skyUpdateInterval = window.setInterval(() => {
             const state = this.getDayNightState();
             skyColorLayer.style.backgroundColor = state.skyColor;
             starsLayer.style.opacity = String(state.starOpacity);
-            
-            // Update firefly glow and color smoothly via CSS variables
             fireflyLayer.style.setProperty('--glow-opacity', String(state.starOpacity));
             fireflyLayer.style.setProperty('--firefly-color', state.starOpacity > 0.1 ? '#7eb357' : '#5e7e50');
         }, 60000);
 
-
-        // --- Mountains layer (behind clouds and bg, in front of satellites) ---
-        const mountainsImg = await loadImage(mountainsUrl);
-        const mountainsScaledH = Math.round(mountainsImg.naturalHeight * PIXEL_SCALE);
-
-        const mountainsLayer = world.createDiv("garden-mountains-layer");
-        mountainsLayer.style.cssText = `
-            position: absolute; top: 0; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
-            height: ${skyHeight}px; z-index: 1.6;
-            background-image: url(${mountainsUrl});
-            background-size: auto ${mountainsScaledH}px;
-            background-repeat: repeat-x;
-            background-position: ${WORLD_BLEED}px bottom;
-            image-rendering: pixelated;
-            pointer-events: none;
-        `;
-
-        // --- Cloud layer (behind bg image, slowly scrolling right) ---
-        const cloudLayer = world.createDiv("garden-cloud-layer");
-        cloudLayer.style.cssText = `
-            position: absolute; top: 0; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
-            height: ${skyHeight}px; z-index: 2;
-            background-image: url(${cloudUrl});
-            background-size: ${cloudScaledW}px ${cloudScaledH}px;
-            background-repeat: repeat-x;
-            background-position: bottom left;
-            image-rendering: pixelated;
-            opacity: 0.5;
-            animation: garden-cloud-scroll ${CLOUD_SCROLL_DURATION}s linear infinite;
-        `;
-
-        // Inject keyframe if not already present
-        if (!document.getElementById('garden-cloud-keyframe')) {
-            const styleEl = document.createElement('style');
-            styleEl.id = 'garden-cloud-keyframe';
-            styleEl.textContent = `
-                @keyframes garden-cloud-scroll {
-                    from { background-position-x: 0; }
-                    to { background-position-x: ${cloudScaledW}px; }
-                }
-            `;
-            document.head.appendChild(styleEl);
-        }
-
-        // --- Bg image layer (trees/mountains, pixel-scaled, in front of clouds) ---
-        const bgLayer = world.createDiv("garden-bg-layer");
-        bgLayer.style.cssText = `
-            position: absolute; top: 0; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
-            width: auto; height: ${skyHeight}px; z-index: 2;
-            background-image: url(${bgImageUrl});
-            background-size: auto ${bgScaledH}px;
-            background-repeat: repeat-x;
-            background-position: ${WORLD_BLEED}px bottom;
-            image-rendering: pixelated;
-        `;
-
-        // --- Ground layer (bottom portion, sized to fit deepest roots) ---
-        const groundLayer = world.createDiv("garden-ground-layer");
-        groundLayer.style.cssText = `
-            position: absolute; bottom: -${WORLD_BLEED}px; left: -${WORLD_BLEED}px; right: -${WORLD_BLEED}px;
-            width: auto; height: ${groundHeight + WORLD_BLEED}px; z-index: 2;
-            background-position: ${WORLD_BLEED}px 0;
-            background-image: url(${groundUrl});
-            background-size: ${Math.round(STEM_ORIGIN_WIDTH * PIXEL_SCALE / 3)}px ${Math.round(STEM_ORIGIN_WIDTH * PIXEL_SCALE / 3)}px;
-            background-repeat: repeat;
-        `;
-
-        // --- Trail layer (ground only, like the worm) ---
-        const trailLayer = world.createDiv("garden-worm-trail-layer");
-        trailLayer.style.zIndex = "3";
-        trailLayer.style.position = 'absolute';
-        trailLayer.style.top = `${skyHeight}px`;
-        trailLayer.style.bottom = '0';
-        trailLayer.style.left = '0';
-        trailLayer.style.right = '0';
-        trailLayer.style.pointerEvents = 'none';
-        const trailCanvas = document.createElement('canvas');
-        trailCanvas.style.position = 'absolute';
-        trailCanvas.style.top = '0';
-        trailCanvas.style.left = '0';
-        trailCanvas.style.opacity = '0.12';
-        trailCanvas.width = calculatedWidth;
-        trailCanvas.height = groundHeight;
-        trailLayer.appendChild(trailCanvas);
-        this.wormTrailCanvas = trailCanvas;
-
-        const wormLayer = world.createDiv("garden-worm-layer");
-        wormLayer.style.zIndex = "4";
-        wormLayer.style.position = 'absolute';
-        wormLayer.style.inset = '0';
-
-        const plantsLayer = world.createDiv("garden-plants-layer");
-        plantsLayer.style.zIndex = "5";
-
-
-
-        // --- Fireflies ---
-        const fireflyLayer = world.createDiv("garden-firefly-layer");
-        fireflyLayer.style.cssText = 'position: absolute; inset: 0; z-index: 6; pointer-events: none;';
-        
-        // Set initial day/night colors based on star opacity
-        const isNight = starOpacity > 0.1;
-        fireflyLayer.style.setProperty('--firefly-color', isNight ? '#7eb357' : '#5e7e50');
-        fireflyLayer.style.setProperty('--glow-opacity', String(starOpacity));
-        
-        this.createFireflies(fireflyLayer, skyHeight);
-
-
-
-
-
-        // --- Ant: sits on the horizon line ---
+        // --- The ant walks the horizon ---
         const antEl = plantsLayer.createDiv("garden-ant");
         antEl.style.backgroundImage = `url(${ant1Url})`;
-        antEl.style.position = 'absolute';
         antEl.style.bottom = `${groundHeight}px`;
-        
         void loadImage(ant1Url).then((img) => {
             antEl.style.width = `${img.naturalWidth * PIXEL_SCALE}px`;
             antEl.style.height = `${img.naturalHeight * PIXEL_SCALE}px`;
         });
 
-        // --- Worm ---
         this.createWormElements(wormLayer);
 
-        // --- Phase 3: Render plants — each wrapper's top-left IS the horizon line ---
-        let index = 0;
-        for (const project of this.app.gardenData) {
-            const plantWrapper = plantsLayer.createDiv("garden-plant-wrapper");
-            plantWrapper.dataset.projectId = project.id;
-            plantWrapper.style.position = 'absolute';
-            plantWrapper.style.left = `${WORLD_PADDING + (index * PLANT_SPACING) + (PLANT_SPACING / 2)}px`;
-            // stemContainer uses top: 0 as the horizon, so wrapper top = skyHeight
-            plantWrapper.style.top = `${skyHeight}px`;
-            this.renderPlantSprite(plantWrapper, project);
-            index++;
-        }
+        // A plant stands in the middle of its slot, its top-left on the horizon:
+        // renderPlantSprite grows the sprite up and down from there.
+        this.app.gardenData.forEach((project, i) => {
+            const wrapper = plantsLayer.createDiv("garden-plant-wrapper");
+            wrapper.dataset.projectId = project.id;
+            wrapper.style.left = `${WORLD_PADDING + i * PLANT_SPACING + PLANT_SPACING / 2}px`;
+            wrapper.style.top = `${skyHeight}px`;
+            void this.renderPlantSprite(wrapper, project);
+        });
 
 
         // --- The borders between your plants and your friends' ---
