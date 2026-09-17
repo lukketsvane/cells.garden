@@ -1,10 +1,3 @@
-/*
- * Theme tokens. The garden CSS was written against Obsidian's theme
- * variables, so we define the same names here and everything renders as it
- * did in the vault. The garden is dark: the sky above it carries its own
- * colour through the day, and a light board beside it never sat right.
- * There is no light theme and nothing follows the system setting.
- */
 :root {
     color-scheme: dark;
 

@@ -17,12 +17,9 @@ test('a path already in the vault naming is left to the pack', () => {
 });
 
 test('the rule stays inside one plant folder', () => {
-    // A part under another plant's name was never written, so it is not rewritten.
     assert.equal(legacyImagePath('plant_2/stem/plant_1_part3.png'), null);
-    // Stems are parts and flowers are flowers; a crossed pair is not a legacy path.
     assert.equal(legacyImagePath('plant_1/stem/plant_1_flower3.png'), null);
     assert.equal(legacyImagePath('plant_1/flowers/plant_1_part3.png'), null);
-    // Nothing outside the two categories, and no deeper nesting.
     assert.equal(legacyImagePath('plant_1/roots/plant_1_part3.png'), null);
     assert.equal(legacyImagePath('a/plant_1/stem/plant_1_part3.png'), null);
     assert.equal(legacyImagePath(''), null);
