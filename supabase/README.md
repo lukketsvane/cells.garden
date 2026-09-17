@@ -1,13 +1,13 @@
 # Supabase (M1)
 
-Free tier. Auth via magic link, one row per garden in `gardens.data` (jsonb), RLS `user_id = auth.uid()`.
+Free tier. Auth by email and password (an emailed link is the fallback), one row per garden in `gardens.data` (jsonb), RLS `user_id = auth.uid()`.
 
 ## Set up
 
 1. Create a project at supabase.com.
-2. SQL editor → paste `migrations/0001_init.sql` → run. Re-runnable.
+2. SQL editor → run every file in `migrations/` in order. Each one is re-runnable.
 3. Authentication → URL configuration: add the site URL (`https://<app>.vercel.app`) to **Site URL** and **Redirect URLs**. Magic links land on `/` and the client picks the session out of the URL.
-4. Authentication → Email: keep "Confirm email" on; magic link is the only sign-in method the app uses.
+4. Authentication → Email: turn **"Confirm email" off**. The free tier sends only a handful of messages an hour before it refuses, so the app signs people in with a password and sends nothing. Leaving confirmation on still works, but every sign-up then waits for an email the project may not be able to send. The emailed link stays available as a fallback, and needs `{{ .Token }}` in the "Magic Link" template for the 6-digit code to work.
 5. Give the web build the two public values (never the secret key):
 
    | Vercel env var             | Supabase → Project settings → API |
@@ -29,6 +29,17 @@ Run them in order in the SQL editor. Each one is safe to run more than once.
 |------|--------------|
 | `migrations/0001_init.sql` | `profiles`, `gardens`, RLS, `updated_at` trigger, realtime publication |
 | `migrations/0002_gardens_unique_user.sql` | removes duplicate garden rows and adds a unique index on `gardens(user_id)` |
+| `migrations/0003_garden_assets_bucket.sql` | private `garden-assets` Storage bucket plus per-user RLS, for custom cell art |
+
+## Custom art (M3)
+
+`migrations/0003_garden_assets_bucket.sql` makes a private `garden-assets` bucket. Each user writes only under a folder named after their own uid:
+
+```
+garden-assets/<uid>/custom/<hash>.png
+```
+
+The part after `<uid>/` is the `imagePath` a cell carries, so the same string works in the app, in a signed URL and in the markdown export. Reads go through signed URLs; the bucket is never public. Uploads are capped at 5 MB and limited to png, jpeg, gif, webp and svg.
 
 ## Sync model
 

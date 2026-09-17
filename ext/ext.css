@@ -20,6 +20,14 @@ html[data-context="sidepanel"] .auth-pill {
     font-size: 11px;
 }
 
+html[data-context="sidepanel"] .garden-files-button {
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+}
+
 html[data-context="sidepanel"] .modal {
     padding: 20px 16px 16px;
 }
