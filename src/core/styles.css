@@ -705,3 +705,126 @@
 .garden-canvas-viewport {
     cursor: grab;
 }
+/* ========================================
+   ONE SURFACE: the kanban strip as a single canvas
+   Layered on top of the rules above so Max's styles stay as written. The
+   columns lose their cards and borders; the page itself is the surface, and
+   the seed row runs across every plant as one band, like the horizon above.
+   ======================================== */
+
+.kanban-scroll-container {
+    background: var(--background-secondary);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.kanban-scroll-container .project-column,
+.kanban-scroll-container .column-card,
+.kanban-scroll-container .column-top-half,
+.kanban-scroll-container .column-bottom-half {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.kanban-scroll-container .column-card {
+    overflow: visible;
+}
+
+/* Zones read as open space, not boxed sections. */
+.kanban-scroll-container .garden-zone {
+    border-bottom: none;
+}
+
+/* The seed row is the horizon of the board: one continuous band. The border image
+   is painted far past the row on both sides (the scroll container clips it), so the
+   band and its two lines run across every plant and the empty board around them. */
+.kanban-scroll-container .seed-cell {
+    border: none;
+    background: transparent;
+    border-image: linear-gradient(to bottom,
+        var(--background-modifier-border) 0 1px,
+        var(--background-primary-alt) 1px calc(100% - 1px),
+        var(--background-modifier-border) calc(100% - 1px)) fill 0 / 0 / 0 100vw;
+    margin: 0;
+}
+
+.kanban-scroll-container .add-column-btn {
+    align-self: stretch;
+}
+
+/* ========================================
+   TOUCH (phones, the iOS home screen app)
+   ======================================== */
+
+@media (pointer: coarse) {
+    /* No double-tap zoom, no text callout on a long press. */
+    .garden-item,
+    .seed-content,
+    .zone-add-btn,
+    .add-column-btn,
+    .garden-resizer,
+    .seed-context-btn {
+        touch-action: manipulation;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+    }
+
+    .garden-item.draggable-cell {
+        padding: 9px 10px;
+        font-size: 14px;
+    }
+
+    /* iOS zooms into any field under 16px when it gains focus. */
+    .garden-item.draggable-cell.is-editing,
+    .seed-content.is-editing {
+        font-size: 16px;
+        -webkit-user-select: text;
+        user-select: text;
+    }
+
+    .zone-add-btn {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        font-size: 18px;
+        margin-top: 0;
+    }
+
+    /* Room for the larger + so it never reaches into the next zone. */
+    .garden-zone-label-row {
+        min-height: 36px;
+    }
+
+    /* Always visible: there is no hover to reveal it. */
+    .seed-context-btn {
+        opacity: 0.7;
+        padding: 6px 8px;
+    }
+
+    .column-drag-handle {
+        padding: 8px 4px;
+    }
+
+    /* A finger needs more than 4px to grab the divider. */
+    .garden-resizer {
+        flex-basis: 14px !important;
+        background: var(--background-secondary) !important;
+        border-top: 1px solid var(--background-modifier-border);
+        border-bottom: 1px solid var(--background-modifier-border);
+        touch-action: none;
+    }
+
+    .garden-resizer::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 36px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--text-faint);
+        transform: translate(-50%, -50%);
+    }
+}

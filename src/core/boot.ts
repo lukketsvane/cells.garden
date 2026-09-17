@@ -30,6 +30,7 @@ import {
     userStoreKey,
 } from './store';
 import { createSupabase, SupabaseStore } from './supabase';
+import { installTouchAdapter } from './touch';
 import { GardenFilesButton } from './transfer';
 
 export interface BootOptions {
@@ -112,6 +113,9 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         host.createEl('p', { text: String(e) });
         return app;
     }
+
+    // Fingers: the view speaks mouse; the adapter translates taps, holds and the divider drag.
+    installTouchAdapter(host);
 
     // M3: export/import. On the host, not in the view, which rebuilds itself.
     // Local-first, so it works signed out and without Supabase config too.

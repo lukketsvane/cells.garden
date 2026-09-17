@@ -1832,6 +1832,10 @@ export class GardenView extends View {
 
         Sortable.create(scrollContainer, {
             animation: 150,
+            // Touch: hold to pick up, so a swipe still scrolls the board.
+            delay: 250,
+            delayOnTouchOnly: true,
+            touchStartThreshold: 6,
             ghostClass: 'sortable-column-ghost',
             handle: '.column-drag-handle',
             filter: '.add-column-btn',
@@ -3227,6 +3231,10 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
         Sortable.create(listContainer, {
             group: 'garden-items',
             animation: 150,
+            // Touch: hold to pick up, so a swipe still scrolls the board.
+            delay: 250,
+            delayOnTouchOnly: true,
+            touchStartThreshold: 6,
             ghostClass: 'sortable-ghost',
             onEnd: (evt: SortableEvent) => this.handleDrop(evt)
         });
