@@ -19,26 +19,16 @@
  */
 import { avatarEl } from './avatar';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import { openMenu, type MenuItem } from './menu';
 import { Modal, Setting } from './ui';
+
+export type { MenuItem };
 
 export interface AuthOptions {
     /** Where the magic link should land. Defaults to the current page. */
     redirectTo?: string;
     /** One extra line under the heading, e.g. why sign-in is being asked for. */
     note?: string;
-}
-
-/** A row in the signed-in menu. */
-export interface MenuItem {
-    label: string;
-    /** Smaller text after the label. */
-    sub?: string;
-    /** Shows a check mark. */
-    active?: boolean;
-    danger?: boolean;
-    /** A non-clickable heading. */
-    heading?: boolean;
-    onClick?: () => void;
 }
 
 /** Checked when a password is chosen, never when one is typed to sign in. */
@@ -362,83 +352,18 @@ export class AuthPill {
     }
 
     private async showMenu() {
-        document.querySelector('.garden-context-menu')?.remove();
         let items: MenuItem[] = [];
         try {
             items = this.buildMenu ? await this.buildMenu() : [];
         } catch (e) {
             console.error('Garden Cells: could not build the menu', e);
         }
-        const menu = document.createElement('div');
-        menu.className = 'garden-context-menu';
-        menu.style.cssText = 'position: fixed; z-index: 10000; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 4px 0; min-width: 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
-        const menuStyle = 'display: block; width: 100%; padding: 6px 16px; text-align: left; background: none; border: none; cursor: pointer; font-size: 14px; color: var(--text-normal);';
-
-        if (this.session) {
-            const who = document.createElement('div');
-            who.textContent = this.session.user.email ?? '';
-            who.style.cssText = `${menuStyle} font-size: 11px; color: var(--text-faint); pointer-events: none; cursor: default;`;
-            menu.appendChild(who);
-        } else {
-            items = [{ label: 'Sign in', onClick: () => new SignInModal(this.client, this.options).open() }, ...items];
+        if (!this.session) {
+            openMenu([{ label: 'Sign in', onClick: () => this.signIn() }, ...items], this.el);
+            return;
         }
-
-        for (const item of items) {
-            if (item.heading) {
-                const h = document.createElement('div');
-                h.textContent = item.label;
-                h.style.cssText = `${menuStyle} font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-faint); pointer-events: none; cursor: default; margin-top: 4px; border-top: 1px solid var(--background-modifier-border); padding-top: 8px;`;
-                menu.appendChild(h);
-                continue;
-            }
-            const row = document.createElement('button');
-            row.className = 'auth-menu-item';
-            row.style.cssText = `${menuStyle} display: flex; align-items: baseline; gap: 8px;${item.danger ? ' color: #E91E63;' : ''}`;
-            const check = document.createElement('span');
-            check.textContent = item.active ? '✓' : '';
-            check.style.cssText = 'width: 12px; flex: 0 0 12px;';
-            row.appendChild(check);
-            const text = document.createElement('span');
-            text.textContent = item.label;
-            row.appendChild(text);
-            if (item.sub) {
-                const sub = document.createElement('span');
-                sub.textContent = item.sub;
-                sub.style.cssText = 'font-size: 11px; color: var(--text-faint);';
-                row.appendChild(sub);
-            }
-            row.onmouseenter = () => { row.style.background = 'var(--background-modifier-hover)'; };
-            row.onmouseleave = () => { row.style.background = 'none'; };
-            row.onclick = () => {
-                menu.remove();
-                item.onClick?.();
-            };
-            menu.appendChild(row);
-        }
-
-        const out = document.createElement('button');
-        out.textContent = 'Sign out';
-        out.style.cssText = menuStyle;
-        if (!this.session) out.style.display = 'none';
-        out.onmouseenter = () => { out.style.background = 'var(--background-modifier-hover)'; };
-        out.onmouseleave = () => { out.style.background = 'none'; };
-        out.onclick = async () => {
-            menu.remove();
-            await this.client.auth.signOut();
-        };
-        menu.appendChild(out);
-
-        document.body.appendChild(menu);
-        const rect = this.el.getBoundingClientRect();
-        menu.style.left = `${rect.left}px`;
-        menu.style.top = `${rect.bottom + 4}px`;
-
-        const closeMenu = (ev: MouseEvent) => {
-            if (!menu.contains(ev.target as Node)) {
-                menu.remove();
-                window.removeEventListener('mousedown', closeMenu, true);
-            }
-        };
-        setTimeout(() => window.addEventListener('mousedown', closeMenu, true), 0);
+        const menu = openMenu([...items, { label: 'Sign out', onClick: () => void this.client.auth.signOut() }], this.el);
+        const who = menu.createDiv({ cls: 'garden-menu-heading', text: this.session.user.email ?? '' });
+        menu.prepend(who);
     }
 }
