@@ -202,8 +202,8 @@
     min-width: 200px;
     max-width: 240px;
     min-height: 100%; /* Allows short columns to fill the screen */
-    border-right: 1px solid var(--background-modifier-border);
-    background: transparent; 
+    /* No border-right: with content-height columns it hung below each card at a different length. */
+    background: transparent;
     flex-shrink: 0;
 }
 
