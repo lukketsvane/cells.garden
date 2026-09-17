@@ -831,18 +831,6 @@
     margin-top: auto;
 }
 
-/* A band can now be taller than the board is, because it is as tall as its
-   fullest plant. Its label sticks to the top of the board while any of the band
-   is still in view, so a plant with one flower still says Flowers over it. */
-.kanban-scroll-container .garden-zone-label-row {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    /* The board's own colour, so the label reads as part of the canvas and only
-       shows itself when a cell passes under it. */
-    background: var(--background-secondary);
-}
-
 /* The + for a new plant sits on the horizon because the horizon is its row,
    rather than because a measuring pass moved it there. */
 .kanban-scroll-container .add-column-btn {

@@ -1194,11 +1194,10 @@ export class GardenView extends View {
                                 scrollContainer.scrollLeft = columnStep > 0
                                     ? Math.round(middle / columnStep) * columnStep
                                     : middle;
-                                const firstSeed = scrollContainer.querySelector('.seed-cell') as HTMLElement;
-                                if (firstSeed) {
-                                    const seedCenterY = firstSeed.offsetTop + (firstSeed.offsetHeight / 2);
-                                    scrollContainer.scrollTop = seedCenterY - (scrollContainer.clientHeight / 2);
-                                }
+                                // The board opens at the top, on the flowers. Centring it on the
+                                // seed row only ever cut the top off: a board shorter than its
+                                // pane is already whole, and a taller one lost its first
+                                // flowers to make room for roots nobody had asked to see.
                             }
                             this.saveViewState();
                         });
