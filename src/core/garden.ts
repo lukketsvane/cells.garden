@@ -91,6 +91,11 @@ export class GardenView extends View {
 
     // --- Mobile Touch Handlers ---
     private handleTouchStart = (e: TouchEvent) => {
+        if (this.inPeek(e.target)) {
+            this._peekPinned = true;
+            this._peekPinnedId = this._peekProjectId;
+            return;
+        }
         // Prevent the browser from doing its own scrolling/zooming
         if (e.touches.length > 0) e.preventDefault();
 
@@ -131,6 +136,7 @@ export class GardenView extends View {
     };
 
     private handleTouchMove = (e: TouchEvent) => {
+        if (this.inPeek(e.target)) return;
         if (e.touches.length > 0) e.preventDefault(); // Prevent page scroll
 
         const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
@@ -1193,6 +1199,7 @@ export class GardenView extends View {
             while (stage.firstChild) container.appendChild(stage.firstChild);
             stage.remove();
             this.settleCamera(false);
+            this.restorePeek();
             // Canvas is now ground-only; offset by old ground line to align content
             if (savedCanvasImage && this.wormTrailCanvas) {
                 const img = new Image();
@@ -1643,6 +1650,12 @@ export class GardenView extends View {
         this.scheduleViewStateSave(); 
     };
     private handleMouseDown = (e: MouseEvent) => {
+        // Working in a plant's card: keep it open, and do not pan the garden under it.
+        if (this.inPeek(e.target)) {
+            this._peekPinned = true;
+            this._peekPinnedId = this._peekProjectId;
+            return;
+        }
         // Middle mouse pans even in drawing mode!
         if (this.isDrawingMode && e.button !== 1) return; 
         
@@ -1710,6 +1723,7 @@ export class GardenView extends View {
     };
 
     private handleWheel = (e: WheelEvent) => {
+        if (this.inPeek(e.target)) return;
         const viewport = this.containerEl.querySelector('.garden-canvas-viewport') as HTMLElement | null;
         const world = this.containerEl.querySelector('.garden-world') as HTMLElement | null;
         if (!viewport || !world) return;
@@ -1881,6 +1895,7 @@ export class GardenView extends View {
     private _peekEl: HTMLElement | null = null;
     private _peekProjectId: string | null = null;
     private _peekPinned = false;
+    private _peekPinnedId: string | null = null;
     private _touchTap: { x: number; y: number; t: number } | null = null;
 
     /**
@@ -1889,7 +1904,7 @@ export class GardenView extends View {
      * the pointer is, so they work with the board hidden too.
      */
     private handleGardenContextMenu = (e: MouseEvent) => {
-        if (this.isDrawingMode) return;
+        if (this.isDrawingMode || this.inPeek(e.target)) return;
         e.preventDefault();
         this.hidePeek();
         const forward = (target: Element | null) => {
@@ -1899,7 +1914,7 @@ export class GardenView extends View {
         };
         const part = (e.target as HTMLElement).closest('[data-item-id]') as HTMLElement | null;
         const itemId = part?.dataset.itemId;
-        if (itemId && forward(this.contentEl.querySelector(`.garden-item[data-id="${itemId}"]`))) return;
+        if (itemId && forward(this.shownEl(`.garden-item[data-id="${itemId}"]`))) return;
         const hit = this.plantAt(e.clientX, e.clientY);
         if (hit) forward(this.contentEl.querySelector(`.project-column[data-project-id="${hit.project.id}"] .seed-content`));
     };
@@ -1941,16 +1956,9 @@ export class GardenView extends View {
         if (this._peekProjectId !== hit.project.id) {
             this._peekProjectId = hit.project.id;
             card.empty();
-            card.createDiv({ cls: 'garden-peek-seed', text: hit.project.seed || hit.project.name });
-            const zones: [LayerName, string][] = [['flowers', 'Flowers'], ['stem', 'Stem'], ['roots', 'Roots'], ['minerals', 'Minerals']];
-            for (const [layer, label] of zones) {
-                const items = hit.project[layer];
-                if (items.length === 0) continue;
-                const zone = card.createDiv('garden-peek-zone');
-                zone.createDiv({ cls: 'garden-peek-label', text: label });
-                for (const item of items.slice(0, 6)) zone.createDiv({ cls: 'garden-peek-item', text: item.content });
-                if (items.length > 6) zone.createDiv({ cls: 'garden-peek-more', text: `${items.length - 6} more` });
-            }
+            // The board's own card for this plant: add, write, edit, drag and the
+            // menus all work in it, the same as on the board.
+            this.createProjectColumn(card, hit.project);
         }
         // Beside the plant, never over it: clear of its drawn right edge, or its left
         // edge when the pane would cut it off, with the card's top level with the top
@@ -1987,8 +1995,49 @@ export class GardenView extends View {
         this._peekEl?.removeClass('is-visible');
     }
 
+    private inPeek(target: EventTarget | null): boolean {
+        return !!this._peekEl && target instanceof Node && this._peekEl.contains(target);
+    }
+
+    /** Where a plant stands on screen, for placing its card without a pointer. */
+    private plantHit(project: ProjectData): { project: ProjectData; x: number; top: number } | null {
+        const index = this.app.gardenData.findIndex(p => p.id === project.id);
+        if (index === -1) return null;
+        const extents = this.calculateProjectExtents(project);
+        const centre = WORLD_PADDING + index * PLANT_SPACING + PLANT_SPACING / 2;
+        return {
+            project,
+            x: this.currentTranslateX + centre * this.zoom,
+            top: this.currentTranslateY + (this._dynamicGroundLineY - extents.aboveHeight - 20) * this.zoom,
+        };
+    }
+
+    /** After a re-render, bring back the card that was being worked in, without fading. */
+    private restorePeek() {
+        const id = this._peekPinnedId;
+        if (!this._peekPinned || !id || !this.boardHidden()) return;
+        const project = this.app.gardenData.find(p => p.id === id);
+        const hit = project ? this.plantHit(project) : null;
+        if (!hit) {
+            this._peekPinned = false;
+            return;
+        }
+        this._peekEl = null;
+        this.showPeek(hit);
+        (this._peekEl as HTMLElement | null)?.addClass('is-instant');
+        this._peekPinned = true;
+        const win = this.containerEl.ownerDocument.defaultView || window;
+        win.requestAnimationFrame(() => win.requestAnimationFrame(() => this._peekEl?.removeClass('is-instant')));
+    }
+
+    /** The element for a selector, preferring one that is on screen (the card over the board). */
+    private shownEl(selector: string): HTMLElement | null {
+        const all = Array.from(this.contentEl.querySelectorAll(selector)) as HTMLElement[];
+        return all.find(el => el.getClientRects().length > 0) ?? all[0] ?? null;
+    }
+
     private handlePeekMove = (e: MouseEvent) => {
-        if (!this.boardHidden() || this.isDragging || this._peekPinned) return;
+        if (!this.boardHidden() || this.isDragging || this._peekPinned || this.inPeek(e.target)) return;
         const hit = this.plantAt(e.clientX, e.clientY);
         if (hit) this.showPeek(hit);
         else this.hidePeek();
@@ -1999,12 +2048,13 @@ export class GardenView extends View {
     };
 
     /** A tap (touch or a click without a drag) pins the card, a tap elsewhere lets it go. */
-    private peekTap(clientX: number, clientY: number) {
-        if (!this.boardHidden()) return;
+    private peekTap(clientX: number, clientY: number, target: EventTarget | null = null) {
+        if (!this.boardHidden() || this.inPeek(target)) return;
         const hit = this.plantAt(clientX, clientY);
         if (hit) {
             this.showPeek(hit);
             this._peekPinned = true;
+            this._peekPinnedId = hit.project.id;
         } else {
             this.hidePeek();
         }
@@ -2445,11 +2495,10 @@ export class GardenView extends View {
         viewport.addEventListener('mouseleave', this.handlePeekLeave);
         viewport.addEventListener('click', (e) => {
             const down = this._mouseDownAt;
-            if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6) this.peekTap(e.clientX, e.clientY);
+            if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6) this.peekTap(e.clientX, e.clientY, e.target);
         });
         this._peekEl = null;
         this._peekProjectId = null;
-        this._peekPinned = false;
         
         // Mobile Touch Listeners
         viewport.addEventListener('touchstart', this.handleTouchStart, { passive: false });
@@ -2893,7 +2942,7 @@ export class GardenView extends View {
         await this.onOpen();
         this.clearSelection();
         for (const id of ids) {
-            const el = this.contentEl.querySelector(`.garden-item[data-id="${id}"]`) as HTMLElement | null;
+            const el = this.shownEl(`.garden-item[data-id="${id}"]`);
             if (!el) continue;
             el.addClass('is-selected');
             this.selectedCells.push(el);
@@ -3023,6 +3072,7 @@ export class GardenView extends View {
             return;
         }
         if (key === 'Escape') {
+            if (this.selectedCells.length === 0) this.hidePeek();
             this.clearSelection();
             (document.activeElement as HTMLElement | null)?.blur?.();
             return;
@@ -3868,9 +3918,7 @@ const seedContent = seedCell.createDiv({ text: project.seed, cls: "seed-content 
             'minerals': 'Idea, task'
         };
 
-        const list = this.contentEl.querySelector(
-            `.project-column[data-project-id="${project.id}"] .${arrayName}-zone .kanban-list`
-        ) as HTMLElement | null;
+        const list = this.shownEl(`.project-column[data-project-id="${project.id}"] .${arrayName}-zone .kanban-list`);
         if (!list) return;
         list.querySelector('.garden-item.is-draft')?.remove();
 
