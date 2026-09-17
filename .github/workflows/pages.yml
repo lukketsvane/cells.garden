@@ -1,5 +1,8 @@
 # Production deploy of the web app to GitHub Pages on every push to main.
 # Stopgap while the Vercel team is reactivated; vercel.json stays the primary target.
+#
+# Publishes dist/ to the gh-pages branch. A public repo serves that branch
+# automatically; if not, pick "gh-pages" as the source under Settings → Pages.
 name: Deploy to GitHub Pages
 
 on:
@@ -8,16 +11,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,19 +30,12 @@ jobs:
       - run: npm run build
         env:
           VITE_BASE: /cells.garden/
-      - uses: actions/configure-pages@v5
+      # Pages would otherwise run Jekyll over the output and drop _-prefixed files.
+      - run: touch dist/.nojekyll
+      - uses: peaceiris/actions-gh-pages@v4
         with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: "Deploy ${{ github.sha }}"
