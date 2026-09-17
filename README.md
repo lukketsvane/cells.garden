@@ -13,7 +13,9 @@ npm run build      # typesjekk + statisk build til dist/
 npm run preview    # serverer dist/
 ```
 
-Hagen blir lagra i `localStorage` (nøkkel `cells.garden/v1`). Ingen innlogging, ingen backend.
+Hagen blir lagra i `localStorage` (nøkkel `cells.garden/v1`). Med Supabase-verdiane i `.env` (offentlege, trygge i repoet) får du i tillegg «Sign in» oppe til venstre og sync mellom einingar. Sjå `supabase/README.md` for oppsettet.
+
+Prod: Vercel byggjer `main` (`vercel.json`).
 
 ## Arkitektur
 
