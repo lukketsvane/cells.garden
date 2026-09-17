@@ -30,6 +30,7 @@ Run them in order in the SQL editor. Each one is safe to run more than once.
 | `migrations/0001_init.sql` | `profiles`, `gardens`, RLS, `updated_at` trigger, realtime publication |
 | `migrations/0002_gardens_unique_user.sql` | removes duplicate garden rows and adds a unique index on `gardens(user_id)` |
 | `migrations/0003_garden_assets_bucket.sql` | private `garden-assets` Storage bucket plus per-user RLS, for custom cell art |
+| `migrations/0004_harden_functions.sql` | keeps `handle_new_user` off the REST surface and pins both trigger functions to an empty `search_path` |
 
 ## Custom art (M3)
 
