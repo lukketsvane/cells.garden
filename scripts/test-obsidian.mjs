@@ -78,6 +78,8 @@ class TFile {}
 const obsidian = { Plugin, ItemView, Notice, TFile };
 const leaves = [];
 window.__app = {
+    // Max's plugin is on in this stand-in, so the clash warning must show.
+    plugins: { enabledPlugins: new Set(['garden-cells']) },
     workspace: {
         getLeavesOfType: (type) => leaves.filter((l) => l.type === type),
         getLeaf: () => {
@@ -93,6 +95,7 @@ window.__app = {
             return leaf;
         },
         revealLeaf: async () => {},
+        onLayoutReady: (callback) => callback(),
         detachLeavesOfType: async (type) => {
             for (const leaf of leaves.filter((l) => l.type === type)) {
                 await leaf.view.onClose();
@@ -142,6 +145,9 @@ try {
         return window.__commands.map((c) => c.id);
     });
     console.log('test-obsidian: commands', commands);
+    const warned = await page.evaluate(() => window.__notices.some((n) => /original plugin/.test(n)));
+    assert(warned, "with Max's plugin on, a notice should say the two clash");
+    await page.evaluate(() => { window.__notices.length = 0; });
     assert(commands.includes('open') && commands.includes('import-vault-garden'), 'expected the open and import commands');
 
     await page.evaluate(async () => { await window.__commands.find((c) => c.id === 'open').callback(); });

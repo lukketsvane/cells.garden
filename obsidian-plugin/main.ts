@@ -63,6 +63,13 @@ export default class CellsGardenPlugin extends Plugin {
             name: `Import this vault's garden (${PLANT_FOLDER}/)`,
             callback: () => void this.importVaultGarden(),
         });
+        // Max's original plugin styles the same class names globally; with both on, the scene breaks.
+        this.app.workspace.onLayoutReady(() => {
+            const plugins = (this.app as unknown as { plugins?: { enabledPlugins?: Set<string> } }).plugins;
+            if (plugins?.enabledPlugins?.has('garden-cells')) {
+                new Notice('Garden Cells (the original plugin) is on too. Its styles clash with cells.garden: turn it off under Community plugins.', 12000);
+            }
+        });
     }
 
     async onunload() {
