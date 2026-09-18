@@ -18,7 +18,7 @@
  */
 import { markdownToProject, projectFileName, projectToMarkdown, ASSET_FOLDER, PLANT_FOLDER } from './markdown';
 import type { Garden, GardenSettings, ProjectData } from './model';
-import { DEFAULT_SETTINGS, emptyGarden } from './model';
+import { emptyGarden, settingsFrom } from './model';
 
 /** The file that carries the settings a plant file has no room for. */
 export const SETTINGS_FILE = 'garden-cells.json';
@@ -153,7 +153,7 @@ function parseSettingsFile(text: string): GardenSettings | null {
         const parsed = JSON.parse(text) as { settings?: Partial<GardenSettings> };
         if (!parsed || typeof parsed !== 'object' || !parsed.settings) return null;
         const { viewState: _viewState, ...rest } = parsed.settings;
-        return { ...DEFAULT_SETTINGS, ...rest };
+        return settingsFrom(rest);
     } catch {
         return null;
     }

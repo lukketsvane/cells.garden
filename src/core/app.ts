@@ -3,7 +3,7 @@ import { AssetManager } from './assets';
 import { GardenView } from './garden';
 import { mergeGardens } from './merge';
 import type { Garden, GardenSettings, ProjectData } from './model';
-import { DEFAULT_SETTINGS, emptyGarden } from './model';
+import { defaultSettings, emptyGarden, settingsFrom } from './model';
 import { GardenGoneError, readJson, snapshot, writeJson, type GardenStore } from './store';
 
 export type SyncState = 'local' | 'syncing' | 'synced' | 'error';
@@ -33,7 +33,7 @@ const FRIEND_PLANTS_KEY = 'cells.garden/friend-plants';
  */
 export class GardenApp {
     gardenData: ProjectData[] = [];
-    settings: GardenSettings = { ...DEFAULT_SETTINGS };
+    settings: GardenSettings = defaultSettings();
     assetManager = new AssetManager();
     view: GardenView | null = null;
     /** Called when a save starts/finishes; the auth pill shows it. */
@@ -44,6 +44,8 @@ export class GardenApp {
     onGone: (() => void) | null = null;
     /** Called whenever a garden is put on screen: loaded, switched, synced in or merged. */
     onGardenApplied: (() => void) | null = null;
+    /** Also told when a garden is applied: open settings panels redraw from it. */
+    readonly settingsWatchers = new Set<() => void>();
     /** Called after a save of this device's edits has been handed to the store. */
     onPersisted: (() => void) | null = null;
 
@@ -230,9 +232,10 @@ export class GardenApp {
         // SORT BY ORDER: Ensure columns appear in the arrangement the user chose!
         this.gardenData.sort((a, b) => (a.order || 0) - (b.order || 0));
         this.arrange();
-        this.settings = { ...DEFAULT_SETTINGS, ...garden.settings };
+        this.settings = settingsFrom(garden.settings);
         this.updatedAt = garden.updatedAt;
         this.onGardenApplied?.();
+        for (const watch of this.settingsWatchers) watch();
     }
 
     /**

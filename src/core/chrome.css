@@ -227,3 +227,28 @@
     color: var(--text-muted);
     white-space: pre;
 }
+
+/* --- Garden settings: the sky's day as a bar, node numbers under their hours --- */
+.garden-sky-day {
+    padding: 4px 0 12px;
+}
+.garden-sky-bar {
+    height: 14px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+}
+.garden-sky-marks {
+    position: relative;
+    height: 16px;
+}
+.garden-sky-mark {
+    position: absolute;
+    top: 2px;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.garden-sky-mark.is-dimmed,
+.setting-item.is-dimmed {
+    opacity: 0.4;
+}

@@ -733,6 +733,14 @@
     filter: brightness(0) invert(19%) sepia(19%) saturate(984%) hue-rotate(127deg) brightness(95%) contrast(90%);
 }
 
+/* A silhouette colour from the garden's settings: the sprite masks that colour. */
+.garden-stem-container.is-standby-plant .garden-part.is-tinted {
+    filter: none;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: bottom center;
+}
+
 /* --- Standby Mode (Kanban) --- */
 /* Hide Flowers, Stems, Roots, and Minerals completely */
 .project-column.is-standby .flowers-zone,
