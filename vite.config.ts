@@ -69,6 +69,8 @@ export default defineConfig(({ mode }) => {
                     // Every same-origin navigation gets the precached shell. The
                     // Supabase magic link lands on "/?code=..." and must reach index.html.
                     navigateFallback: 'index.html',
+                    // Plain pages next to the app, such as the privacy policy, load as themselves.
+                    navigateFallbackDenylist: [/^\/privacy/],
                     // No runtimeCaching on purpose: only precached same-origin URLs are
                     // ever served from the worker. Cross-origin requests (Supabase auth
                     // and data) pass straight through and are never cached.

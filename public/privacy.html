@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy - cells.garden</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<style>
+    :root { color-scheme: light dark; --bg: #ffffff; --text: #222222; --muted: #666666; --accent: #7c5cf2; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #1e1e1e; --text: #dadada; --muted: #b3b3b3; --accent: #a88bfa; } }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    main { max-width: 42rem; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-left)) 64px; }
+    h1 { font-size: 1.6rem; margin: 0 0 4px; }
+    h2 { font-size: 1.05rem; margin: 28px 0 6px; }
+    p, li { margin: 6px 0; }
+    .muted { color: var(--muted); }
+    a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<h1>Privacy</h1>
+<p class="muted">cells.garden: the web app, the Chrome extension and the Obsidian plugin. Updated 18 September 2026.</p>
+
+<h2>Without an account</h2>
+<p>Your garden stays on your device, in the browser's storage for the site or the extension, or in Obsidian. Nothing is sent anywhere.</p>
+
+<h2>With an account</h2>
+<p>Signing in is optional. It syncs your garden between devices and lets you share gardens and plants. For that we store:</p>
+<ul>
+    <li>your email address, and your password as a hash (sign-in is handled by Supabase Auth);</li>
+    <li>a display name and the seed of your generated avatar;</li>
+    <li>your gardens and plants: their names, the text in their cells, and their layout;</li>
+    <li>who shares which garden or plant with whom, invite links, and plants offered to friends.</li>
+</ul>
+<p>The data is kept by <a href="https://supabase.com">Supabase</a> in the EU (Ireland), and is readable only by you and the people you share a garden or plant with. The website is hosted by Vercel.</p>
+
+<h2>What we do not do</h2>
+<p>No analytics, no ads, no tracking, no cookies beyond sign-in. We do not sell or share your data, and use it only to run cells.garden.</p>
+
+<h2>The Chrome extension</h2>
+<p>It shows your garden on the New Tab page, in the side panel and in the toolbar popup. Its only permission is the side panel. It does not read the pages you visit or your browsing history.</p>
+
+<h2>Deleting your data</h2>
+<p>Without an account, clearing the site's or the extension's storage removes your garden. With an account, ask for deletion through <a href="https://github.com/lukketsvane/cells.garden/issues">GitHub issues</a>, and the account and everything it owns will be removed.</p>
+
+<h2>Questions</h2>
+<p>Open an issue at <a href="https://github.com/lukketsvane/cells.garden/issues">github.com/lukketsvane/cells.garden</a>. The code is open source under Apache-2.0.</p>
+</main>
+</body>
+</html>
