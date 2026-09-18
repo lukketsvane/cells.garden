@@ -32,7 +32,7 @@ function mouse(type: string, touch: Touch, target: EventTarget, extra: MouseEven
     target.dispatchEvent(new MouseEvent(type, init));
 }
 
-export function installTouchAdapter(host: HTMLElement): () => void {
+export function installTouchAdapter(host: HTMLElement): void {
     let start: { x: number; y: number; t: number; cell: HTMLElement | null; wasSelected: boolean } | null = null;
     let resizing = false;
 
@@ -110,12 +110,4 @@ export function installTouchAdapter(host: HTMLElement): () => void {
         if (cell && !cell.classList.contains('is-editing')) e.preventDefault();
     };
     host.addEventListener('selectstart', noCallout);
-
-    return () => {
-        host.removeEventListener('touchstart', onStart);
-        host.removeEventListener('touchmove', onMove);
-        host.removeEventListener('touchend', onEnd);
-        host.removeEventListener('touchcancel', onCancel);
-        host.removeEventListener('selectstart', noCallout);
-    };
 }

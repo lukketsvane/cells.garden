@@ -1239,7 +1239,6 @@ export class GardenView extends View {
     private enterDrawingMode() {
         this.isDrawingMode = true;
         this.selectedToolEraser = false;
-        this.containerEl.addClass('is-drawing-mode');
         this.showDrawingToolbar();
         const viewport = this.viewport;
         if (!viewport) return;
@@ -1251,7 +1250,6 @@ export class GardenView extends View {
     private exitDrawingMode() {
         this.isDrawingMode = false;
         this.isCurrentlyDrawing = false;
-        this.containerEl.removeClass('is-drawing-mode');
         this.drawingToolbarEl?.remove();
         this.drawingToolbarEl = null;
         const viewport = this.viewport;
@@ -1442,7 +1440,7 @@ export class GardenView extends View {
         
         // Check if we clicked on an actual interactive element
         const interactable = (e.target as HTMLElement).closest(
-            '.garden-item, .seed-content, .column-header, .zone-add-btn, .add-column-btn, .seed-light-btn, .column-drag-handle'
+            '.garden-item, .seed-content, .zone-add-btn, .add-column-btn, .column-drag-handle'
         );
         
         // Left mouse (button 0) pans only if NOT interactable
@@ -1503,7 +1501,7 @@ export class GardenView extends View {
         this._mouseDownAt = { x: e.clientX, y: e.clientY };
         const target = e.target as HTMLElement;
         // Check if we clicked a plant part or interactable element
-        const isInteractable = target.closest('.interactable, [data-item-id]');
+        const isInteractable = target.closest('[data-item-id]');
         
         // Middle mouse pans EVERYWHERE. Left mouse pans only on empty space.
         if (isMiddle || (e.button === 0 && !isInteractable)) {

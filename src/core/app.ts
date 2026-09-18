@@ -277,10 +277,6 @@ export class GardenApp {
         return this.persist();
     }
 
-    async saveSettings() {
-        return this.persist();
-    }
-
     toGarden(): Garden {
         return {
             version: 1,
