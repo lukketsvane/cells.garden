@@ -5,26 +5,19 @@
  * hidden by ext.css. Buttons open the full garden in a tab or the side panel.
  * The garden itself is booted by main.ts, as on the other extension pages.
  */
+import { local } from '../src/core/local';
 import { inExtension, ready } from './main';
 
 /** Which plant the popup showed last. Per device, like the camera. */
 const INDEX_KEY = 'cells.garden/popup/index';
 
 function readIndex(): number {
-    try {
-        const n = Number(localStorage.getItem(INDEX_KEY));
-        return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
-    } catch {
-        return 0;
-    }
+    const n = Number(local.get(INDEX_KEY));
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
 }
 
 function writeIndex(i: number) {
-    try {
-        localStorage.setItem(INDEX_KEY, String(i));
-    } catch {
-        // storage blocked: the popup just starts at the first plant next time
-    }
+    local.set(INDEX_KEY, String(i)); // Blocked storage: the popup starts at the first plant next time.
 }
 
 void ready.then((app) => {
