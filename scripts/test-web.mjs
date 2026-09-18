@@ -395,6 +395,39 @@ async function scenario(browser, errors) {
     assert(mobileBoardLayout.appPaddingBottom === 0, `the PWA shell must not clip itself above the home indicator: ${JSON.stringify(mobileBoardLayout)}`);
     assert(mobileBoardLayout.boardBottom <= mobileBoardLayout.viewportHeight + 1, `the board is cut off below the mobile viewport: ${JSON.stringify(mobileBoardLayout)}`);
 
+    // Tapping a rendered plant part on iPhone must focus its exact board cell.
+    // The canvas prevents the native touch default, so this specifically guards the
+    // direct touch-end path rather than a synthetic click.
+    const plantPartTap = await mpage.evaluate(() => {
+        for (const part of document.querySelectorAll('.garden-part[data-item-id]')) {
+            const rect = part.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            const hit = document.elementFromPoint(x, y)?.closest('.garden-part[data-item-id]');
+            if (hit?.dataset.itemId) return { x, y, itemId: hit.dataset.itemId };
+        }
+        return null;
+    });
+    assert(plantPartTap, 'no tappable plant part was found on mobile');
+    await touch('touchStart', plantPartTap.x, plantPartTap.y);
+    await touch('touchEnd', plantPartTap.x, plantPartTap.y);
+    await mpage.waitForTimeout(180);
+    const focusedPartCell = await mpage.evaluate((itemId) => {
+        const cell = [...document.querySelectorAll('.kanban-scroll-container .garden-item, .kanban-scroll-container .seed-content')]
+            .find((el) => el.dataset.id === itemId);
+        if (!cell) return null;
+        const rect = cell.getBoundingClientRect();
+        const board = document.querySelector('.kanban-scroll-container').getBoundingClientRect();
+        return {
+            focused: cell.classList.contains('is-focus-highlighted'),
+            flashed: cell.classList.contains('is-click-flash'),
+            visible: rect.bottom > board.top && rect.top < board.bottom && rect.right > board.left && rect.left < board.right,
+        };
+    }, plantPartTap.itemId);
+    console.log('mobile plant-part focus:', plantPartTap.itemId, focusedPartCell);
+    assert(focusedPartCell?.focused && focusedPartCell?.flashed, `tapping a plant part did not highlight its board cell: ${JSON.stringify(focusedPartCell)}`);
+    assert(focusedPartCell.visible, 'tapping a plant part did not bring its board cell into view');
+
     // Tap selects, a second tap edits, at 16px so iOS does not zoom.
     await tapAt('.garden-item >> nth=0');
     await mpage.waitForSelector('.garden-item.is-selected');
