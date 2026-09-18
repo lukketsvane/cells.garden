@@ -59,6 +59,31 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+/* Continue with Google: Google's neutral button, the G on the left. */
+.auth-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: 20px;
+    border: 1px solid #747775;
+    background: #ffffff;
+    color: #1f1f1f;
+    font: 500 14px/1 var(--font-ui, Roboto, Arial, sans-serif);
+    cursor: pointer;
+}
+.auth-google:hover { background: #f2f2f2; }
+.auth-google-mark { display: flex; }
+.auth-or {
+    margin: 14px 0 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
 /* The way over to the emailed link, and back. */
 .auth-alt {
     margin-top: 4px;

@@ -13,6 +13,7 @@ import '../src/core/styles.css';
 import '../src/core/chrome.css';
 import './plugin.css';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GardenApp } from '../src/core/app';
 import { bootGarden } from '../src/core/boot';
 import { LOCAL_PREFIX, setLocalBackend } from '../src/core/local';
@@ -21,6 +22,10 @@ import { CLAIM_KEY } from '../src/core/store';
 import { mergeGarden, vaultFilesToGarden, type VaultFile } from '../src/core/vault';
 
 const VIEW_TYPE = 'cells-garden';
+/** Google sends the browser back to obsidian://cells-garden?code=..., which this plugin handles. */
+const RETURN_URL = 'obsidian://cells-garden';
+/** The open garden's sign-in client, which holds the code verifier Google's answer is checked against. */
+let client: SupabaseClient | null = null;
 /** Set in a vault's storage once the shared localStorage keys were copied into it. */
 const COPIED_KEY = `${LOCAL_PREFIX}vault-copied`;
 
@@ -43,7 +48,12 @@ class GardenTabView extends ItemView {
         const host = this.contentEl;
         host.empty();
         host.addClass('cells-garden-host');
-        this.garden = await bootGarden(host);
+        this.garden = await bootGarden(host, {
+            redirectTo: RETURN_URL,
+            // Google's page opens in the system browser; it comes back through the protocol handler.
+            openOAuth: (url) => window.open(url),
+            onClient: (c) => { client = c; },
+        });
     }
 
     async onClose() {
@@ -56,6 +66,7 @@ export default class CellsGardenPlugin extends Plugin {
     async onload() {
         this.useVaultStorage();
         this.registerView(VIEW_TYPE, (leaf) => new GardenTabView(leaf));
+        this.registerObsidianProtocolHandler('cells-garden', (params) => void this.finishSignIn(params));
         this.addRibbonIcon('sprout', 'Open cells.garden', () => void this.openGarden());
         this.addCommand({ id: 'open', name: 'Open garden', callback: () => void this.openGarden() });
         this.addCommand({
@@ -113,6 +124,17 @@ export default class CellsGardenPlugin extends Plugin {
                 app.saveLocalStorage(key, null);
             },
         });
+    }
+
+    /** The browser is back from Google with a code (or an error): trade it for a session. */
+    private async finishSignIn(params: Record<string, string>) {
+        if (params.error) {
+            new Notice(`Google sign-in did not finish: ${params.error_description ?? params.error}`);
+            return;
+        }
+        if (!params.code || !client) return;
+        const { error } = await client.auth.exchangeCodeForSession(params.code);
+        new Notice(error ? `Could not sign in: ${error.message}` : 'Signed in.');
     }
 
     private async openGarden(): Promise<GardenTabView | null> {

@@ -56,6 +56,7 @@ class Plugin {
     registerView(type, factory) { views[type] = factory; }
     addRibbonIcon() { return document.createElement('div'); }
     addCommand(cmd) { window.__commands.push(cmd); }
+    registerObsidianProtocolHandler(action, handler) { window.__protocol = { action, handler }; }
 }
 class ItemView {
     constructor(leaf) {

@@ -132,6 +132,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         return app;
     }
 
+    options.onClient?.(supabase);
     const pill = new AuthPill(supabase, host, options);
     app.onSyncState = (state) => pill.setSyncState(state);
 
