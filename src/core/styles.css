@@ -671,16 +671,21 @@
 
 
 
-/* Highlight when hovering plant part */
+/* Highlight the matching board cell while hovering a plant part, or briefly
+   after tapping that part on a touch screen. */
 .garden-item.is-hover-highlighted,
-.seed-content.is-hover-highlighted {
+.seed-content.is-hover-highlighted,
+.garden-item.is-focus-highlighted,
+.seed-content.is-focus-highlighted {
     outline: 2px solid var(--interactive-accent);
     border-radius: 4px;
 }
 
 /* Above the ghost and every other state, and the flash keeps the same colour. */
 .garden-item.is-hover-highlighted:not(#_),
-.seed-content.is-hover-highlighted:not(#_) {
+.seed-content.is-hover-highlighted:not(#_),
+.garden-item.is-focus-highlighted:not(#_),
+.seed-content.is-focus-highlighted:not(#_) {
     --garden-cell-flash-rest: var(--background-modifier-hover);
     --garden-cell-flash-peak: var(--background-modifier-hover);
     background: var(--background-modifier-hover);
