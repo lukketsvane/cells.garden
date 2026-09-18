@@ -120,14 +120,6 @@ export class GardenApp {
         window.addEventListener('pagehide', this.flush);
     }
 
-    async unmount() {
-        window.removeEventListener('pagehide', this.flush);
-        this.clearRetry();
-        this._unsubscribe?.();
-        this._unsubscribe = null;
-        await this.view?.onClose();
-        this.view = null;
-    }
 
     async loadGardenData() {
         const garden = await this.store.load();
