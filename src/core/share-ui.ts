@@ -5,6 +5,10 @@
  */
 import { Setting } from './ui';
 
+declare const __CELLS_SYSTEM_CLIPBOARD__: boolean;
+const systemClipboard =
+    typeof __CELLS_SYSTEM_CLIPBOARD__ === 'boolean' ? __CELLS_SYSTEM_CLIPBOARD__ : true;
+
 /** Run a button's work; a failure is said on the modal's status line. */
 export async function attempt(say: (text: string) => void, what: string, run: () => Promise<unknown>) {
     try {
@@ -16,14 +20,17 @@ export async function attempt(say: (text: string) => void, what: string, run: ()
 
 /** Copy to the clipboard, or fall back to selecting the text so ⌘C works. */
 async function copyText(text: string, fallback: HTMLInputElement): Promise<boolean> {
-    try {
-        await navigator.clipboard.writeText(text);
-        return true;
-    } catch {
-        fallback.focus();
-        fallback.select();
-        return false;
+    if (systemClipboard) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch {
+            // Fall through to a selected field.
+        }
     }
+    fallback.focus();
+    fallback.select();
+    return false;
 }
 
 export interface InviteSection {
