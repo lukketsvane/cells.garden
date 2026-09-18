@@ -4,25 +4,31 @@
  * page-level rules and the theme tokens stay in each shell.
  */
 
-/* --- Sign-in pill (M1) --- */
-.auth-pill {
+/* --- Sign-in pill (M1), and the Files button in its place without an account ---
+   viewport-fit=cover draws under the status bar and the home indicator, so the
+   sky reaches the top edge; the corner controls stay inside the safe area. */
+.auth-pill,
+.garden-files-button {
     position: fixed;
-    top: 8px;
-    left: 8px;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    left: calc(8px + env(safe-area-inset-left, 0px));
     z-index: 50;
+    border-radius: 999px;
+    border: 1px solid var(--background-modifier-border);
+    background: color-mix(in srgb, var(--background-primary) 80%, transparent);
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+}
+.garden-files-button { padding: 4px 10px; }
+.auth-pill {
     display: flex;
     align-items: center;
     gap: 6px;
     max-width: 220px;
     padding: 4px 10px 4px 6px;
-    border-radius: 999px;
-    border: 1px solid var(--background-modifier-border);
-    background: color-mix(in srgb, var(--background-primary) 80%, transparent);
     backdrop-filter: blur(6px);
-    color: var(--text-muted);
-    font-size: 12px;
     line-height: 1;
-    cursor: pointer;
     opacity: 0.85;
     transition: opacity 0.15s ease, background 0.15s ease;
 }
@@ -79,8 +85,8 @@
 /* --- The corner button: show or hide the board --- */
 .garden-board-toggle {
     position: fixed;
-    top: 8px;
-    right: 8px;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    right: calc(8px + env(safe-area-inset-right, 0px));
     z-index: 50;
     width: 28px;
     height: 28px;
@@ -139,19 +145,7 @@
 }
 .garden-files-status p { margin: 8px 0 0; }
 
-/* --- iPhone and the home screen app ---
-   viewport-fit=cover draws under the status bar and the home indicator, so the
-   sky reaches the top edge; the controls stay inside the safe area. */
-.auth-pill {
-    top: calc(8px + env(safe-area-inset-top, 0px));
-    left: calc(8px + env(safe-area-inset-left, 0px));
-}
-
-.garden-board-toggle {
-    top: calc(8px + env(safe-area-inset-top, 0px));
-    right: calc(8px + env(safe-area-inset-right, 0px));
-}
-
+/* --- iPhone and the home screen app: modals stay inside the safe area too --- */
 .modal-container {
     padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
 }
@@ -178,21 +172,6 @@
     .modal-container .modal select {
         font-size: 16px;
     }
-}
-
-/* Without an account: export and import where the pill would be. */
-.garden-files-button {
-    position: fixed;
-    top: calc(8px + env(safe-area-inset-top, 0px));
-    left: calc(8px + env(safe-area-inset-left, 0px));
-    z-index: 50;
-    padding: 4px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--background-modifier-border);
-    background: color-mix(in srgb, var(--background-primary) 80%, transparent);
-    color: var(--text-muted);
-    font-size: 12px;
-    cursor: pointer;
 }
 
 /* The board hidden: the garden takes the whole page. */

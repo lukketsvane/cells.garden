@@ -41,6 +41,8 @@ body {
     height: 100dvh;
     /* Keep the kanban above the home indicator on phones. */
     padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
     background: var(--background-primary);
 }
 
@@ -50,23 +52,6 @@ body {
     width: 100%;
 }
 
-/* The garden pinches/pans itself; stop the browser from doing the same. */
-.garden-canvas-viewport {
-    touch-action: none;
-}
-
 button {
     font-family: inherit;
-}
-
-#app {
-    padding-left: env(safe-area-inset-left, 0);
-    padding-right: env(safe-area-inset-right, 0);
-}
-
-/* Installed on the home screen: no browser bar, so the page owns every edge. */
-@media (display-mode: standalone) {
-    html, body {
-        background: var(--background-primary);
-    }
 }
