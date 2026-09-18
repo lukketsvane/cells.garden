@@ -30,7 +30,7 @@ The web app is the core. The extension and the PWA are shells around the same bu
 - **PWA**: same app on a phone; service worker precaches the shell so it opens offline.
 - **Extension**: New Tab override, Side Panel and a popup that shows one plant at a time, same core, same local storage.
 
-Same code, three distributions. Diagrams: `docs/architecture.html` (and the PNG next to it).
+Same code, three distributions.
 
 ## Repository
 
@@ -62,7 +62,6 @@ ext/           Chrome extension (Manifest V3): newtab.html, sidepanel.html, back
 public/        icons (SVG + PNG); the web manifest is generated at build time
 scripts/       make-icons.mjs, test-web.mjs, test-ext.mjs
 supabase/      migrations + README (auth, RLS, SMTP)
-docs/          architecture diagrams
 obsidian/      Max's plugin, untouched. Hooks into the core later.
 dist/          web build (ignored)
 dist-ext/      extension build (ignored)
