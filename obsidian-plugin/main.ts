@@ -6,7 +6,7 @@
  * Max's original plugin (the `original` branch) keeps the garden in vault files; the
  * "Import this vault's garden" command brings that garden into the synced one.
  */
-import { ItemView, Notice, Plugin } from 'obsidian';
+import { ItemView, Notice, Plugin, TFile, TFolder, Vault } from 'obsidian';
 
 import '../src/core/shim';
 import '../src/core/styles.css';
@@ -15,10 +15,13 @@ import './plugin.css';
 
 import type { GardenApp } from '../src/core/app';
 import { bootGarden } from '../src/core/boot';
+import { LOCAL_PREFIX, setLocalBackend } from '../src/core/local';
 import { PLANT_FOLDER } from '../src/core/markdown';
 import { mergeGarden, vaultFilesToGarden, type VaultFile } from '../src/core/vault';
 
 const VIEW_TYPE = 'cells-garden';
+/** Set in a vault's storage once the shared localStorage keys were copied into it. */
+const COPIED_KEY = `${LOCAL_PREFIX}vault-copied`;
 
 class GardenTabView extends ItemView {
     garden: GardenApp | null = null;
@@ -50,6 +53,7 @@ class GardenTabView extends ItemView {
 
 export default class CellsGardenPlugin extends Plugin {
     async onload() {
+        this.useVaultStorage();
         this.registerView(VIEW_TYPE, (leaf) => new GardenTabView(leaf));
         this.addRibbonIcon('sprout', 'Open cells.garden', () => void this.openGarden());
         this.addCommand({ id: 'open', name: 'Open garden', callback: () => void this.openGarden() });
@@ -68,6 +72,35 @@ export default class CellsGardenPlugin extends Plugin {
     }
 
 
+    /**
+     * Keep the garden's device storage per vault. Earlier versions used the
+     * shared localStorage: copy those keys in once, and leave them in place.
+     */
+    private useVaultStorage() {
+        const app = this.app;
+        const get = (key: string): string | null => {
+            const value: unknown = app.loadLocalStorage(key);
+            return typeof value === 'string' ? value : null;
+        };
+        if (get(COPIED_KEY) === null) {
+            const shared = window.localStorage;
+            const keys: string[] = [];
+            for (let i = 0; i < shared.length; i++) {
+                const key = shared.key(i);
+                if (key?.startsWith(LOCAL_PREFIX)) keys.push(key);
+            }
+            for (const key of keys) {
+                if (get(key) === null) app.saveLocalStorage(key, shared.getItem(key));
+            }
+            app.saveLocalStorage(COPIED_KEY, '1');
+        }
+        setLocalBackend({
+            get,
+            set: (key, value) => app.saveLocalStorage(key, value),
+            remove: (key) => app.saveLocalStorage(key, null),
+        });
+    }
+
     private async openGarden(): Promise<GardenTabView | null> {
         let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE)[0];
         if (!leaf) {
@@ -80,7 +113,13 @@ export default class CellsGardenPlugin extends Plugin {
 
     /** Fold the plants Max's plugin keeps as markdown files into the synced garden. */
     private async importVaultGarden() {
-        const files = this.app.vault.getFiles().filter((f) => f.path.startsWith(`${PLANT_FOLDER}/`));
+        const folder = this.app.vault.getAbstractFileByPath(PLANT_FOLDER);
+        const files: TFile[] = [];
+        if (folder instanceof TFolder) {
+            Vault.recurseChildren(folder, (file) => {
+                if (file instanceof TFile) files.push(file);
+            });
+        }
         if (files.length === 0) {
             new Notice(`No ${PLANT_FOLDER}/ folder in this vault.`);
             return;

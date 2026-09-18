@@ -3,6 +3,7 @@ import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
 import { PLANT_TYPES } from './assets';
 import { ICONS, setIcon, ZONE_ICONS } from './icons';
+import { local } from './local';
 import { openMenu, type MenuItem } from './menu';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
@@ -256,11 +257,8 @@ export class GardenView extends View {
             kanbanScrollLeft: scrollContainer ? scrollContainer.scrollLeft : 0,
             kanbanScrollTop: scrollContainer ? scrollContainer.scrollTop : 0
         };
-        try {
-            localStorage.setItem(this._viewStateKey, JSON.stringify(state));
-        } catch {
-            // private mode or blocked storage: the camera just starts centred next time
-        } 
+        // Private mode or blocked storage: the camera just starts centred next time.
+        local.set(this._viewStateKey, JSON.stringify(state));
     }
     private scheduleViewStateSave() {
         if (this._viewStateSaveTimeout) window.clearTimeout(this._viewStateSaveTimeout);
@@ -276,7 +274,7 @@ export class GardenView extends View {
     }
     private loadViewState(): ViewState | null {
         try {
-            const raw = localStorage.getItem(this._viewStateKey);
+            const raw = local.get(this._viewStateKey);
             if (!raw) return null;
             const s = JSON.parse(raw) as Partial<ViewState>;
             if (typeof s.zoom !== 'number' || typeof s.translateX !== 'number' || typeof s.translateY !== 'number') return null;

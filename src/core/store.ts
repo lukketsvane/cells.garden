@@ -1,5 +1,6 @@
 import type { Garden } from './model';
 import { DEFAULT_SETTINGS, emptyGarden } from './model';
+import { local } from './local';
 
 /**
  * Where the garden lives. The app only ever talks to this interface, so the
@@ -27,24 +28,20 @@ export interface GardenStore {
 /** The anonymous garden of this device (no account). */
 export const LOCAL_KEY = 'cells.garden/v1';
 
-/** A JSON value from localStorage; null when missing, unreadable or blocked. */
+/** A JSON value kept on this device; null when missing, unreadable or blocked. */
 export function readJson<T>(key: string): T | null {
     try {
-        const raw = localStorage.getItem(key);
+        const raw = local.get(key);
         return raw ? (JSON.parse(raw) as T) : null;
     } catch {
         return null;
     }
 }
 
-/** Keep a JSON value in localStorage (null removes it). Blocked or full: it just does not survive a reload. */
+/** Keep a JSON value on this device (null removes it). Blocked or full: it just does not survive a reload. */
 export function writeJson(key: string, value: unknown) {
-    try {
-        if (value === null) localStorage.removeItem(key);
-        else localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-        // Storage blocked or full.
-    }
+    if (value === null) local.remove(key);
+    else local.set(key, JSON.stringify(value));
 }
 
 /** A stored or fetched garden with every field filled in. */
@@ -78,41 +75,26 @@ const CLAIM_KEY = `${LOCAL_KEY}/claimedBy`;
  * device never receives the first account's plants.
  */
 export function anonymousGardenClaimedBy(): string | null {
-    try {
-        return localStorage.getItem(CLAIM_KEY);
-    } catch {
-        return null;
-    }
+    return local.get(CLAIM_KEY);
 }
 
 export function claimAnonymousGarden(userId: string): void {
-    try {
-        localStorage.setItem(CLAIM_KEY, userId);
-    } catch {
-        // storage blocked: nothing to remember
-    }
+    local.set(CLAIM_KEY, userId);
 }
 
-/** Works without login. One key in localStorage, the whole garden as JSON. */
+/** Works without login. One key on this device, the whole garden as JSON. */
 export class LocalStore implements GardenStore {
     constructor(readonly key: string = LOCAL_KEY) {}
 
     async load(): Promise<Garden | null> {
-        let raw: string | null = null;
-        try {
-            raw = localStorage.getItem(this.key);
-        } catch {
-            return null;
-        }
+        const raw = local.get(this.key);
         if (!raw) return null;
         return parseGarden(raw);
     }
 
     async save(garden: Garden): Promise<void> {
-        try {
-            localStorage.setItem(this.key, JSON.stringify(garden));
-        } catch (e) {
-            console.error('Garden Cells: could not save to localStorage', e);
+        if (!local.set(this.key, JSON.stringify(garden))) {
+            console.error('Garden Cells: could not save the garden on this device');
         }
     }
 
