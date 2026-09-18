@@ -13,7 +13,7 @@
  *
  * Pure, no DOM, covered by merge.test.ts.
  */
-import type { Garden, GardenSettings, LayerName, ProjectData } from './model';
+import { settingsFrom, type Garden, type GardenSettings, type LayerName, type ProjectData } from './model';
 
 type Prefer = 'local' | 'remote';
 
@@ -125,9 +125,10 @@ function mergeProject(b: ProjectData | undefined, l: ProjectData, r: ProjectData
 
 function mergeSettings(base: GardenSettings | undefined, local: GardenSettings, remote: GardenSettings, prefer: Prefer): GardenSettings {
     // viewState is per surface and never synced; keep whatever remote carries.
-    const { viewState: _l, ...l } = local;
-    const { viewState, ...r } = remote;
-    const b = base ? (({ viewState: _b, ...rest }) => rest)(base) : undefined;
+    // All three over the defaults: a base remembered before a setting existed must not read as a change.
+    const { viewState: _l, ...l } = settingsFrom(local);
+    const { viewState, ...r } = settingsFrom(remote);
+    const b = base ? (({ viewState: _b, ...rest }) => rest)(settingsFrom(base)) : undefined;
     const merged = mergeFields(b, l, r, prefer) as GardenSettings;
     return viewState === undefined ? merged : { ...merged, viewState };
 }

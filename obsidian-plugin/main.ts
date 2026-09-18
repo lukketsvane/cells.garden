@@ -6,7 +6,7 @@
  * Max's original plugin (the `original` branch) keeps the garden in vault files; the
  * "Import this vault's garden" command brings that garden into the synced one.
  */
-import { ItemView, Notice, Plugin, TFile, TFolder, Vault } from 'obsidian';
+import { ItemView, Notice, Plugin, PluginSettingTab, TFile, TFolder, Vault, type App } from 'obsidian';
 
 import '../src/core/shim';
 import '../src/core/styles.css';
@@ -17,6 +17,7 @@ import type { GardenApp } from '../src/core/app';
 import { bootGarden } from '../src/core/boot';
 import { LOCAL_PREFIX, setLocalBackend } from '../src/core/local';
 import { PLANT_FOLDER } from '../src/core/markdown';
+import { gardenSettings } from '../src/core/settings';
 import { mergeGarden, vaultFilesToGarden, type VaultFile } from '../src/core/vault';
 
 const VIEW_TYPE = 'cells-garden';
@@ -51,10 +52,32 @@ class GardenTabView extends ItemView {
     }
 }
 
+/** The garden's settings, the same ones as in the app's Settings; they belong to the open garden. */
+class GardenSettingTab extends PluginSettingTab {
+    constructor(app: App, private readonly plugin: CellsGardenPlugin) {
+        super(app, plugin);
+    }
+
+    display() {
+        const { containerEl } = this;
+        containerEl.empty();
+        const garden = this.plugin.openGardenApp();
+        if (garden) gardenSettings(containerEl.createDiv(), garden, false);
+        else containerEl.createEl('p', { text: 'Open the garden to change its settings.' });
+    }
+}
+
 export default class CellsGardenPlugin extends Plugin {
+    /** The garden in an open tab, if there is one. */
+    openGardenApp(): GardenApp | null {
+        const view = this.app.workspace.getLeavesOfType(VIEW_TYPE)[0]?.view;
+        return view instanceof GardenTabView ? view.garden : null;
+    }
+
     async onload() {
         this.useVaultStorage();
         this.registerView(VIEW_TYPE, (leaf) => new GardenTabView(leaf));
+        this.addSettingTab(new GardenSettingTab(this.app, this));
         this.addRibbonIcon('sprout', 'Open cells.garden', () => void this.openGarden());
         this.addCommand({ id: 'open', name: 'Open garden', callback: () => void this.openGarden() });
         this.addCommand({

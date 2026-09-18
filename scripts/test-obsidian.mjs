@@ -2,8 +2,9 @@
 // Smoke test of the Obsidian plugin build in obsidian-plugin/. Obsidian itself
 // cannot run here, so the built main.js is loaded into Chromium behind a small
 // stand-in for the parts of Obsidian's API the plugin uses (Plugin, ItemView,
-// Notice, the workspace and the vault). It checks that the plugin loads, the
-// Open garden command puts the garden in a tab with the sign-in pill, the vault
+// Notice, PluginSettingTab, the workspace and the vault). It checks that the plugin
+// loads, the Open garden command puts the garden in a tab with the sign-in pill, the
+// settings tab draws the garden's settings and a change reaches the garden, the vault
 // import command brings a Garden-Cells/ plant in, the garden keeps its device
 // storage in the vault's storage (copying the old shared keys once), and Obsidian
 // closing the tab tears the garden down without errors. Run with "npm run test:obsidian".
@@ -56,6 +57,10 @@ class Plugin {
     registerView(type, factory) { views[type] = factory; }
     addRibbonIcon() { return document.createElement('div'); }
     addCommand(cmd) { window.__commands.push(cmd); }
+    addSettingTab(tab) { window.__settingTab = tab; }
+}
+class PluginSettingTab {
+    constructor(app, plugin) { this.app = app; this.plugin = plugin; this.containerEl = document.createElement('div'); }
 }
 class ItemView {
     constructor(leaf) {
@@ -80,7 +85,7 @@ class Vault {
         for (const child of root.children ?? []) Vault.recurseChildren(child, cb);
     }
 }
-const obsidian = { Plugin, ItemView, Notice, TFile, TFolder, Vault };
+const obsidian = { Plugin, ItemView, Notice, PluginSettingTab, TFile, TFolder, Vault };
 const folders = {
     'Garden-Cells': new TFolder('Garden-Cells', [new TFile('Garden-Cells/From the vault.md')]),
     Notes: new TFolder('Notes', [new TFile('Notes/unrelated.md')]),
@@ -192,6 +197,20 @@ try {
     assert(shell.pill === 'absolute', `the sign-in pill should sit in the tab, got position ${shell.pill}`);
     assert(shell.pillText === 'Sign in', `the pill should offer sign-in: ${shell.pillText}`);
     assert(shell.canvas > 100, 'the canvas has no height');
+
+    // The settings tab draws the open garden's settings, and a change reaches the garden.
+    const tab = await page.evaluate(() => {
+        const t = window.__settingTab;
+        t.display();
+        const fireflies = [...t.containerEl.querySelectorAll('.setting-item')].find((el) => el.textContent.startsWith('Fireflies'));
+        const input = fireflies.querySelector('input');
+        input.value = '2';
+        input.dispatchEvent(new Event('change'));
+        return { bar: !!t.containerEl.querySelector('.garden-sky-bar'), nodes: t.containerEl.querySelectorAll('.garden-sky-node').length };
+    });
+    console.log('test-obsidian: settings tab', tab);
+    assert(tab.bar && tab.nodes === 6, `the settings tab should show the sky bar and six nodes: ${JSON.stringify(tab)}`);
+    await page.waitForFunction(() => document.querySelectorAll('.cells-garden-host .garden-firefly').length === 2, null, { timeout: 5000 });
 
     await page.evaluate(async () => { await window.__commands.find((c) => c.id === 'import-vault-garden').callback(); });
     await page.waitForFunction(() => [...document.querySelectorAll('.seed-content')].some((el) => el.textContent === 'From the vault'), null, { timeout: 5000 });
