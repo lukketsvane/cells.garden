@@ -14,14 +14,25 @@
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
 import { mergeGardens } from './merge';
 import type { Garden } from './model';
+import { local } from './local';
 import { GardenGoneError, gardenFrom, readJson, snapshot, writeJson, LOCAL_KEY, type GardenStore } from './store';
 
 /** null when the build has no Supabase config: the app then stays local-only. */
 export function createSupabase(): SupabaseClient | null {
     const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined ?? '').trim();
     const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined ?? '').trim();
-    // The session is kept, refreshed and picked up from a link by default; only the flow is ours.
-    return url && key ? createClient(url, key, { auth: { flowType: 'pkce' } }) : null;
+    // Keep the auth session in the same host-provided device storage as the garden.
+    // In Obsidian that means Plugin.loadData/saveData rather than Web Storage.
+    const authStorage = {
+        getItem: (storageKey: string) => local.get(`cells.garden/auth/${storageKey}`),
+        setItem: (storageKey: string, value: string) => {
+            local.set(`cells.garden/auth/${storageKey}`, value);
+        },
+        removeItem: (storageKey: string) => {
+            local.remove(`cells.garden/auth/${storageKey}`);
+        },
+    };
+    return url && key ? createClient(url, key, { auth: { flowType: 'pkce', storage: authStorage } }) : null;
 }
 
 interface GardenRow {
