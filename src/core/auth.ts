@@ -20,12 +20,17 @@
 import type { SyncState } from './app';
 import { avatarEl } from './avatar';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import { ICONS, setIcon } from './icons';
 import { openMenu, type MenuItem } from './menu';
 import { Modal, Setting } from './ui';
 
 export interface AuthOptions {
-    /** Where the magic link should land. Defaults to the current page. */
+    /** Where the magic link and the way back from Google land. Defaults to the current page. */
     redirectTo?: string;
+    /** How to open Google's sign-in page. Defaults to going there in this page. */
+    openOAuth?: (url: string) => void;
+    /** Handed the client once it exists, for hosts that finish sign-in themselves (Obsidian). */
+    onClient?: (client: SupabaseClient) => void;
     /** One extra line under the heading, e.g. why sign-in is being asked for. */
     note?: string;
 }
@@ -106,10 +111,18 @@ class SignInModal extends Modal {
         contentEl.empty();
         contentEl.createEl('h2', { text: 'Sign in' });
         if (this.options.note) contentEl.createEl('p', { cls: 'auth-note', text: this.options.note });
-        contentEl.createEl('p', { text: 'Syncs to every device you sign in on. New here? Pick a password and press Create account.' });
+        contentEl.createEl('p', { text: 'Syncs to every device you sign in on.' });
+
+        const status = contentEl.createDiv('auth-status');
+        // One button for signing in and signing up: Google says who it is, the account follows.
+        const google = contentEl.createEl('button', { type: 'button', cls: 'auth-google' });
+        setIcon(google.createSpan('auth-google-mark'), ICONS.google);
+        google.createSpan({ text: 'Continue with Google' });
+        google.addEventListener('click', () => void this.continueWithGoogle(status));
+        contentEl.createDiv({ cls: 'auth-or', text: 'or with email. New here? Pick a password and press Create account.' });
+        contentEl.appendChild(status);
 
         let password = '';
-        const status = contentEl.createDiv('auth-status');
 
         const submit = async (mode: 'in' | 'up') => {
             const email = validEmail(this.email, status);
@@ -185,6 +198,20 @@ class SignInModal extends Modal {
         const alt = contentEl.createDiv('auth-alt');
         alt.createEl('button', { type: 'button', cls: 'auth-link', text: 'Email me a link instead' })
             .addEventListener('click', () => this.showLinkStep());
+    }
+
+    private async continueWithGoogle(status: HTMLElement) {
+        status.setText('Opening Google…');
+        const redirectTo = this.options.redirectTo ?? (window.location.origin + window.location.pathname);
+        const { data, error } = await this.client.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo, skipBrowserRedirect: true },
+        });
+        if (error || !data.url) {
+            status.setText(`Could not reach Google: ${error?.message ?? 'no address to go to'}`);
+            return;
+        }
+        (this.options.openOAuth ?? ((url: string) => window.location.assign(url)))(data.url);
     }
 
     /** The second way in, for anyone without a password, or who lost theirs. */

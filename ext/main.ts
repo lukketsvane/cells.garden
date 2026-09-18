@@ -19,9 +19,14 @@ if (!host) throw new Error('cells.garden: #app element missing');
 /** False when a built page is opened from disk while debugging: no chrome.* APIs. */
 export const inExtension = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
 
-// The magic link lands on the New Tab page whichever surface asked for it;
-// opened from disk, the pill falls back to its own URL.
-export const ready = bootGarden(host, { redirectTo: inExtension ? chrome.runtime.getURL('newtab.html') : undefined });
+// The magic link and the way back from Google land on the New Tab page whichever
+// surface asked; the popup and the side panel send Google to a tab of its own.
+// Opened from disk, the pill falls back to its own URL.
+const onNewTab = document.documentElement.dataset.context === 'newtab';
+export const ready = bootGarden(host, inExtension ? {
+    redirectTo: chrome.runtime.getURL('newtab.html'),
+    openOAuth: onNewTab ? undefined : (url) => void chrome.tabs.create({ url }),
+} : {});
 void ready.then((app) => {
     window.garden = app;
 });
