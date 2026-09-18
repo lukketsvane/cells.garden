@@ -1924,7 +1924,7 @@ export class GardenView extends View {
         const splitContainer = container.createDiv("garden-split-container");
 
         const canvasParent = splitContainer.createDiv("garden-canvas-area");
-        canvasParent.style.flex = `0 0 ${this._splitRatio * 100}%`;
+        canvasParent.setCssProps({ '--garden-canvas-flex': `0 0 ${this._splitRatio * 100}%` });
         await this.renderGardenCanvas(canvasParent);
 
         const resizer = splitContainer.createDiv("garden-resizer");
@@ -1945,8 +1945,8 @@ export class GardenView extends View {
                 y = Math.max(100, Math.min(rect.height - 100, y));
                 
                 // Apply explicit pixel heights instead of flex
-                canvasParent.style.flex = `0 0 ${y}px`;
-                bottomHalf.style.flex = `0 0 ${rect.height - y - 4}px`; // -4 for the resizer height
+                canvasParent.setCssProps({ '--garden-canvas-flex': `0 0 ${y}px` });
+                bottomHalf.setCssProps({ '--garden-board-flex': `0 0 ${rect.height - y - 4}px` }); // -4 for the resizer height
             };
 
             const onMouseUp = () => {

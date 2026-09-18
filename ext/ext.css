@@ -54,13 +54,13 @@ html[data-context="popup"] #app {
 }
 
 html[data-context="popup"] .garden-canvas-area {
-    flex: 1 1 auto !important;
+    flex: 1 1 auto;
 }
 
 html[data-context="popup"] .garden-resizer,
 html[data-context="popup"] .garden-bottom-half,
 html[data-context="popup"] .garden-board-toggle {
-    display: none !important;
+    display: none;
 }
 
 html[data-context="popup"].popup-aimed .garden-world {

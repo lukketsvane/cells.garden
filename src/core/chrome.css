@@ -166,11 +166,11 @@
 /* The board hidden: the garden takes the whole page. */
 :root[data-board="hidden"] .garden-resizer,
 :root[data-board="hidden"] .garden-bottom-half {
-    display: none !important;
+    display: none;
 }
 
 :root[data-board="hidden"] .garden-canvas-area {
-    flex: 1 1 auto !important;
+    flex: 1 1 auto;
 }
 
 /* --- Shared gardens (M4) --- */
