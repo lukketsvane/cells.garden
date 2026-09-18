@@ -1,27 +1,21 @@
 /**
  * Shared gardens (M4): the calls behind the share modal, the garden list in the
- * pill menu and the invite link. No UI here; errors come back typed so the UI
- * can word them. Needs migrations 0005 and 0006; `sharingAvailable()` hides the
- * feature when they are missing.
+ * pill menu and the invite link. No UI here; a failure the user should read
+ * comes back as a ShareError. Needs migrations 0005 and 0006;
+ * `sharingAvailable()` hides the feature when they are missing.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { PlantData } from './merge';
 
 /** Where invite links point. Every build talks to the same project, so one origin serves all. */
 export const APP_URL = 'https://cells.garden/';
 
-export class InvalidInviteError extends Error {
-    constructor() { super('This link no longer works.'); this.name = 'InvalidInviteError'; }
-}
+/** A failure worded for the user: its message is what the UI shows. */
+export class ShareError extends Error {}
 
-export class GardenFullError extends Error {
-    constructor() { super('That garden is full.'); this.name = 'GardenFullError'; }
-}
+const linkGone = () => new ShareError('This link no longer works.');
 
-export class SharingUnavailableError extends Error {
-    constructor() { super('Sharing is not available.'); this.name = 'SharingUnavailableError'; }
-}
-
-export interface SharedGarden {
+interface SharedGarden {
     id: string;
     name: string;
     ownerName: string;
@@ -40,14 +34,14 @@ const MISSING = new Set(['42P01', 'PGRST205', 'PGRST202', '42883']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function fail(error: PgError): never {
-    if (MISSING.has(error.code ?? '')) throw new SharingUnavailableError();
+    if (MISSING.has(error.code ?? '')) throw new ShareError('Sharing is not available.');
     throw new Error(error.message ?? 'Request failed');
 }
 
 /** Joining says the same two things whether it is a garden or a plant. */
 function failJoin(error: PgError): never {
-    if (error.code === 'P0002') throw new InvalidInviteError();
-    if (error.code === '53400') throw new GardenFullError();
+    if (error.code === 'P0002') throw linkGone();
+    if (error.code === '53400') throw new ShareError('That garden is full.');
     fail(error);
 }
 
@@ -100,7 +94,7 @@ export async function joinGarden(client: SupabaseClient, token: string): Promise
     const { data, error } = await client.rpc('join_garden', { invite: token });
     if (error) failJoin(error);
     const row = ((data ?? []) as { garden_id: string; name: string }[])[0];
-    if (!row) throw new InvalidInviteError();
+    if (!row) throw linkGone();
     return { id: row.garden_id, name: row.name };
 }
 
@@ -183,12 +177,12 @@ export const plantInviteUrl = (token: string) => `${APP_URL}#plant=${token}`;
 export interface SharedPlantRow {
     id: string;
     owner_id: string;
-    data: import('./merge').PlantData;
+    data: PlantData;
     rev: number;
 }
 
 /** Make a plants row from a plant in this garden. The caller links it with sharedPlantId. */
-export async function createSharedPlant(client: SupabaseClient, userId: string, data: import('./merge').PlantData): Promise<SharedPlantRow> {
+export async function createSharedPlant(client: SupabaseClient, userId: string, data: PlantData): Promise<SharedPlantRow> {
     const { data: row, error } = await client
         .from('plants')
         .insert({ owner_id: userId, data })
@@ -202,8 +196,8 @@ export async function createSharedPlant(client: SupabaseClient, userId: string, 
 export async function joinPlant(client: SupabaseClient, token: string): Promise<SharedPlantRow> {
     const { data, error } = await client.rpc('join_plant', { invite: token });
     if (error) failJoin(error);
-    const row = ((data ?? []) as { plant_id: string; data: import('./merge').PlantData; rev: number }[])[0];
-    if (!row) throw new InvalidInviteError();
+    const row = ((data ?? []) as { plant_id: string; data: PlantData; rev: number }[])[0];
+    if (!row) throw linkGone();
     const { data: owner } = await client.from('plants').select('owner_id').eq('id', row.plant_id).limit(1);
     const ownerId = ((owner ?? []) as { owner_id: string }[])[0]?.owner_id ?? '';
     return { id: row.plant_id, owner_id: ownerId, data: row.data, rev: row.rev };
@@ -229,7 +223,7 @@ export async function deleteSharedPlant(client: SupabaseClient, plantId: string)
 
 // --- Friends and plant offers (migration 0009) --------------------------------
 
-export interface Friend {
+interface Friend {
     userId: string;
     name: string;
     avatar: string;
@@ -237,9 +231,8 @@ export interface Friend {
     plants: number;
 }
 
-export interface PlantOffer {
+interface PlantOffer {
     plantId: string;
-    fromId: string;
     fromName: string;
     fromAvatar: string;
     seed: string;
@@ -270,15 +263,15 @@ export async function listPlantOffers(client: SupabaseClient): Promise<PlantOffe
     const { data, error } = await client.rpc('plant_offers_for_me');
     if (error) fail(error);
     return ((data ?? []) as { plant_id: string; from_id: string; from_name: string; from_avatar: string; seed: string }[])
-        .map(o => ({ plantId: o.plant_id, fromId: o.from_id, fromName: o.from_name, fromAvatar: o.from_avatar || o.from_id, seed: o.seed }));
+        .map(o => ({ plantId: o.plant_id, fromName: o.from_name, fromAvatar: o.from_avatar || o.from_id, seed: o.seed }));
 }
 
 /** Take an offered plant: the user becomes a member and gets the row back. */
 export async function acceptPlantOffer(client: SupabaseClient, plantId: string): Promise<SharedPlantRow> {
     const { data, error } = await client.rpc('accept_plant_offer', { pid: plantId });
     if (error) failJoin(error);
-    const row = ((data ?? []) as { plant_id: string; owner_id: string; data: import('./merge').PlantData; rev: number }[])[0];
-    if (!row) throw new InvalidInviteError();
+    const row = ((data ?? []) as { plant_id: string; owner_id: string; data: PlantData; rev: number }[])[0];
+    if (!row) throw linkGone();
     return { id: row.plant_id, owner_id: row.owner_id, data: row.data, rev: row.rev };
 }
 
@@ -289,7 +282,7 @@ export async function declinePlantOffer(client: SupabaseClient, plantId: string,
 
 // --- The signed-in user's own profile -----------------------------------------
 
-export interface Profile {
+interface Profile {
     name: string;
     avatar: string;
 }

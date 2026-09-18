@@ -13,7 +13,7 @@
  *
  * Pure, no DOM, covered by merge.test.ts.
  */
-import type { Garden, GardenSettings, LayerItem, LayerName, ProjectData } from './model';
+import type { Garden, GardenSettings, LayerName, ProjectData } from './model';
 
 type Prefer = 'local' | 'remote';
 
@@ -107,10 +107,6 @@ function mergeList<T extends { id: string }>(
     return sequence.map(id => kept.get(id) as T);
 }
 
-function mergeItem(b: LayerItem | undefined, l: LayerItem, r: LayerItem, prefer: Prefer): LayerItem {
-    return mergeFields(b, l, r, prefer);
-}
-
 function byOrder(projects: ProjectData[]): ProjectData[] {
     return [...projects].sort((a, b) => (a.order || 0) - (b.order || 0));
 }
@@ -122,7 +118,7 @@ function mergeProject(b: ProjectData | undefined, l: ProjectData, r: ProjectData
         if (!(key in fields)) delete (merged as unknown as Record<string, unknown>)[key];
     }
     for (const layer of LAYERS) {
-        merged[layer] = mergeList(b ? b[layer] : null, l[layer] ?? [], r[layer] ?? [], prefer, mergeItem);
+        merged[layer] = mergeList(b ? b[layer] : null, l[layer] ?? [], r[layer] ?? [], prefer, mergeFields);
     }
     return merged;
 }
@@ -155,9 +151,7 @@ export function mergePlant(base: PlantData | null, local: PlantData, remote: Pla
 }
 
 /** Deep equality with sorted keys, for callers that need to know whether anything changed. */
-export function sameData(a: unknown, b: unknown): boolean {
-    return same(a, b);
-}
+export { same as sameData };
 
 export function mergeGardens(base: Garden | null, local: Garden, remote: Garden, now: () => string = () => new Date().toISOString()): Garden {
     const prefer: Prefer = base ? 'remote' : 'local';

@@ -4,7 +4,7 @@ import { GardenView } from './garden';
 import { mergeGardens } from './merge';
 import type { Garden, GardenSettings, ProjectData } from './model';
 import { DEFAULT_SETTINGS, emptyGarden } from './model';
-import { GardenGoneError, snapshot, type GardenStore } from './store';
+import { GardenGoneError, readJson, snapshot, writeJson, type GardenStore } from './store';
 
 export type SyncState = 'local' | 'syncing' | 'synced' | 'error';
 
@@ -25,12 +25,12 @@ export interface UseStoreOptions {
     reconcile?: boolean;
 }
 
+const FRIEND_PLANTS_KEY = 'cells.garden/friend-plants';
+
 /**
  * The app shell, what `GardenPlugin` was in Obsidian. Owns the data, the
  * settings, the asset manager and the store; mounts the GardenView.
  */
-const FRIEND_PLANTS_KEY = 'cells.garden/friend-plants';
-
 export class GardenApp {
     gardenData: ProjectData[] = [];
     settings: GardenSettings = { ...DEFAULT_SETTINGS };
@@ -58,14 +58,7 @@ export class GardenApp {
     private _persistQueue: Promise<void> = Promise.resolve();
     private _retryOnline: (() => void) | null = null;
 
-    constructor(public store: GardenStore) {
-        try {
-            const raw = localStorage.getItem(FRIEND_PLANTS_KEY);
-            if (raw) this.friendPlants = new Set(JSON.parse(raw) as string[]);
-        } catch {
-            // Unknown until the plants sync says whose they are.
-        }
-    }
+    constructor(public store: GardenStore) {}
 
     /**
      * Shared plants someone else owns, by their plants row id. They stand to
@@ -73,7 +66,7 @@ export class GardenApp {
      * middle with your friends' plants at its borders. Remembered on the device,
      * so the garden opens already arranged.
      */
-    friendPlants = new Set<string>();
+    friendPlants = new Set<string>(readJson<string[]>(FRIEND_PLANTS_KEY) ?? []);
 
     isFriendPlant(project: ProjectData): boolean {
         return !!project.sharedPlantId && this.friendPlants.has(project.sharedPlantId);
@@ -91,11 +84,7 @@ export class GardenApp {
         const next = new Set(ids);
         if (next.size === this.friendPlants.size && [...next].every(id => this.friendPlants.has(id))) return;
         this.friendPlants = next;
-        try {
-            localStorage.setItem(FRIEND_PLANTS_KEY, JSON.stringify([...next]));
-        } catch {
-            // The arrangement is worked out again next time.
-        }
+        writeJson(FRIEND_PLANTS_KEY, [...next]);
         this.arrange();
         this.view?.scheduleRender();
     }
@@ -111,7 +100,7 @@ export class GardenApp {
     }
 
     async mount(host: HTMLElement) {
-        await this.loadGardenData();
+        this.applyGarden((await this.store.load()) ?? emptyGarden());
 
         this.view = new GardenView(host, this);
         await this.view.onOpen();
@@ -127,11 +116,6 @@ export class GardenApp {
         this._unsubscribe = null;
         await this.view?.onClose();
         this.view = null;
-    }
-
-    async loadGardenData() {
-        const garden = await this.store.load();
-        this.applyGarden(garden ?? emptyGarden());
     }
 
     /**
@@ -195,12 +179,12 @@ export class GardenApp {
                 pushToRemote = true;
                 options.onSeedUsed?.();
             } else {
-                chosen = remote ?? mine ?? emptyGarden();
+                chosen = mine ?? emptyGarden();
             }
 
             this.applyGarden(chosen);
             if (pushToRemote) {
-                await this.persist();
+                await this.saveGardenData();
             } else {
                 if (this.mirror) await this.mirror.save(chosen).catch(() => {});
                 this.onSyncState?.(this.mirror ? 'synced' : 'local');
@@ -253,15 +237,14 @@ export class GardenApp {
 
     /**
      * Replace one plant's own fields from elsewhere (a shared plant changed by
-     * someone else), keeping where it stands in this garden. Saves when asked.
+     * someone else), keeping where it stands in this garden. The caller saves.
      */
-    async patchProject(id: string, data: Omit<ProjectData, 'order' | 'sharedPlantId'>, save = true): Promise<void> {
+    async patchProject(id: string, data: Omit<ProjectData, 'order' | 'sharedPlantId'>): Promise<void> {
         const index = this.gardenData.findIndex(p => p.id === id);
         if (index === -1) return;
         const current = this.gardenData[index];
         this.gardenData[index] = { ...data, id: current.id, order: current.order, sharedPlantId: current.sharedPlantId };
         this.view?.scheduleRender();
-        if (save) await this.saveGardenData();
     }
 
     /** Add a plant at the right end of the row and save. */
@@ -270,11 +253,6 @@ export class GardenApp {
         this.arrange();
         this.view?.scheduleRender();
         await this.saveGardenData();
-    }
-
-    /** Persist projects + settings. Serialised so saves never interleave. */
-    async saveGardenData() {
-        return this.persist();
     }
 
     toGarden(): Garden {
@@ -297,7 +275,8 @@ export class GardenApp {
         await this.saveGardenData();
     }
 
-    private persist(): Promise<void> {
+    /** Persist projects + settings. Serialised so saves never interleave. */
+    saveGardenData(): Promise<void> {
         this.updatedAt = new Date().toISOString();
         const run = async () => {
             // Read the garden when this save runs, not when it was queued: a merge that

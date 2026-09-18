@@ -9,34 +9,19 @@
  * Saves are compare-and-swap on `rev`, a version the database bumps on every
  * update. When someone else wrote first, the store fetches their version,
  * merges it with ours over the last version we both knew (merge.ts) and tries
- * again. Without migration 0005 (no `rev` column) it falls back to a plain
- * overwrite, which is how M1 worked.
+ * again.
  */
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
 import { mergeGardens } from './merge';
 import type { Garden } from './model';
-import { emptyGarden } from './model';
-import { GardenGoneError, snapshot, LOCAL_KEY, type GardenStore } from './store';
-
-function supabaseConfig(): { url: string; key: string } | null {
-    const url = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
-    const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '').trim();
-    if (!url || !key) return null;
-    return { url, key };
-}
+import { GardenGoneError, gardenFrom, readJson, snapshot, writeJson, LOCAL_KEY, type GardenStore } from './store';
 
 /** null when the build has no Supabase config: the app then stays local-only. */
 export function createSupabase(): SupabaseClient | null {
-    const cfg = supabaseConfig();
-    if (!cfg) return null;
-    return createClient(cfg.url, cfg.key, {
-        auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true,
-            flowType: 'pkce',
-        },
-    });
+    const url = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
+    const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '').trim();
+    // The session is kept, refreshed and picked up from a link by default; only the flow is ours.
+    return url && key ? createClient(url, key, { auth: { flowType: 'pkce' } }) : null;
 }
 
 interface GardenRow {
@@ -47,34 +32,15 @@ interface GardenRow {
     rev?: number;
 }
 
-/** Postgres / PostgREST codes for "that column does not exist". */
-const MISSING_COLUMN = new Set(['42703', 'PGRST204']);
-
 /** At most this many fetch-merge-retry rounds before a save gives up. */
 const MAX_SAVE_ROUNDS = 4;
 
-function rowToGarden(row: GardenRow): Garden {
-    const base = emptyGarden();
-    const data = (row.data ?? {}) as Partial<Garden>;
-    return {
-        version: 1,
-        projects: Array.isArray(data.projects) ? data.projects : [],
-        settings: { ...base.settings, ...(data.settings ?? {}) },
-        updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : row.updated_at,
-    };
-}
-
-export interface GardenTarget {
-    /** Open this row (a garden shared with the user) instead of the user's own. */
-    gardenId: string;
-}
+const rowToGarden = (row: GardenRow): Garden => gardenFrom((row.data ?? {}) as Partial<Garden>, row.updated_at);
 
 export class SupabaseStore implements GardenStore {
     private rowId: string | null;
     /** Server version of the row as this store last saw it; null until known. */
     private rev: number | null = null;
-    /** False when the database has no `rev` column yet (before migration 0005). */
-    private cas = true;
     /** The last version this store knows the server held: the common base for a merge. */
     private base: Garden | null = null;
     /** What load() fetched, kept for mergeOffline(). */
@@ -90,56 +56,35 @@ export class SupabaseStore implements GardenStore {
     constructor(
         private readonly client: SupabaseClient,
         private readonly userId: string,
-        private readonly target?: GardenTarget,
+        /** Open this row (a garden shared with the user) instead of the user's own. */
+        private readonly gardenId?: string,
     ) {
-        this.rowId = target?.gardenId ?? null;
+        this.rowId = gardenId ?? null;
     }
 
     private get baseKey(): string {
-        return `${LOCAL_KEY}/base/${this.target ? this.target.gardenId : `user/${this.userId}`}`;
+        return `${LOCAL_KEY}/base/${this.gardenId ?? `user/${this.userId}`}`;
     }
 
+    /** Not kept (storage full or blocked): an offline merge falls back to a union. */
     private rememberBase() {
-        if (!this.base || this.rev === null) return;
-        try {
-            localStorage.setItem(this.baseKey, JSON.stringify({ rev: this.rev, garden: this.base }));
-        } catch {
-            // Storage full or blocked: an offline merge falls back to a union.
-        }
+        if (this.base && this.rev !== null) writeJson(this.baseKey, { rev: this.rev, garden: this.base });
     }
 
     private readRememberedBase(): { rev: number; garden: Garden } | null {
-        try {
-            const raw = localStorage.getItem(this.baseKey);
-            if (!raw) return null;
-            const parsed = JSON.parse(raw) as { rev?: unknown; garden?: Garden };
-            if (typeof parsed.rev !== 'number' || !parsed.garden || !Array.isArray(parsed.garden.projects)) return null;
-            return { rev: parsed.rev, garden: parsed.garden };
-        } catch {
-            return null;
-        }
-    }
-
-    private columns(): string {
-        return this.cas ? 'id, data, updated_at, rev' : 'id, data, updated_at';
+        const parsed = readJson<{ rev?: unknown; garden?: Garden }>(this.baseKey);
+        if (!parsed || typeof parsed.rev !== 'number' || !parsed.garden || !Array.isArray(parsed.garden.projects)) return null;
+        return { rev: parsed.rev, garden: parsed.garden };
     }
 
     /** Own garden: the newest row for this user. Shared: the target row. Adopts its id. */
     private async findRow(): Promise<GardenRow | null> {
-        const query = () => {
-            const q = this.client.from('gardens').select(this.columns());
-            return this.target
-                ? q.eq('id', this.target.gardenId).limit(1)
-                : q.eq('user_id', this.userId).order('updated_at', { ascending: false }).limit(1);
-        };
-        let { data, error } = await query();
-        if (error && this.cas && MISSING_COLUMN.has(error.code ?? '')) {
-            console.warn('Garden Cells: gardens.rev is missing; run supabase/migrations/0005_shared_gardens.sql. Saving without merge.');
-            this.cas = false;
-            ({ data, error } = await query());
-        }
+        const q = this.client.from('gardens').select('id, data, updated_at, rev');
+        const { data, error } = await (this.gardenId
+            ? q.eq('id', this.gardenId).limit(1)
+            : q.eq('user_id', this.userId).order('updated_at', { ascending: false }).limit(1));
         if (error) throw error;
-        const row = ((data ?? []) as unknown as GardenRow[])[0];
+        const row = ((data ?? []) as GardenRow[])[0];
         if (!row) return null;
         this.rowId = row.id;
         return row;
@@ -148,7 +93,7 @@ export class SupabaseStore implements GardenStore {
     async load(): Promise<Garden | null> {
         const row = await this.findRow();
         if (!row) {
-            if (this.target) throw new GardenGoneError();
+            if (this.gardenId) throw new GardenGoneError();
             return null;
         }
         const garden = rowToGarden(row);
@@ -184,7 +129,7 @@ export class SupabaseStore implements GardenStore {
         this.lastSeen = garden.updatedAt;
         // Another page of the same user may have inserted the row a moment ago
         // (sign-in is broadcast to every tab): re-check before inserting.
-        if (!this.rowId || (this.cas && this.rev === null)) {
+        if (!this.rowId || this.rev === null) {
             const row = await this.findRow();
             if (row && typeof row.rev === 'number' && this.rev === null) {
                 this.rev = row.rev;
@@ -193,11 +138,11 @@ export class SupabaseStore implements GardenStore {
         }
 
         if (!this.rowId) {
-            if (this.target) throw new GardenGoneError();
+            if (this.gardenId) throw new GardenGoneError();
             return this.insert(garden);
         }
 
-        if (!this.cas || this.rev === null) {
+        if (this.rev === null) {
             const { error } = await this.client
                 .from('gardens')
                 .update({ data: garden, updated_at: garden.updatedAt })
@@ -247,7 +192,7 @@ export class SupabaseStore implements GardenStore {
         const { data, error } = await this.client
             .from('gardens')
             .insert({ user_id: this.userId, name: 'My garden', data: garden, updated_at: garden.updatedAt })
-            .select(this.cas ? 'id, rev' : 'id')
+            .select('id, rev')
             .single();
         if (error) {
             // Unique index (migration 0002) refused a second row: adopt the existing one.
@@ -274,9 +219,9 @@ export class SupabaseStore implements GardenStore {
 
     subscribe(listener: (garden: Garden) => void): () => void {
         this.listener = listener;
-        const filter = this.target ? `id=eq.${this.target.gardenId}` : `user_id=eq.${this.userId}`;
+        const filter = this.gardenId ? `id=eq.${this.gardenId}` : `user_id=eq.${this.userId}`;
         this.channel = this.client
-            .channel(`gardens:${this.target ? this.target.gardenId : this.userId}`)
+            .channel(`gardens:${this.gardenId ?? this.userId}`)
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'gardens', filter },
