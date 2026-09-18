@@ -94,20 +94,53 @@ export class ShareGardenModal extends Modal {
     }
 }
 
-export class LeaveGardenModal extends Modal {
-    constructor(private readonly name: string, private readonly onLeave: () => unknown) {
+/** Leave a garden, or delete a space: one question, one button that means it. */
+export class GardenQuestionModal extends Modal {
+    constructor(
+        private readonly title: string,
+        private readonly body: string,
+        private readonly action: string,
+        private readonly onYes: () => unknown,
+    ) {
         super();
     }
 
     onOpen() {
         const { contentEl } = this;
-        contentEl.createEl('h2', { text: `Leave ${this.name}?` });
-        contentEl.createEl('p', { text: 'You can come back with a new link.' });
+        contentEl.createEl('h2', { text: this.title });
+        contentEl.createEl('p', { text: this.body });
         new Setting(contentEl)
             .addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()))
-            .addButton((b) => b.setButtonText('Leave').setWarning().onClick(() => {
+            .addButton((b) => b.setButtonText(this.action).setWarning().onClick(() => {
                 this.close();
-                this.onLeave();
+                this.onYes();
             }));
+    }
+}
+
+/** Name a new garden space. */
+export class NewSpaceModal extends Modal {
+    constructor(private readonly onCreate: (name: string) => unknown) {
+        super();
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.createEl('h2', { text: 'New garden space' });
+        contentEl.createEl('p', { text: 'A garden of its own, to share with others.' });
+        let name = '';
+        const create = () => {
+            if (!name.trim()) return;
+            this.close();
+            this.onCreate(name.trim());
+        };
+        new Setting(contentEl).setName('Name').addText((t) => {
+            t.onChange((v) => { name = v; });
+            t.inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') create(); });
+            window.setTimeout(() => t.inputEl.focus(), 50);
+        });
+        new Setting(contentEl)
+            .addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()))
+            .addButton((b) => b.setButtonText('Create').setCta().onClick(create));
     }
 }

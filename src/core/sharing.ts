@@ -6,6 +6,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PlantData } from './merge';
+import { emptyGarden } from './model';
 
 /** Where invite links point. Every build talks to the same project, so one origin serves all. */
 export const APP_URL = 'https://cells.garden/';
@@ -76,20 +77,48 @@ export const inviteUrl = (token: string) => `${APP_URL}#join=${token}`;
 export async function listSharedGardens(client: SupabaseClient, userId: string): Promise<SharedGarden[]> {
     const { data, error } = await client
         .from('garden_members')
-        .select('garden_id, gardens(id, name, user_id)')
+        .select('garden_id, gardens(id, name, user_id, owner_id)')
         .eq('user_id', userId);
     if (error) fail(error);
-    const rows = (data ?? []) as unknown as { garden_id: string; gardens: { id: string; name: string; user_id: string } | null }[];
-    const gardens = rows.map(r => r.gardens).filter((g): g is { id: string; name: string; user_id: string } => !!g);
+    type Row = { id: string; name: string; user_id: string | null; owner_id: string | null };
+    const rows = (data ?? []) as unknown as { garden_id: string; gardens: Row | null }[];
+    // A space has no user_id; its owner is owner_id.
+    const gardens = rows.map(r => r.gardens).filter((g): g is Row => !!g).map(g => ({ ...g, owner: g.user_id ?? g.owner_id ?? '' }));
     if (gardens.length === 0) return [];
     const { data: profiles } = await client
         .from('profiles')
         .select('id, display_name')
-        .in('id', gardens.map(g => g.user_id));
+        .in('id', gardens.map(g => g.owner));
     const names = new Map(((profiles ?? []) as { id: string; display_name: string | null }[]).map(p => [p.id, p.display_name ?? '']));
     return gardens
-        .map(g => ({ id: g.id, name: g.name, ownerName: names.get(g.user_id) || 'someone' }))
+        .map(g => ({ id: g.id, name: g.name, ownerName: names.get(g.owner) || 'someone' }))
         .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Garden spaces this user owns: gardens that are nobody's own, shared like any garden. */
+export async function listOwnSpaces(client: SupabaseClient, userId: string): Promise<{ id: string; name: string }[]> {
+    const { data, error } = (await client.from('gardens').select('id, name').eq('owner_id', userId).order('name')) as
+        { data: { id: string; name: string }[] | null; error: PgError | null };
+    if (error) fail(error);
+    return data ?? [];
+}
+
+export async function createSpace(client: SupabaseClient, userId: string, name: string): Promise<{ id: string; name: string }> {
+    const now = new Date().toISOString();
+    const { data, error } = await client
+        .from('gardens')
+        .insert({ owner_id: userId, user_id: null, name, data: { ...emptyGarden(), updatedAt: now }, updated_at: now })
+        .select('id, name');
+    if (error) fail(error);
+    const row = ((data ?? []) as { id: string; name: string }[])[0];
+    if (!row) throw new Error('The space was not created.');
+    return row;
+}
+
+/** Only ever a space: a row with a user_id is someone's own garden. Members and links go with it. */
+export async function deleteSpace(client: SupabaseClient, gardenId: string): Promise<void> {
+    const { error } = await client.from('gardens').delete().eq('id', gardenId).is('user_id', null);
+    if (error) fail(error);
 }
 
 /** Present an invite token; the user becomes a member. Returns the garden. */
