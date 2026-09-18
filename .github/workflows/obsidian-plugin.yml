@@ -38,6 +38,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build:obsidian
+      - name: Check compact Obsidian kanban
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const css = fs.readFileSync('obsidian-plugin/styles.css', 'utf8');
+          if (!/\.kanban-scroll-container\s+\.project-column\s*\{[^}]*display:\s*flex/s.test(css)) {
+            throw new Error('Obsidian build is missing the compact per-plant kanban layout');
+          }
+          if (/\.kanban-scroll-container\s+\.project-column\s*\{[^}]*grid-template-rows:\s*subgrid/s.test(css)) {
+            throw new Error('Obsidian build still contains the shared-row kanban spacing');
+          }
+          NODE
       # A push made with the workflow's own token does not start the workflow again.
       - name: Commit the build if it changed
         run: |
