@@ -16,7 +16,7 @@ export interface MenuItem {
     heading?: boolean;
     /** Shown, but greyed out and inert. */
     disabled?: boolean;
-    onClick?: () => void;
+    onClick?: () => unknown;
 }
 
 /** Where the menu opens: a point (a right-click) or under an element (the pill). */
@@ -81,7 +81,7 @@ export function openMenu(items: MenuItem[], anchor: MenuAnchor, doc: Document = 
         win.removeEventListener('keydown', close, true);
     };
     // After the click that opened it has finished travelling.
-    setTimeout(() => {
+    window.setTimeout(() => {
         win.addEventListener('mousedown', close, true);
         win.addEventListener('keydown', close, true);
     }, 0);

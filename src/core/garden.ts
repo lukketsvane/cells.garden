@@ -52,8 +52,8 @@ const FIREFLY_COUNT = 8;
 /** Cancel a timer or interval and hand back null, so `x = stop(x)` clears it. */
 function stop(handle: number | null): null {
     if (handle !== null) {
-        clearTimeout(handle);
-        clearInterval(handle);
+        window.clearTimeout(handle);
+        window.clearInterval(handle);
     }
     return null;
 }
@@ -248,7 +248,7 @@ export class GardenView extends View {
     private _viewStateKey = 'cells.garden/view/' + (document.documentElement.dataset.context || 'web');
 
     private saveViewState() {
-        const scrollContainer = this.contentEl.querySelector('.kanban-scroll-container') as HTMLElement | null;
+        const scrollContainer = this.contentEl.querySelector<HTMLElement>('.kanban-scroll-container');
         const state: ViewState = {
             zoom: this.zoom,
             translateX: this.currentTranslateX,
@@ -263,14 +263,14 @@ export class GardenView extends View {
         } 
     }
     private scheduleViewStateSave() {
-        if (this._viewStateSaveTimeout) clearTimeout(this._viewStateSaveTimeout);
+        if (this._viewStateSaveTimeout) window.clearTimeout(this._viewStateSaveTimeout);
         this._viewStateSaveTimeout = window.setTimeout(() => {
             this.saveViewState();
         }, 1000); // Wait 1 second after the last movement before saving to disk
     }
     /** Flush a pending debounced save immediately (tab closing, unmount). */
     saveViewStateNow() {
-        if (this._viewStateSaveTimeout) clearTimeout(this._viewStateSaveTimeout);
+        if (this._viewStateSaveTimeout) window.clearTimeout(this._viewStateSaveTimeout);
         this._viewStateSaveTimeout = null;
         this.saveViewState();
     }
@@ -866,19 +866,6 @@ export class GardenView extends View {
         this.fireflyState = [];
         parent.empty();
 
-        // Inject blink keyframe if not present
-        if (!document.getElementById('garden-firefly-keyframes')) {
-            const styleEl = document.createElement('style');
-            styleEl.id = 'garden-firefly-keyframes';
-            styleEl.textContent = `
-                @keyframes garden-firefly-blink {
-                    0%, 100% { filter: brightness(0.8); box-shadow: 0 0 4px 1px rgba(126, 179, 87, var(--glow-opacity, 0)); }
-                    50% { filter: brightness(1.2); box-shadow: 0 0 6px 2px rgba(126, 179, 87, var(--glow-opacity, 0)); }
-                }
-            `;
-            document.head.appendChild(styleEl);
-        }
-
         for (let i = 0; i < FIREFLY_COUNT; i++) {
             const el = parent.createDiv("garden-firefly");
 
@@ -922,14 +909,14 @@ export class GardenView extends View {
 
         // 1. Fade them in
         for (const f of this.fireflyState) {
-            f.el.style.opacity = '1';
+            f.el.setCssStyles({ opacity: '1' });
         }
 
         const world = this.world;
         if (!world) return;
 
         // Cache plant bounds for landing
-        const plantWrappers = Array.from(world.querySelectorAll('.garden-plant-wrapper')) as HTMLElement[];
+        const plantWrappers = Array.from(world.querySelectorAll<HTMLElement>('.garden-plant-wrapper'));
         const plantBounds = plantWrappers.map(p => {
             if (!p.querySelector('.garden-stem-part, .garden-flower-part')) return null;
             const leftStr = p.style.left;
@@ -1121,7 +1108,7 @@ export class GardenView extends View {
             let savedCanvasImage: string | null = null;
             const oldGroundLineY = this._dynamicGroundLineY;
             if (this.wormTrailCanvas) {
-                try { savedCanvasImage = this.wormTrailCanvas.toDataURL(); } catch(_) {}
+                try { savedCanvasImage = this.wormTrailCanvas.toDataURL(); } catch { /* unreadable canvas: the trail starts over */ }
             }
 
             const container = this.contentEl;
@@ -1132,7 +1119,7 @@ export class GardenView extends View {
             // Emptying first showed a blank board for as long as the images took to
             // load, then a jump back to the scroll position: the board shook on
             // every edit.
-            if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
+            if (getComputedStyle(container).position === 'static') container.setCssStyles({ position: 'relative' });
                 const stage = container.createDiv('garden-render-stage');
             try {
                 await this.renderGarden(stage);
@@ -1455,8 +1442,7 @@ export class GardenView extends View {
             this.kanbanStartY = e.clientY;
             this.kanbanScrollLeft = container.scrollLeft;
             this.kanbanScrollTop = container.scrollTop;
-            container.style.cursor = 'grabbing';
-            container.style.userSelect = 'none';
+            container.setCssStyles({ cursor: 'grabbing', userSelect: 'none' });
 
             window.addEventListener('mousemove', this.handleKanbanMouseMove);
             window.addEventListener('mouseup', this.handleKanbanMouseUp);
@@ -1465,7 +1451,7 @@ export class GardenView extends View {
 
     private handleKanbanMouseMove = (e: MouseEvent) => {
         if (!this.isPanningKanban) return;
-        const container = this.containerEl.querySelector('.kanban-scroll-container') as HTMLElement | null;
+        const container = this.containerEl.querySelector<HTMLElement>('.kanban-scroll-container');
         if (!container) return;
 
         const dx = e.clientX - this.kanbanStartX;
@@ -1478,10 +1464,9 @@ export class GardenView extends View {
     private handleKanbanMouseUp = () => {
         if (!this.isPanningKanban) return;
         this.isPanningKanban = false;
-        const container = this.containerEl.querySelector('.kanban-scroll-container') as HTMLElement | null;
+        const container = this.containerEl.querySelector<HTMLElement>('.kanban-scroll-container');
         if (container) {
-            container.style.cursor = '';
-            container.style.userSelect = '';
+            container.setCssStyles({ cursor: '', userSelect: '' });
         }
         window.removeEventListener('mousemove', this.handleKanbanMouseMove);
         window.removeEventListener('mouseup', this.handleKanbanMouseUp);
@@ -1617,7 +1602,7 @@ export class GardenView extends View {
         const above = extents.aboveHeight + margin;
         const below = Math.max(extents.undergroundDepth, 40) + margin;
         // Width: the sprite itself (renderPlantSprite leaves it on the wrapper) plus room on each side.
-        const wrapper = this.contentEl.querySelector(`.garden-plant-wrapper[data-project-id="${project.id}"]`) as HTMLElement | null;
+        const wrapper = this.contentEl.querySelector<HTMLElement>(`.garden-plant-wrapper[data-project-id="${project.id}"]`);
         const spriteWidth = Number(wrapper?.dataset.width) || STEM_ORIGIN_WIDTH * PIXEL_SCALE;
         const widthBasis = Math.max(spriteWidth + 2 * margin, 240);
         const fit = Math.min(vw / widthBasis, (vh * horizon) / above, (vh * (1 - horizon)) / below);
@@ -1680,7 +1665,7 @@ export class GardenView extends View {
     private cancelSettle() {
         if (this._settleFrame) cancelAnimationFrame(this._settleFrame);
         this._settleFrame = 0;
-        if (this._settleTimeout) clearTimeout(this._settleTimeout);
+        if (this._settleTimeout) window.clearTimeout(this._settleTimeout);
         this._settleTimeout = null;
     }
 
@@ -1716,10 +1701,10 @@ export class GardenView extends View {
             this.currentTranslateX = fromX + (toX - fromX) * e;
             this.currentTranslateY = fromY + (toY - fromY) * e;
             this.applyWorldTransform(world, viewport);
-            this._settleFrame = t < 1 ? requestAnimationFrame(step) : 0;
+            this._settleFrame = t < 1 ? window.requestAnimationFrame(step) : 0;
             if (t === 1) this.scheduleViewStateSave();
         };
-        this._settleFrame = requestAnimationFrame(step);
+        this._settleFrame = window.requestAnimationFrame(step);
     }
 
 
@@ -1748,7 +1733,7 @@ export class GardenView extends View {
             target.dispatchEvent(new MouseEvent('contextmenu', { bubbles: false, cancelable: true, clientX: e.clientX, clientY: e.clientY, button: 2 }));
             return true;
         };
-        const part = (e.target as HTMLElement).closest('[data-item-id]') as HTMLElement | null;
+        const part = (e.target as HTMLElement).closest<HTMLElement>('[data-item-id]');
         const itemId = part?.dataset.itemId;
         if (itemId && forward(this.shownEl(`.garden-item[data-id="${itemId}"]`))) return;
         const hit = this.plantAt(e.clientX, e.clientY);
@@ -1865,7 +1850,7 @@ export class GardenView extends View {
 
     /** The element for a selector, preferring one that is on screen (the card over the board). */
     private shownEl(selector: string): HTMLElement | null {
-        const all = Array.from(this.contentEl.querySelectorAll(selector)) as HTMLElement[];
+        const all = Array.from(this.contentEl.querySelectorAll<HTMLElement>(selector));
         return all.find(el => el.getClientRects().length > 0) ?? all[0] ?? null;
     }
 
@@ -1895,7 +1880,7 @@ export class GardenView extends View {
     private applyWorldTransform(world: HTMLElement, viewport: HTMLElement) {
         // Standard 2D camera math: origin at top-left makes centering predictable
         if (this._peekEl && !this._peekPinned) this._peekEl.removeClass('is-visible');
-        world.style.transformOrigin = '0 0';
+        world.setCssStyles({ transformOrigin: '0 0' });
         world.style.transform = `translate(${this.currentTranslateX}px, ${this.currentTranslateY}px) scale(${this.zoom})`;
     }
 
@@ -1949,8 +1934,7 @@ export class GardenView extends View {
         resizer.addEventListener('mousedown', (e) => {
             e.preventDefault();
             resizer.addClass('is-dragging');
-            document.body.style.cursor = 'row-resize';
-            document.body.style.userSelect = 'none'; // Prevent text highlighting while dragging
+            document.body.setCssStyles({ cursor: 'row-resize', userSelect: 'none' }); // Prevent text highlighting while dragging
 
             const onMouseMove = (ev: MouseEvent) => {
                 const rect = splitContainer.getBoundingClientRect();
@@ -1967,8 +1951,7 @@ export class GardenView extends View {
 
             const onMouseUp = () => {
                 resizer.removeClass('is-dragging');
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
+                document.body.setCssStyles({ cursor: '', userSelect: '' });
                 // Save the split ratio so it persists across re-renders
                 const rect = splitContainer.getBoundingClientRect();
                 const canvasHeight = canvasParent.getBoundingClientRect().height;
@@ -2021,7 +2004,7 @@ export class GardenView extends View {
             ghostClass: 'sortable-column-ghost',
             handle: '.column-drag-handle',
             filter: '.add-column-btn',
-            onEnd: (evt: SortableEvent) => this.handleColumnDrop(evt)
+            onEnd: (evt: SortableEvent) => void this.handleColumnDrop(evt)
         });
     }
 
@@ -2094,11 +2077,8 @@ export class GardenView extends View {
         cloudLayer.style.backgroundImage = `url(${cloudUrl})`;
         cloudLayer.style.backgroundSize = `${cloudScaledW}px ${cloudScaledH}px`;
         cloudLayer.style.animation = `garden-cloud-scroll ${CLOUD_SCROLL_DURATION}s linear infinite`;
-        // The keyframes carry the cloud's own width, so they are written once it is known.
-        if (!document.getElementById('garden-cloud-keyframe')) {
-            const styleEl = document.head.createEl('style', { attr: { id: 'garden-cloud-keyframe' } });
-            styleEl.textContent = `@keyframes garden-cloud-scroll { from { background-position-x: 0; } to { background-position-x: ${cloudScaledW}px; } }`;
-        }
+        // The keyframes scroll by the cloud's own width.
+        cloudLayer.setCssProps({ '--garden-cloud-width': `${cloudScaledW}px` });
 
         const bgLayer = world.createDiv("garden-bg-layer");
         bgLayer.style.backgroundImage = `url(${bgImageUrl})`;
@@ -2248,7 +2228,7 @@ export class GardenView extends View {
 
 
     private scareFireflies(projectId: string) {
-        const wrapper = this.containerEl.querySelector(`.garden-plant-wrapper[data-project-id="${projectId}"]`) as HTMLElement | null;
+        const wrapper = this.containerEl.querySelector<HTMLElement>(`.garden-plant-wrapper[data-project-id="${projectId}"]`);
         if (!wrapper) return;
 
         const leftStr = wrapper.style.left;
@@ -2277,26 +2257,26 @@ export class GardenView extends View {
 
         partDiv.addEventListener('mouseenter', () => {
             if (isAboveGround) this.scareFireflies(projectId);
-            const cell = this.containerEl.querySelector(`.garden-item[data-id="${itemId}"], .seed-content[data-id="${itemId}"]`) as HTMLElement | null;
+            const cell = this.containerEl.querySelector<HTMLElement>(`.garden-item[data-id="${itemId}"], .seed-content[data-id="${itemId}"]`);
             if (cell) cell.addClass('is-hover-highlighted');
         });
 
         partDiv.addEventListener('mouseleave', () => {
-            const cell = this.containerEl.querySelector(`.garden-item[data-id="${itemId}"], .seed-content[data-id="${itemId}"]`) as HTMLElement | null;
+            const cell = this.containerEl.querySelector<HTMLElement>(`.garden-item[data-id="${itemId}"], .seed-content[data-id="${itemId}"]`);
             if (cell) cell.removeClass('is-hover-highlighted');
         });
 
         partDiv.addEventListener('click', (e) => {
             e.stopPropagation();
             if (isAboveGround) this.scareFireflies(projectId);
-            const cell = this.containerEl.querySelector(`.garden-item[data-id="${itemId}"], .seed-content[data-id="${itemId}"]`) as HTMLElement | null;
+            const cell = this.containerEl.querySelector<HTMLElement>(`.garden-item[data-id="${itemId}"], .seed-content[data-id="${itemId}"]`);
             if (cell) {
                 // Smoothly center the cell in the Kanban scroll container
                 cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 
                 // Trigger the flash animation
                 cell.addClass('is-click-flash');
-                setTimeout(() => cell.removeClass('is-click-flash'), 800);
+                window.setTimeout(() => cell.removeClass('is-click-flash'), 800);
             }
         });
 
@@ -2535,7 +2515,7 @@ export class GardenView extends View {
     /** Move the selection to the next cell up or down its zone, or across to the next plant. */
     private moveSelection(key: string) {
         const current = this.selectedCells[this.selectedCells.length - 1];
-        const all = Array.from(this.contentEl.querySelectorAll('.garden-item[data-id]')) as HTMLElement[];
+        const all = Array.from(this.contentEl.querySelectorAll<HTMLElement>('.garden-item[data-id]'));
         if (all.length === 0) return;
         if (!current || !current.isConnected) {
             this.selectSingleCell(all[0]);
@@ -2553,7 +2533,7 @@ export class GardenView extends View {
             const col = columns.indexOf(current.closest('.project-column')!);
             const zone = current.parentElement?.dataset.array;
             for (let c = col + (key === 'ArrowLeft' ? -1 : 1); c >= 0 && c < columns.length; c += key === 'ArrowLeft' ? -1 : 1) {
-                const cells = Array.from(columns[c].querySelectorAll('.garden-item[data-id]')) as HTMLElement[];
+                const cells = Array.from(columns[c].querySelectorAll<HTMLElement>('.garden-item[data-id]'));
                 next = cells.find(el => el.parentElement?.dataset.array === zone) ?? cells[0];
                 if (next) break;
             }
@@ -2587,7 +2567,7 @@ export class GardenView extends View {
             if (!list) return;
             e.preventDefault();
             this.clearSelection();
-            (Array.from(list.querySelectorAll('.garden-item[data-id]')) as HTMLElement[]).forEach(el => this.select(el));
+            (Array.from(list.querySelectorAll<HTMLElement>('.garden-item[data-id]'))).forEach(el => this.select(el));
             return;
         }
         if (mod || e.altKey) return;
@@ -2617,7 +2597,7 @@ export class GardenView extends View {
             void this.createNewProject('right');
         } else if (lower === 'b') {
             e.preventDefault();
-            (document.querySelector('.garden-board-toggle') as HTMLElement | null)?.click();
+            (document.querySelector<HTMLElement>('.garden-board-toggle'))?.click();
         } else if (key === '?') {
             e.preventDefault();
             new ShortcutsModal().open();
@@ -2712,7 +2692,7 @@ export class GardenView extends View {
             item.content = newText;
             const live = this.liveItem(item.id);
             if (live && live !== item) live.content = newText;
-            this.app.saveGardenData();
+            void this.app.saveGardenData();
         }
     }
 
@@ -2844,7 +2824,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         seedContent.contentEditable = "false";
         
         // Apply Hue Filter
-        seedContent.style.color = '#6e7f9c';
+        seedContent.setCssStyles({ color: '#6e7f9c' });
         seedContent.style.filter = `hue-rotate(${project.hue ?? 0}deg)`;
 
         seedContent.addEventListener("click", (e) => {
@@ -2965,7 +2945,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
             el.dataset.id = item.id;
             el.setText(item.content);
             if (item.highlighted) {
-                el.style.fontWeight = 'bold';
+                el.setCssStyles({ fontWeight: 'bold' });
                 el.addClass('garden-item-highlighted');
             }
             
@@ -3054,7 +3034,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
             delayOnTouchOnly: true,
             touchStartThreshold: 6,
             ghostClass: 'sortable-ghost',
-            onEnd: (evt: SortableEvent) => this.handleDrop(evt)
+            onEnd: (evt: SortableEvent) => void this.handleDrop(evt)
         });
     }
 
@@ -3094,7 +3074,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         // We just need to redraw the plant sprite on the canvas to match the new order.
         // This prevents the scrollbar from jumping!
         if (sourceProjectId === targetProjectId && sourceArrayName === targetArrayName) {
-            const wrapper = this.containerEl.querySelector(`.garden-plant-wrapper[data-project-id="${targetProjectId}"]`) as HTMLElement | null;
+            const wrapper = this.containerEl.querySelector<HTMLElement>(`.garden-plant-wrapper[data-project-id="${targetProjectId}"]`);
             if (wrapper) {
                 wrapper.empty();
                 await this.renderPlantSprite(wrapper, targetProject);

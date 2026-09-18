@@ -48,7 +48,7 @@ export interface InviteSection {
 export function inviteSection(parent: HTMLElement, s: InviteSection) {
     const link = new Setting(parent).setName('Invite link').setDesc(s.token ? s.desc : 'No link yet.');
     if (!s.token) {
-        link.addButton((b) => b.setButtonText('Create link').setCta().onClick(() => attempt(s.say, 'make a link', async () => {
+        link.addButton((b) => b.setButtonText('Create link').setCta().onClick(() => void attempt(s.say, 'make a link', async () => {
             await s.renew();
             await s.again('Link ready.');
         })));
@@ -56,6 +56,7 @@ export function inviteSection(parent: HTMLElement, s: InviteSection) {
     }
 
     const url = s.url(s.token);
+    link.controlEl.addClass('share-link-row');
     const input = link.controlEl.createEl('input', { type: 'text', cls: 'share-link', value: url });
     input.readOnly = true;
     input.addEventListener('focus', () => input.select());
@@ -64,11 +65,11 @@ export function inviteSection(parent: HTMLElement, s: InviteSection) {
     }));
 
     new Setting(parent)
-        .addButton((b) => b.setButtonText('New link').onClick(() => attempt(s.say, 'make a link', async () => {
+        .addButton((b) => b.setButtonText('New link').onClick(() => void attempt(s.say, 'make a link', async () => {
             await s.renew();
             await s.again('New link made. The old one stops working.');
         })))
-        .addButton((b) => b.setButtonText('Turn off link').setWarning().onClick(() => attempt(s.say, 'turn it off', async () => {
+        .addButton((b) => b.setButtonText('Turn off link').setWarning().onClick(() => void attempt(s.say, 'turn it off', async () => {
             await s.clear();
             await s.again('Link turned off. People who have it keep it.');
         })));

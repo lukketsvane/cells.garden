@@ -78,7 +78,7 @@ class ButtonComponent {
     setButtonText(text: string) { this.buttonEl.setText(text); return this; }
     setCta() { this.buttonEl.addClass('mod-cta'); return this; }
     setWarning() { this.buttonEl.addClass('mod-warning'); return this; }
-    onClick(cb: (evt: MouseEvent) => void) {
+    onClick(cb: (evt: MouseEvent) => unknown) {
         this.buttonEl.addEventListener('click', cb);
         return this;
     }

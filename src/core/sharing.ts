@@ -33,6 +33,9 @@ interface PgError { code?: string; message?: string }
 const MISSING = new Set(['42P01', 'PGRST205', 'PGRST202', '42883']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** A database function's reply; its rows are cast where they are read. */
+type Rpc = { data: unknown; error: PgError | null };
+
 function fail(error: PgError): never {
     if (MISSING.has(error.code ?? '')) throw new ShareError('Sharing is not available.');
     throw new Error(error.message ?? 'Request failed');
@@ -91,7 +94,7 @@ export async function listSharedGardens(client: SupabaseClient, userId: string):
 
 /** Present an invite token; the user becomes a member. Returns the garden. */
 export async function joinGarden(client: SupabaseClient, token: string): Promise<{ id: string; name: string }> {
-    const { data, error } = await client.rpc('join_garden', { invite: token });
+    const { data, error } = (await client.rpc('join_garden', { invite: token })) as Rpc;
     if (error) failJoin(error);
     const row = ((data ?? []) as { garden_id: string; name: string }[])[0];
     if (!row) throw linkGone();
@@ -194,7 +197,7 @@ export async function createSharedPlant(client: SupabaseClient, userId: string, 
 
 /** Present a plant invite; the user becomes a member. Returns the plant row. */
 export async function joinPlant(client: SupabaseClient, token: string): Promise<SharedPlantRow> {
-    const { data, error } = await client.rpc('join_plant', { invite: token });
+    const { data, error } = (await client.rpc('join_plant', { invite: token })) as Rpc;
     if (error) failJoin(error);
     const row = ((data ?? []) as { plant_id: string; data: PlantData; rev: number }[])[0];
     if (!row) throw linkGone();
@@ -240,7 +243,7 @@ interface PlantOffer {
 
 /** Everyone who shares a garden or a plant with the signed-in user. */
 export async function listFriends(client: SupabaseClient): Promise<Friend[]> {
-    const { data, error } = await client.rpc('friends');
+    const { data, error } = (await client.rpc('friends')) as Rpc;
     if (error) fail(error);
     return ((data ?? []) as { user_id: string; display_name: string; avatar_seed: string; gardens: number; plants: number }[])
         .map(f => ({ userId: f.user_id, name: f.display_name || 'someone', avatar: f.avatar_seed || f.user_id, gardens: Number(f.gardens), plants: Number(f.plants) }));
@@ -260,7 +263,7 @@ export async function pendingOffersFor(client: SupabaseClient, plantId: string):
 }
 
 export async function listPlantOffers(client: SupabaseClient): Promise<PlantOffer[]> {
-    const { data, error } = await client.rpc('plant_offers_for_me');
+    const { data, error } = (await client.rpc('plant_offers_for_me')) as Rpc;
     if (error) fail(error);
     return ((data ?? []) as { plant_id: string; from_id: string; from_name: string; from_avatar: string; seed: string }[])
         .map(o => ({ plantId: o.plant_id, fromName: o.from_name, fromAvatar: o.from_avatar || o.from_id, seed: o.seed }));
@@ -268,7 +271,7 @@ export async function listPlantOffers(client: SupabaseClient): Promise<PlantOffe
 
 /** Take an offered plant: the user becomes a member and gets the row back. */
 export async function acceptPlantOffer(client: SupabaseClient, plantId: string): Promise<SharedPlantRow> {
-    const { data, error } = await client.rpc('accept_plant_offer', { pid: plantId });
+    const { data, error } = (await client.rpc('accept_plant_offer', { pid: plantId })) as Rpc;
     if (error) failJoin(error);
     const row = ((data ?? []) as { plant_id: string; owner_id: string; data: PlantData; rev: number }[])[0];
     if (!row) throw linkGone();

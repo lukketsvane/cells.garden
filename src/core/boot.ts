@@ -87,14 +87,14 @@ function peekPendingJoin(): { token: string; kind: InviteKind } | null {
 function notify(host: HTMLElement, text: string) {
     host.querySelector('.garden-notice')?.remove();
     const el = host.createDiv({ cls: 'garden-notice', text, attr: { role: 'status' } });
-    setTimeout(() => el.remove(), 5000);
+    window.setTimeout(() => el.remove(), 5000);
 }
 
 /** `options.redirectTo`: where a magic link should land. Defaults to the current page. */
 export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): Promise<GardenApp> {
     applyScene();
     // Extension pages never receive a link, so only the web app looks.
-    const inExtension = !!(globalThis as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
+    const inExtension = !!(window as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
     if (!inExtension) stashInviteFromUrl();
 
     // Always start local so the garden shows instantly, signed in or not.
@@ -333,12 +333,12 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         // An invite is waiting and nobody is signed in: ask once, on the first answer.
         if (!uid && !askedToSignIn && peekPendingJoin()) {
             askedToSignIn = true;
-            setTimeout(() => pill.signIn('Sign in to open the garden you were invited to.'), 0);
+            window.setTimeout(() => pill.signIn('Sign in to open the garden you were invited to.'), 0);
         }
         if (uid === currentUser) return; // token refresh, same user
         currentUser = uid;
         // Supabase asks that other client calls run outside this callback.
-        setTimeout(() => {
+        window.setTimeout(() => {
             plants?.stop();
             plants = null;
             if (uid) {

@@ -22,7 +22,7 @@ const PROJECT_FIELDS = ['name', 'seed', 'seedImagePath', 'standby', 'hue', 'plan
 
 /** JSON with sorted keys, so two equal objects compare equal whatever their key order. */
 function canonical(value: unknown): string {
-    return JSON.stringify(value, (_key, v) => {
+    return JSON.stringify(value, (_key, v: unknown): unknown => {
         if (v && typeof v === 'object' && !Array.isArray(v)) {
             const sorted: Record<string, unknown> = {};
             for (const k of Object.keys(v).sort()) sorted[k] = (v as Record<string, unknown>)[k];

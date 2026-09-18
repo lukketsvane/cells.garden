@@ -49,7 +49,7 @@ function saveToDisk(name: string, bytes: Uint8Array) {
     link.click();
     link.remove();
     // Revoking straight away can cancel the download in some browsers.
-    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 // --- Reading what the user handed over -------------------------------------

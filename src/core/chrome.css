@@ -200,7 +200,7 @@
     font-weight: 600;
 }
 
-.share-modal .setting-item-control:has(.share-link) {
+.share-link-row {
     flex-wrap: wrap;
     gap: 6px;
 }

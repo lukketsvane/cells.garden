@@ -50,7 +50,9 @@ export function crc32(bytes: Uint8Array): number {
 type StreamCtor = new (format: string) => { readable: ReadableStream; writable: WritableStream };
 
 function streamCtor(name: 'CompressionStream' | 'DecompressionStream'): StreamCtor | null {
-    const ctor = (globalThis as Record<string, unknown>)[name];
+    const ctor: unknown = name === 'CompressionStream'
+        ? typeof CompressionStream === 'function' && CompressionStream
+        : typeof DecompressionStream === 'function' && DecompressionStream;
     return typeof ctor === 'function' ? (ctor as StreamCtor) : null;
 }
 

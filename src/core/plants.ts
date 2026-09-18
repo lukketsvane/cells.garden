@@ -69,7 +69,7 @@ export class PlantSync {
 
     stop() {
         this.stopped = true;
-        if (this.refreshTimer) clearTimeout(this.refreshTimer);
+        if (this.refreshTimer) window.clearTimeout(this.refreshTimer);
         this.app.onGardenApplied = null;
         this.app.onPersisted = null;
         for (const t of this.tracked.values()) void t.channel?.unsubscribe();
@@ -107,7 +107,7 @@ export class PlantSync {
 
     private scheduleRefresh() {
         if (this.stopped || this.refreshTimer) return;
-        this.refreshTimer = setTimeout(() => {
+        this.refreshTimer = window.setTimeout(() => {
             this.refreshTimer = null;
             void this.refresh();
         }, 50);

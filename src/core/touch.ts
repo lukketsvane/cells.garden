@@ -44,7 +44,7 @@ export function installTouchAdapter(host: HTMLElement): void {
         const touch = e.touches[0];
         const target = e.target as HTMLElement;
 
-        const resizer = target.closest('.garden-resizer') as HTMLElement | null;
+        const resizer = target.closest<HTMLElement>('.garden-resizer');
         if (resizer) {
             e.preventDefault();
             resizing = true;
@@ -52,7 +52,7 @@ export function installTouchAdapter(host: HTMLElement): void {
             return;
         }
 
-        const cell = target.closest(CELL) as HTMLElement | null;
+        const cell = target.closest<HTMLElement>(CELL);
         if (cell?.classList.contains('is-editing')) {
             start = null; // typing: leave the caret alone
             return;

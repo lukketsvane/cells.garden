@@ -3,7 +3,7 @@ import { Modal, Setting } from './ui';
 // --- The Confirm Delete Modal ---
 
 export class ConfirmDeleteModal extends Modal {
-    constructor(private plantName: string, private onSubmit: () => void) {
+    constructor(private plantName: string, private onSubmit: () => unknown) {
         super();
     }
 
@@ -32,7 +32,7 @@ export class ConfirmDeleteModal extends Modal {
 // --- The Create Project Modal ---
 
 export class CreateProjectModal extends Modal {
-    constructor(private onSubmit: (seed: string) => void) {
+    constructor(private onSubmit: (seed: string) => unknown) {
         super();
     }
 
@@ -59,7 +59,7 @@ export class CreateProjectModal extends Modal {
                         submit();
                     }
                 });
-                setTimeout(() => text.inputEl.focus(), 50);
+                window.setTimeout(() => text.inputEl.focus(), 50);
             });
 
         new Setting(contentEl)

@@ -11,7 +11,7 @@ import { bootGarden } from '../core/boot';
 const host = document.getElementById('app');
 if (!host) throw new Error('cells.garden: #app element missing');
 
-bootGarden(host).then((app) => {
+void bootGarden(host).then((app) => {
     window.garden = app;
 });
 
@@ -26,7 +26,7 @@ const updateServiceWorker = registerSW({
         const busy = () => document.querySelector('.modal-container, .is-editing') !== null;
         const apply = () => {
             if (busy()) {
-                setTimeout(apply, 2000);
+                window.setTimeout(apply, 2000);
                 return;
             }
             void updateServiceWorker(true);

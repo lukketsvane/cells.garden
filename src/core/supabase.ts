@@ -18,8 +18,8 @@ import { GardenGoneError, gardenFrom, readJson, snapshot, writeJson, LOCAL_KEY, 
 
 /** null when the build has no Supabase config: the app then stays local-only. */
 export function createSupabase(): SupabaseClient | null {
-    const url = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
-    const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '').trim();
+    const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined ?? '').trim();
+    const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined ?? '').trim();
     // The session is kept, refreshed and picked up from a link by default; only the flow is ours.
     return url && key ? createClient(url, key, { auth: { flowType: 'pkce' } }) : null;
 }
@@ -240,7 +240,7 @@ export class SupabaseStore implements GardenStore {
         return () => {
             this.listener = null;
             this.buffered = null;
-            this.channel?.unsubscribe();
+            void this.channel?.unsubscribe();
             this.channel = null;
         };
     }
