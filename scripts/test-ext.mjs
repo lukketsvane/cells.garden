@@ -78,9 +78,11 @@ if (process.env.EXT_TEST_FORCE_BUILD || !distIsFresh()) {
 const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8'));
 assert(manifest.manifest_version === 3, 'manifest_version must be 3');
 assert(manifest.name === 'cells.garden', `unexpected name ${manifest.name}`);
-assert(JSON.stringify(manifest.permissions) === JSON.stringify(['sidePanel']), `permissions must be exactly ["sidePanel"], got ${JSON.stringify(manifest.permissions)}`);
+assert(JSON.stringify(manifest.permissions) === JSON.stringify(['sidePanel', 'storage']), `permissions must be sidePanel + storage, got ${JSON.stringify(manifest.permissions)}`);
+assert(JSON.stringify(manifest.externally_connectable?.matches) === JSON.stringify(['https://cells.garden/*']), `only cells.garden should be able to message the extension: ${JSON.stringify(manifest.externally_connectable)}`);
 assert(!('host_permissions' in manifest), 'host_permissions must not be set');
 assert(!('optional_permissions' in manifest), 'optional_permissions must not be set');
+assert(!('web_accessible_resources' in manifest), 'OAuth must use the website message bridge, not expose extension pages to the web');
 assert(manifest.background?.service_worker === 'background.js' && manifest.background?.type === 'module', 'background must be the module service worker background.js');
 assert(existsSync(join(DIST, 'background.js')), 'dist-ext/background.js is missing');
 assert(manifest.chrome_url_overrides?.newtab === 'newtab.html', 'chrome_url_overrides.newtab must be newtab.html');
@@ -98,20 +100,10 @@ for (const page of ['newtab.html', 'sidepanel.html', 'popup.html']) {
     assert(/<script\b[^>]*\bsrc="\.\/assets\//.test(html), `${page} does not load its module from ./assets/`);
 }
 
-// Sign-in is only part of the build when it carries Supabase config, and the
-// manifest then also opens newtab.html to the auth server for the magic link.
-// Read the way the build reads it (vite.config.ts): real environment over .env* files, VITE_ prefix optional.
+// Sign-in is only part of the UI when the build carries Supabase config.
 const env = loadEnv('production', ROOT, '');
 const supabaseUrl = (env.VITE_SUPABASE_URL || env.SUPABASE_URL || '').trim();
 const hasSupabase = supabaseUrl !== '';
-if (hasSupabase) {
-    const war = manifest.web_accessible_resources;
-    assert(Array.isArray(war) && war.length === 1, 'web_accessible_resources must have exactly one entry when Supabase is configured');
-    assert(JSON.stringify(war[0].resources) === JSON.stringify(['newtab.html']), 'web_accessible_resources must expose newtab.html only');
-    assert(JSON.stringify(war[0].matches) === JSON.stringify([`${new URL(supabaseUrl).origin}/*`]), `web_accessible_resources must match the Supabase origin, got ${JSON.stringify(war[0].matches)}`);
-} else {
-    assert(!('web_accessible_resources' in manifest), 'web_accessible_resources must be absent without Supabase config');
-}
 console.log(`test-ext: manifest ok (version ${manifest.version}, supabase ${hasSupabase ? 'configured' : 'not configured'})`);
 
 // ---------------------------------------------------------------------------
@@ -163,6 +155,21 @@ try {
         if (behavior === null) await new Promise((r) => setTimeout(r, 100));
     }
     assert(behavior && behavior.openPanelOnActionClick !== true, `the side panel must not open on the action click: ${JSON.stringify(behavior)}`);
+
+    // A real cells.garden page can hand an OAuth result to the worker, without
+    // exposing an extension page as a web-accessible resource.
+    const bridge = await context.newPage();
+    const bridgeHtml = readFileSync(join(ROOT, 'public/privacy/oauth-return.html'), 'utf8');
+    await bridge.route('https://cells.garden/privacy/oauth-return.html**', (route) => route.fulfill({
+        contentType: 'text/html',
+        body: bridgeHtml,
+    }));
+    await bridge.goto(`https://cells.garden/privacy/oauth-return.html?target=extension&extension_id=${extId}&code=test-oauth-code`);
+    await bridge.waitForFunction(() => document.body.textContent?.includes('Return to cells.garden'));
+    const bridged = await worker.evaluate(async () => (await chrome.storage.local.get('cells.garden/oauth-return'))['cells.garden/oauth-return']);
+    assert(bridged?.code === 'test-oauth-code', `website OAuth return did not reach the extension worker: ${JSON.stringify(bridged)}`);
+    await worker.evaluate(async () => chrome.storage.local.remove('cells.garden/oauth-return'));
+    await bridge.close();
 
     // --- New Tab: plant, add a stem cell, reload, still there. ---
     const newtab = await context.newPage();

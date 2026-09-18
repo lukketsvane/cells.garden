@@ -21,8 +21,8 @@ import { PLANT_FOLDER } from '../src/core/markdown';
 import { mergeGarden, vaultFilesToGarden, type VaultFile } from '../src/core/vault';
 
 const VIEW_TYPE = 'cells-garden';
-/** Google sends the browser back to obsidian://cells-garden?code=..., which this plugin handles. */
-const RETURN_URL = 'obsidian://cells-garden';
+/** Supabase is always allowed to return to the website; that page deep-links the code back here. */
+const RETURN_URL = 'https://cells.garden/privacy/oauth-return.html?target=obsidian';
 /** The open garden's sign-in client, which holds the code verifier Google's answer is checked against. */
 let client: SupabaseClient | null = null;
 
@@ -137,8 +137,17 @@ export default class CellsGardenPlugin extends Plugin {
             new Notice(`Google sign-in did not finish: ${params.error_description ?? params.error}`);
             return;
         }
-        if (!params.code || !client) return;
-        const { error } = await client.auth.exchangeCodeForSession(params.code);
+        if (!params.code) return;
+
+        // The callback can arrive after the garden tab was closed. Reopen it so
+        // the same Supabase client (and its stored PKCE verifier) is available.
+        if (!client) await this.openGarden();
+        const auth = client;
+        if (!auth) {
+            new Notice('Could not finish sign-in. Open cells.garden and try again.');
+            return;
+        }
+        const { error } = await auth.auth.exchangeCodeForSession(params.code);
         new Notice(error ? `Could not sign in: ${error.message}` : 'Signed in.');
     }
 

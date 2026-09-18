@@ -31,6 +31,8 @@ assert(!/import\.meta\.glob/.test(mainJs), 'main.js still contains an unresolved
 assert(/require\(["']obsidian["']\)/.test(mainJs), 'main.js should require obsidian at runtime');
 assert(!/navigator\.clipboard|\.clipboardData\b/.test(mainJs), 'Obsidian build must not access the system clipboard');
 assert(!/loadLocalStorage|saveLocalStorage/.test(mainJs), 'Obsidian build must use Plugin.loadData/saveData instead of legacy local storage APIs');
+assert(/privacy\/oauth-return\.html\?target=obsidian/.test(mainJs), 'Obsidian Google sign-in must return through the website bridge');
+assert(/obsidian:\/\/cells-garden/.test(mainJs), 'Obsidian build must keep the cells-garden protocol callback');
 assert(
     /\.kanban-scroll-container\s+\.project-column\s*\{[^}]*display:\s*flex/s.test(css),
     'Obsidian must ship the compact per-plant kanban layout'
