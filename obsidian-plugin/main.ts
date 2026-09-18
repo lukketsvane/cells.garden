@@ -3,7 +3,7 @@
  *
  * The same app as the web, the PWA and the extension, in an Obsidian tab: sign
  * in with the same account and the garden syncs live with every other device.
- * Max's original plugin (obsidian/) keeps the garden in vault files instead; the
+ * Max's original plugin (the `original` branch) keeps the garden in vault files; the
  * "Import this vault's garden" command brings that garden into the synced one.
  */
 import { ItemView, Notice, Plugin } from 'obsidian';
