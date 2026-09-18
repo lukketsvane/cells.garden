@@ -14,11 +14,11 @@ npm run preview        # serves dist/ on http://localhost:4173
 npm run build:ext      # Chrome extension into dist-ext/
 npm run dev:ext        # extension build in watch mode
 npm run icons          # regenerates the PNG icons from the pixel grid
-npm run typecheck      # tsc for the web app
-npm run typecheck:ext  # tsc for the extension entry
+npm run typecheck      # tsc for the web app (also :ext, :obsidian and :test)
+npm run test:unit      # node --test over src/**/*.test.ts
 npm run test:web       # Playwright smoke test of the web build + PWA offline start
-npm run test:ext       # Playwright test of the extension (new tab + side panel)
-npm run build:obsidian # Obsidian plugin into dist-obsidian/ (link that folder into a vault)
+npm run test:ext       # Playwright test of the extension (new tab, side panel, popup)
+npm run build:obsidian # Obsidian plugin into obsidian-plugin/ (committed; CI rebuilds it)
 npm run test:obsidian  # loads the plugin build behind a stand-in Obsidian API
 ```
 
@@ -26,59 +26,40 @@ The tests use the repo's Playwright and a Chromium it can find; run `npx playwri
 
 ## Architecture
 
-The web app is the core. The extension and the PWA are shells around the same build.
+The web app is the core. The PWA, the extension and the Obsidian plugin are shells around the same code.
 
 - **Web**: the garden at a URL, deployed by Vercel: `main` is `cells.garden`, `dev` is `dev.cells.garden`.
 - **PWA**: same app on a phone; service worker precaches the shell so it opens offline.
 - **Extension**: New Tab override, Side Panel and a popup that shows one plant at a time, same core, same local storage.
-
-Same code, three distributions.
+- **Obsidian**: the same app in an Obsidian tab, see below.
 
 ## Repository
 
 ```
-src/core/      the core (independent of web, extension and Obsidian)
-  shim.ts        createDiv/createEl/empty/setText/addClass … on Node/Element, as Obsidian does
-  ui.ts, ui.css  View, Modal, Setting (a few dozen lines of our own)
-  menu.ts        the floating menu: the pill's, a plant's and a cell's
-  model.ts       data model, constants, DEFAULT_SETTINGS
-  store.ts       GardenStore { load, save, subscribe? } + LocalStore + snapshot()
-  supabase.ts    Supabase client + SupabaseStore (cloud)
-  auth.ts        sign-in pill, magic link + 6-digit code
-  boot.ts        bootGarden(host): mounts the garden and wires sign-in/sync
-  assets.ts      AssetManager over the bundled asset pack in src/assets/pack/
-  asset-paths.ts the pack's path rules, including the sprite names of the first build
-  modals.ts      Max's modals, plus the keyboard shortcuts sheet
-  sharing.ts     the Supabase calls behind sharing a garden or a plant
-  share.ts, share-plant.ts, share-ui.ts   the two share modals and what they share
-  garden.ts      GardenView, Max's main.ts ported
-  app.ts         GardenApp, owns data, settings, the store switch
-  markdown.ts    Max's markdown format (frontmatter + ## Flowers/Stem/Roots/Minerals), import/export
-  vault.ts       a garden as a folder of files, and back; merge/replace on import
-  zip.ts         a small zip reader/writer, no dependencies
-  transfer.ts    the download, the drop target and the Garden files modal
-  styles.css     Max's styles.css
+src/core/      the core, independent of web, extension and Obsidian; every file opens
+               with a comment saying what it holds. garden.ts is Max's main.ts ported,
+               styles.css his styles.css, shim.ts and ui.ts the bits of Obsidian's API he used.
 src/web/       index.html, main.ts, app.css (theme tokens), service-worker registration
 src/assets/    sprites; pack/<plantType>/<category>/ is what Garden-Assets/ was in the vault
-ext/           Chrome extension (Manifest V3): newtab.html, sidepanel.html, background.ts, manifest.ts
+ext/           Chrome extension (Manifest V3), see ext/README.md
 public/        icons (SVG + PNG); the web manifest is generated at build time
-scripts/       make-icons.mjs, test-web.mjs, test-ext.mjs
-supabase/      migrations + README (auth, RLS, SMTP)
+scripts/       the icon generator, the three browser tests, the .ts loader for the unit tests
+supabase/      migrations + README (auth, RLS, sharing)
 obsidian/      Max's plugin, untouched. Keeps the garden in vault files, no sync.
-obsidian-plugin/  the synced Obsidian plugin: the same app in an Obsidian tab
+obsidian-plugin/  the synced Obsidian plugin; main.js and styles.css are its committed build
 dist/          web build (ignored)
 dist-ext/      extension build (ignored)
 ```
 
 ## Obsidian plugin
 
-`obsidian-plugin/` runs the same app in an Obsidian tab. Sign in with the same account and the garden syncs live with the web app, the phone and the extension. Build it with `npm run build:obsidian`; the result in `dist-obsidian/` is a complete plugin folder. Link it into a vault once, then every build shows up in Obsidian after a reload:
+`obsidian-plugin/` runs the same app in an Obsidian tab. Sign in with the same account and the garden syncs live with the web app, the phone and the extension. The folder is a complete plugin: `main.js` and `styles.css` are its build, committed, and CI rebuilds them on every push to `main` and `dev` that touches the code (`npm run build:obsidian` does the same locally). Link the folder into a vault once (Windows; `ln -s` elsewhere):
 
 ```
-mklink /J "<vault>\.obsidian\plugins\cells-garden" "<repo>\dist-obsidian"
+mklink /J "<vault>\.obsidian\plugins\cells-garden" "<repo>\obsidian-plugin"
 ```
 
-Then turn on cells.garden under Settings, Community plugins. Its id is `cells-garden`, so it sits next to Max's `garden-cells` without clashing. The command "Import this vault's garden" brings the plants Max's plugin keeps in `Garden-Cells/` into the synced garden.
+Then turn on cells.garden under Settings, Community plugins. From then on a pull (GitHub Desktop: Fetch origin, then Pull) is the update: reload the plugin, or restart Obsidian, to pick it up. With the Hot Reload community plugin installed, the empty `.hotreload` file makes it reload on its own. Its id is `cells-garden`, so it sits next to Max's `garden-cells` without clashing. The command "Import this vault's garden" brings the plants Max's plugin keeps in `Garden-Cells/` into the synced garden.
 
 ## Storage and sync
 
@@ -124,5 +105,5 @@ The first web build carried the twelve `plant_1` sprites bundled with the plugin
 - **M0**: runs in a browser, localStorage, deployed on Vercel. Done.
 - **M1**: Supabase auth + sync, PWA. Same garden on phone and desktop. Done.
 - **M2**: Chrome extension (new tab + side panel), service worker, per-surface camera, hardened sync. Done.
-- **M3**: Obsidian import/export in the UI, and the extension popup (one plant at a time). Done. An Obsidian plugin on top of the core, syncing to the same backend, is still open. Custom images are out of scope for now.
+- **M3**: Obsidian import/export in the UI, the extension popup (one plant at a time), and the Obsidian plugin on the same backend. Done. Custom images are out of scope for now.
 - **M4**: shared gardens (invite by link, live co-editing, merge on conflict). Done.

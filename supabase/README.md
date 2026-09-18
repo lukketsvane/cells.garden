@@ -29,22 +29,13 @@ Run them in order in the SQL editor. Each one is safe to run more than once.
 |------|--------------|
 | `migrations/0001_init.sql` | `profiles`, `gardens`, RLS, `updated_at` trigger, realtime publication |
 | `migrations/0002_gardens_unique_user.sql` | removes duplicate garden rows and adds a unique index on `gardens(user_id)` |
-| `migrations/0003_garden_assets_bucket.sql` | private `garden-assets` Storage bucket plus per-user RLS, for custom cell art |
+| `migrations/0003_garden_assets_bucket.sql` | private `garden-assets` Storage bucket plus per-user RLS, for custom cell art (the app does not use it yet) |
 | `migrations/0004_harden_functions.sql` | keeps `handle_new_user` off the REST surface and pins both trigger functions to an empty `search_path` |
 | `migrations/0005_shared_gardens.sql` | `gardens.rev` bumped by a trigger that also freezes `user_id`, `garden_members`, `garden_invites`, `join_garden(token)`, member policies |
 | `migrations/0006_private_policy_helpers.sql` | moves the policy helpers to a `private` schema so they are not API endpoints; `(select auth.uid())` in the older owner policies |
 | `migrations/0007_shared_plants.sql` | `plants` (one shared plant, server revision), `plant_members`, `plant_invites`, `join_plant(token)`, policies, realtime |
 | `migrations/0008_owner_rows_visible_on_insert.sql` | lets an owner read back a garden or plant row inside the insert that creates it |
-
-## Custom art (M3)
-
-`migrations/0003_garden_assets_bucket.sql` makes a private `garden-assets` bucket. Each user writes only under a folder named after their own uid:
-
-```
-garden-assets/<uid>/custom/<hash>.png
-```
-
-The part after `<uid>/` is the `imagePath` a cell carries, so the same string works in the app, in a signed URL and in the markdown export. Reads go through signed URLs; the bucket is never public. Uploads are capped at 5 MB and limited to png, jpeg, gif, webp and svg.
+| `migrations/0009_friends.sql` | `profiles.avatar_seed`, `friends()`, plant offers to friends |
 
 ## Shared gardens (M4)
 
@@ -63,11 +54,12 @@ Saves are compare-and-swap on `rev`. When someone wrote first, the client fetche
 
 One plant shared by link (`https://cells.garden/#plant=<token>`) into other people's own gardens. The plant keeps its cells in a `plants` row; each garden that holds it keeps a copy in its blob, marked with `sharedPlantId`, so it still works offline. Everyone who has it edits the same row: compare-and-swap on `rev`, merged by cell id, pushed to the others over realtime. Where the plant stands is each garden's own.
 
-In the app: pill menu, Share a plant. The owner gets a link, sees who has the plant, can remove people or stop sharing. Someone who joined can leave. Leaving or stopping keeps every copy.
+In the app: the share icon on a plant's card. The owner gets a link, sees who has the plant, can remove people or stop sharing. Someone who joined can leave. Leaving or stopping keeps every copy.
 
 ## Sync model
 
-- Signed out: `LocalStore` (localStorage, `cells.garden/v1`).
-- Signed in: `SupabaseStore` is primary; a per-user `LocalStore` (`cells.garden/v1/user/<uid>`) mirrors every save as the offline copy. On sign-in the newer `updatedAt` of cloud vs. mirror wins. An account with no garden yet receives the device's anonymous garden, once (`cells.garden/v1/claimedBy` remembers which account took it), so a second account on the same device never inherits the first one's plants.
+The main README's Storage and sync covers the stores. On top of that:
+
+- On sign-in the mirror (`cells.garden/v1/user/<uid>`) wins over the cloud only when this device edited offline, and is then merged over the last base it synced. `cells.garden/v1/claimedBy` remembers which account took the anonymous garden.
 - Two pages signing in at the same moment (new tab + side panel) are serialised with `navigator.locks`; the store also re-checks for an existing row before inserting and follows the newest row per user in realtime.
 - Sign-out shows the anonymous garden again and never writes the account's data into it.
