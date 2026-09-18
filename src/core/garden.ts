@@ -9,6 +9,10 @@ import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals
 import { View } from './ui';
 import { mineralOpacity, skyAt } from './garden-settings';
 import type { LayerItem, LayerName, ProjectData, ViewState } from './model';
+
+declare const __CELLS_SYSTEM_CLIPBOARD__: boolean;
+const systemClipboard =
+    typeof __CELLS_SYSTEM_CLIPBOARD__ === 'boolean' ? __CELLS_SYSTEM_CLIPBOARD__ : true;
 import {
     simpleHash,
     PIXEL_SCALE, PLANT_SPACING, CLOUD_SCROLL_DURATION,
@@ -2509,17 +2513,21 @@ export class GardenView extends View {
         if (this._shortcutsInstalled) return;
         this._shortcutsInstalled = true;
         document.addEventListener('keydown', this.handleShortcut);
-        document.addEventListener('copy', this.handleCopy);
-        document.addEventListener('cut', this.handleCut);
-        document.addEventListener('paste', this.handlePaste);
+        if (systemClipboard) {
+            document.addEventListener('copy', this.handleCopy);
+            document.addEventListener('cut', this.handleCut);
+            document.addEventListener('paste', this.handlePaste);
+        }
     }
 
     private removeShortcuts() {
         this._shortcutsInstalled = false;
         document.removeEventListener('keydown', this.handleShortcut);
-        document.removeEventListener('copy', this.handleCopy);
-        document.removeEventListener('cut', this.handleCut);
-        document.removeEventListener('paste', this.handlePaste);
+        if (systemClipboard) {
+            document.removeEventListener('copy', this.handleCopy);
+            document.removeEventListener('cut', this.handleCut);
+            document.removeEventListener('paste', this.handlePaste);
+        }
     }
 
     private shortcutsBlocked(target: EventTarget | null): boolean {
@@ -2574,7 +2582,7 @@ export class GardenView extends View {
     }
 
     private handleCopy = (e: ClipboardEvent) => {
-        if (this.shortcutsBlocked(e.target)) return;
+        if (!systemClipboard || this.shortcutsBlocked(e.target)) return;
         const locs = this.selectedLocations();
         if (locs.length === 0) return;
         e.preventDefault();
@@ -2583,14 +2591,14 @@ export class GardenView extends View {
     };
 
     private handleCut = (e: ClipboardEvent) => {
-        if (this.shortcutsBlocked(e.target)) return;
+        if (!systemClipboard || this.shortcutsBlocked(e.target)) return;
         if (this.selectedLocations().length === 0) return;
         this.handleCopy(e);
         void this.deleteSelectedCells();
     };
 
     private handlePaste = (e: ClipboardEvent) => {
-        if (this.shortcutsBlocked(e.target)) return;
+        if (!systemClipboard || this.shortcutsBlocked(e.target)) return;
         if (this.selectedLocations().length === 0) return;
         const text = e.clipboardData?.getData('text/plain') ?? '';
         const ours = this._clipboardItems.map(i => i.content).join('\n');
@@ -2668,6 +2676,24 @@ export class GardenView extends View {
             this.clearSelection();
             (Array.from(list.querySelectorAll<HTMLElement>('.garden-item[data-id]'))).forEach(el => this.select(el));
             return;
+        }
+        // The Obsidian build deliberately never touches the system clipboard.
+        // Cmd/Ctrl+C/X/V still work there through this internal cell buffer.
+        if (mod && !systemClipboard) {
+            const lower = key.toLowerCase();
+            if (lower === 'c' || lower === 'x') {
+                const locs = this.selectedLocations();
+                if (locs.length === 0) return;
+                e.preventDefault();
+                this._clipboardItems = locs.map(l => ({ ...l.item }));
+                if (lower === 'x') void this.deleteSelectedCells();
+                return;
+            }
+            if (lower === 'v' && this._clipboardItems.length > 0 && this.selectedLocations().length > 0) {
+                e.preventDefault();
+                void this.insertItems(this._clipboardItems);
+                return;
+            }
         }
         if (mod || e.altKey) return;
 
