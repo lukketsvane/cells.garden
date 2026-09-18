@@ -49,6 +49,13 @@ jobs:
           if (/\.kanban-scroll-container\s+\.project-column\s*\{[^}]*grid-template-rows:\s*subgrid/s.test(css)) {
             throw new Error('Obsidian build still contains the shared-row kanban spacing');
           }
+          const js = fs.readFileSync('obsidian-plugin/main.js', 'utf8');
+          if (/navigator\.clipboard|\.clipboardData\b/.test(js)) {
+            throw new Error('Obsidian build still accesses the system clipboard');
+          }
+          if (/loadLocalStorage|saveLocalStorage/.test(js)) {
+            throw new Error('Obsidian build still uses legacy local storage APIs');
+          }
           NODE
       # A push made with the workflow's own token does not start the workflow again.
       - name: Commit the build if it changed
