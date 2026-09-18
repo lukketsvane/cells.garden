@@ -6,7 +6,7 @@ Free tier. Auth by email and password (an emailed link is the fallback), one row
 
 1. Create a project at supabase.com.
 2. SQL editor → run every file in `migrations/` in order. Each one is re-runnable.
-3. Authentication → URL configuration: **Site URL** `https://cells.garden/`; **Redirect URLs** `https://cells.garden/**`, `https://dev.cells.garden/**` and the Chrome Web Store build's `chrome-extension://cighiofbnmdgppphnofkgfoneldalbbf/newtab.html`. Magic links land on `/` and the client picks the session out of the URL.
+3. Authentication → URL configuration: **Site URL** `https://cells.garden/`; **Redirect URLs** `https://cells.garden/**`, `https://dev.cells.garden/**` the Chrome Web Store build's `chrome-extension://cighiofbnmdgppphnofkgfoneldalbbf/newtab.html`, Obsidian's `obsidian://cells-garden`, and `http://localhost:5173/**` and `5174` for development. **Google** is on under Sign In / Providers, with the OAuth client of the Google Cloud project `cells-garden` (consent screen in production, basic scopes only); its secret lives only in the Supabase dashboard. Magic links land on `/` and the client picks the session out of the URL.
 4. Authentication → Email: turn **"Confirm email" off**. The free tier sends only a handful of messages an hour before it refuses, so the app signs people in with a password and sends nothing. Leaving confirmation on still works, but every sign-up then waits for an email the project may not be able to send. The emailed link stays available as a fallback, and needs `{{ .Token }}` in the "Magic Link" template for the 6-digit code to work.
 5. Give the web build the two public values (never the secret key):
 
