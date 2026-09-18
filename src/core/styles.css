@@ -797,9 +797,9 @@
 }
 
 .kanban-scroll-container .project-column {
-    display: flex;
-    flex-direction: column;
+    display: grid;
     grid-row: 1 / -1;
+    grid-template-rows: subgrid;
     /* One track as wide as the column. Left implicit, the track grows to the
        longest word in it and a long name spills over the next plant. */
     grid-template-columns: minmax(0, 1fr);
@@ -830,12 +830,25 @@
 .kanban-scroll-container .garden-zone {
     /* Explicit, or the seed row's long area pushes roots and minerals into a
        column of their own. */
+    grid-column: 1;
     background: var(--background-secondary);
     border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.kanban-scroll-container .flowers-zone { border-radius: 4px 4px 0 0; }
-.kanban-scroll-container .minerals-zone { border-bottom: none; border-radius: 0 0 4px 4px; }
+.kanban-scroll-container .flowers-zone,
+.kanban-scroll-container .stem-zone {
+    align-self: end;
+}
+
+.kanban-scroll-container .roots-zone,
+.kanban-scroll-container .minerals-zone {
+    align-self: start;
+}
+
+.kanban-scroll-container .flowers-zone { grid-row: 1; border-radius: 4px 4px 0 0; }
+.kanban-scroll-container .stem-zone { grid-row: 2; }
+.kanban-scroll-container .roots-zone { grid-row: 4; }
+.kanban-scroll-container .minerals-zone { grid-row: 5; border-bottom: none; border-radius: 0 0 4px 4px; }
 
 /* Above the seed row the cells grow up from it: the label keeps the top of the
    band, lined up with the other plants, and the cells sit against the seed. */
@@ -854,6 +867,8 @@
    item can only move inside its own area, so the seed row's area runs from its
    band to the bottom of the column, and the row itself stays one line tall. */
 .kanban-scroll-container .seed-cell {
+    grid-row: 3 / -1;
+    align-self: start;
     min-height: 44px;
     margin: 0;
     background: var(--background-primary-alt);
