@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["obsidian-plugin", "src"],
+  "exclude": ["src/**/*.test.ts"]
+}

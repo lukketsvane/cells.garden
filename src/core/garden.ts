@@ -1392,6 +1392,42 @@ export class GardenView extends View {
 
     private _viewportObserver: ResizeObserver | null = null;
 
+    async onClose() {
+        this.removeShortcuts();
+        this._viewportObserver?.disconnect();
+        this._viewportObserver = null;
+        this.cancelSettle();
+        this.saveViewStateNow();
+
+        this.stopFireflies();
+        this.stopShootingStars();
+        this.stopAnt();
+        this.stopWorm();
+        this._renderDebounce = stop(this._renderDebounce);
+        this._skyUpdateInterval = stop(this._skyUpdateInterval);
+
+        for (const [type, fn] of [
+            ['mousemove', this.handleKanbanMouseMove],
+            ['mouseup', this.handleKanbanMouseUp],
+            ['mousemove', this.handleMouseMove],
+            ['mouseup', this.handleMouseUp],
+        ] as [string, EventListener][]) {
+            window.removeEventListener(type, fn);
+        }
+
+        const viewport = this.viewport;
+        if (!viewport) return;
+        for (const [type, fn] of [
+            ['mousedown', this.handleMouseDown],
+            ['wheel', this.handleWheel],
+            ['touchstart', this.handleTouchStart],
+            ['touchmove', this.handleTouchMove],
+            ['touchend', this.handleTouchEnd],
+            ['touchcancel', this.handleTouchEnd],
+        ] as [string, EventListener][]) {
+            viewport.removeEventListener(type, fn);
+        }
+    }
 
 
 
@@ -2405,6 +2441,13 @@ export class GardenView extends View {
         document.addEventListener('paste', this.handlePaste);
     }
 
+    private removeShortcuts() {
+        this._shortcutsInstalled = false;
+        document.removeEventListener('keydown', this.handleShortcut);
+        document.removeEventListener('copy', this.handleCopy);
+        document.removeEventListener('cut', this.handleCut);
+        document.removeEventListener('paste', this.handlePaste);
+    }
 
     private shortcutsBlocked(target: EventTarget | null): boolean {
         if (document.documentElement.dataset.context === 'popup') return true;

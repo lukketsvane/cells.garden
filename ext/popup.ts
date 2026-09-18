@@ -6,6 +6,7 @@
  */
 import '../src/core/shim';
 import '../src/web/app.css';
+import '../src/core/chrome.css';
 import '../src/core/ui.css';
 import '../src/core/styles.css';
 import './ext.css';
