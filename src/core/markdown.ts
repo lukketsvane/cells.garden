@@ -134,13 +134,14 @@ interface Frontmatter {
     minerals?: unknown[];
 }
 
-/** C0 control characters other than tab and line breaks; js-yaml refused them in any scalar. */
+/** C0 control characters other than tab and line breaks, anywhere in the frontmatter. */
 const CONTROL_CHARACTER = /[^\P{Cc}\t\n\r\x7F-\x9F]/u;
 
 /**
- * Frontmatter read as js-yaml's default schema read it: timestamps become
+ * Frontmatter read close to js-yaml's default schema: timestamps become
  * Dates, `<<` merges, a lone `\r` is a line break, and unknown tags, duplicate
- * keys or control characters refuse the file.
+ * keys or C0 control characters (also in comments) refuse the file. Unlike
+ * js-yaml, `0b101` stays a string and C1 controls pass.
  */
 function parseFrontmatter(src: string): Frontmatter | null {
     if (CONTROL_CHARACTER.test(src)) throw new Error('control character in frontmatter');

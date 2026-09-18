@@ -67,7 +67,7 @@ export class GardenGoneError extends Error {
     }
 }
 
-const CLAIM_KEY = `${LOCAL_KEY}/claimedBy`;
+export const CLAIM_KEY = `${LOCAL_KEY}/claimedBy`;
 
 /**
  * Which account the anonymous garden was uploaded to. It is only ever offered
