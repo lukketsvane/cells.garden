@@ -19,6 +19,10 @@ npm run typecheck:ext  # ext/ together with the src/core it imports
 
 The manifest is generated from `ext/manifest.ts` by the small plugin in `vite.ext.config.ts`. The version and description come from `package.json` (Chrome only accepts 1 to 4 dot-separated integers as a version), the icons from `ext/public/icons/` (`npm run icons` regenerates them from `public/icon.svg`), and the Supabase origin from the env, see below.
 
+## Chrome Web Store
+
+Item `cighiofbnmdgppphnofkgfoneldalbbf` (publisher iverfinne), submitted 18 September 2026 and published automatically once Google approves it. Its listing text, screenshots and promo tiles were made from the real extension. An update: bump `version` in `package.json`, `npm run build:ext`, zip the contents of `dist-ext/` (with `manifest.json` at the top), and upload it under Package in the developer dashboard. The store build's sign-in link lands on `chrome-extension://cighiofbnmdgppphnofkgfoneldalbbf/newtab.html`, which is on the Supabase redirect list.
+
 ## Load unpacked
 
 1. Open `chrome://extensions`.
