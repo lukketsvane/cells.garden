@@ -34,7 +34,11 @@ export default defineConfig(({ mode }) => {
         // Extension pages load their assets relative to themselves.
         base: './',
         publicDir: 'public',
-        define,
+        define: {
+            ...define,
+            __CELLS_BROWSER_STORAGE__: 'true',
+            __CELLS_SYSTEM_CLIPBOARD__: 'true',
+        },
         plugins: [
             extensionManifest({ version: pkg.version, description: pkg.description, supabaseUrl }),
         ],
