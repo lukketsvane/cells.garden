@@ -1,6 +1,7 @@
-# Keeps the committed Obsidian plugin build (obsidian-plugin/main.js and
-# styles.css) in step with the code, so pulling the repo is all it takes to
-# update the plugin in a vault that links to that folder.
+# Keeps the committed Obsidian plugin build (obsidian-plugin/) in step with the
+# code, so pulling the repo is all it takes to update the plugin in a vault that
+# links to that folder. On main it also publishes the GitHub release Obsidian's
+# plugin directory installs from, once per version in the root manifest.json.
 name: Build the Obsidian plugin
 
 on:
@@ -13,6 +14,7 @@ on:
       - 'package-lock.json'
       - 'vite.config.ts'
       - 'vite.obsidian.config.ts'
+      - 'manifest.json'
       - '.env'
 
 permissions:
@@ -36,7 +38,7 @@ jobs:
       # A push made with the workflow's own token does not start the workflow again.
       - name: Commit the build if it changed
         run: |
-          git add obsidian-plugin/main.js obsidian-plugin/styles.css
+          git add obsidian-plugin/main.js obsidian-plugin/styles.css obsidian-plugin/manifest.json
           if git diff --cached --quiet; then
             echo "The committed build is current."
             exit 0
@@ -44,3 +46,15 @@ jobs:
           git -c user.name=tastefinger -c user.email=41840333+lukketsvane@users.noreply.github.com \
             commit -m "Build the Obsidian plugin"
           git push
+      - name: Publish the release for a new version
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./manifest.json').version")
+          if gh release view "$version" >/dev/null 2>&1; then
+            echo "Release $version exists."
+            exit 0
+          fi
+          gh release create "$version" obsidian-plugin/main.js obsidian-plugin/manifest.json obsidian-plugin/styles.css \
+            --target "$(git rev-parse HEAD)" --title "$version" --notes "cells.garden for Obsidian, version $version."

@@ -1,4 +1,5 @@
-/* Modal + Setting — mirrors the Obsidian class names the garden modals use. */
+/* Modal + Setting: the web and extension stand-in for Obsidian's own styles of
+   these class names. Not part of the Obsidian plugin, where Obsidian styles them. */
 
 .modal-container {
     position: fixed;
@@ -7,7 +8,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    /* 16px, more where the notch or the home bar needs it. */
+    padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px))
+        max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
 }
 
 .modal-bg {
@@ -119,57 +122,11 @@
     color: #fff;
 }
 
-/* --- Shared gardens (M4) --- */
-
-/* A one-line notice over the garden, gone after a few seconds. */
-.garden-notice {
-    position: absolute;
-    left: 50%;
-    top: calc(52px + env(safe-area-inset-top, 0px));
-    transform: translateX(-50%);
-    max-width: calc(100% - 32px);
-    padding: 7px 14px;
-    border-radius: 999px;
-    background: var(--background-primary);
-    border: 1px solid var(--background-modifier-border);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-    color: var(--text-normal);
-    font-size: 13px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    z-index: 30;
-    pointer-events: none;
-}
-
-.auth-note {
-    font-weight: 600;
-}
-
-.share-modal .setting-item-control:has(.share-link) {
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.share-people {
-    margin-top: 12px;
-}
-
-.auth-pill.is-shared .auth-pill-label {
-    font-weight: 600;
-}
-
-.garden-shortcuts {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: 6px 16px;
-    align-items: baseline;
-    font-size: 13px;
-}
-
-.garden-shortcuts kbd {
-    font-family: var(--font-ui);
-    font-size: 12px;
-    color: var(--text-muted);
-    white-space: pre;
+/* iOS zooms into any field under 16px when it gains focus. */
+@media (pointer: coarse) {
+    .modal-container .modal input,
+    .modal-container .modal textarea,
+    .modal-container .modal select {
+        font-size: 16px;
+    }
 }

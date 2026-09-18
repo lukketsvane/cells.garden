@@ -9,7 +9,6 @@
 import { ItemView, Notice, Plugin } from 'obsidian';
 
 import '../src/core/shim';
-import '../src/core/ui.css';
 import '../src/core/styles.css';
 import '../src/core/chrome.css';
 import './plugin.css';
@@ -68,9 +67,6 @@ export default class CellsGardenPlugin extends Plugin {
         });
     }
 
-    async onunload() {
-        this.app.workspace.detachLeavesOfType(VIEW_TYPE);
-    }
 
     private async openGarden(): Promise<GardenTabView | null> {
         let leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE)[0];
