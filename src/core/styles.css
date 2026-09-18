@@ -1024,7 +1024,29 @@
 
 .settings-avatar {
     display: inline-flex;
-    margin-right: 8px;
+    margin: 0 8px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.settings-avatar:hover {
+    transform: scale(1.04);
+}
+
+.settings-avatar:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.settings-avatar:active {
+    transform: scale(0.96);
 }
 
 .settings-avatar .garden-avatar {
