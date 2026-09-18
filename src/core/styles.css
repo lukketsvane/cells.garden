@@ -2,8 +2,6 @@
 
 .garden-container {
     height: 100%;
-    padding: 0 !important;
-    margin: 0 !important;
 }
 
 .garden-split-container {
@@ -225,7 +223,6 @@
 .garden-worm-hitbox {
     position: absolute;
     z-index: 2;
-    pointer-events: auto;
     cursor: pointer;
 }
 
@@ -265,7 +262,8 @@
     transition: filter 0.2s ease;
 }
 
-.garden-part:hover {
+.garden-part:hover,
+.garden-part-highlighted {
     filter: brightness(1.4);
 }
 
@@ -284,10 +282,6 @@
    Animation
    ======================================== */
    
-.garden-part-highlighted {
-    filter: brightness(1.4);
-}
-
 .garden-part-bounce {
     animation: garden-bounce 0.4s ease;
 }
@@ -501,21 +495,15 @@
     flex-grow: 1;
     font-size: 13px; /* Matches header */
     font-weight: 600;
-    padding: 2px 4px;
+    padding: 6px 4px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     line-height: 1.4;
-    cursor: text;
+    cursor: default;
 }
 
 /* Seed Content Editable styles */
-.seed-content.draggable-cell {
-    text-align: left;
-    padding: 6px 4px;
-    cursor: default; /* Not grabbable */
-}
-
 /* 3-Dot Context Menu Button */
 .seed-context-btn {
     background: transparent;
@@ -610,7 +598,6 @@
 }
 
 .zone-add-btn:hover {
-    background: none;
     color: var(--text-normal);
 }
 
@@ -888,10 +875,6 @@
     align-self: stretch;
     height: auto;
     min-height: 44px;
-}
-
-.kanban-scroll-container .add-column-btn-inner {
-    top: 50%;
 }
 
 @media (max-width: 599px) {
