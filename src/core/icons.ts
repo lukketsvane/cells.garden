@@ -14,6 +14,10 @@ export const ICONS = {
     eyeOpen: `<svg ${stroke}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
     /** The plant's own menu. */
     dots: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg>`,
+    /** An arrow turning back: revert a setting to its default. */
+    reset: `<svg ${stroke}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`,
+    /** A cross: remove. */
+    close: `<svg ${stroke}><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>`,
     /** A pane split in two: show or hide the board. */
     board: `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.3"/></svg>`,
 };

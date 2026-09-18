@@ -1,5 +1,5 @@
 import type { Garden } from './model';
-import { DEFAULT_SETTINGS, emptyGarden } from './model';
+import { emptyGarden, settingsFrom } from './model';
 import { local } from './local';
 
 /**
@@ -49,7 +49,7 @@ export function gardenFrom(data: Partial<Garden>, updatedAt: string): Garden {
     return {
         version: 1,
         projects: Array.isArray(data.projects) ? data.projects : [],
-        settings: { ...DEFAULT_SETTINGS, ...(data.settings ?? {}) },
+        settings: settingsFrom(data.settings),
         updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : updatedAt,
     };
 }

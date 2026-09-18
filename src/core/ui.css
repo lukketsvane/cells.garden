@@ -122,6 +122,63 @@
     color: #fff;
 }
 
+.garden-settings .setting-item-control { align-items: center; }
+.setting-item-heading .setting-item-name { font-size: 16px; font-weight: 600; }
+.setting-item-control input[type="number"],
+.setting-item-control input[type="time"] {
+    width: 96px;
+    font: inherit;
+    font-size: 14px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary-alt);
+    color: var(--text-normal);
+}
+.setting-item-control input[type="color"] {
+    width: 36px;
+    height: 30px;
+    padding: 2px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: none;
+    cursor: pointer;
+}
+.extra-setting-button {
+    display: flex;
+    padding: 4px;
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+.extra-setting-button:hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.extra-setting-button svg { width: 16px; height: 16px; }
+
+/* A switch, standing in for Obsidian's toggle. */
+.checkbox-container {
+    position: relative;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--background-modifier-border);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.checkbox-container::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s ease;
+}
+.checkbox-container.is-enabled { background: var(--interactive-accent); }
+.checkbox-container.is-enabled::after { transform: translateX(16px); }
+
 /* iOS zooms into any field under 16px when it gains focus. */
 @media (pointer: coarse) {
     .modal-container .modal input,

@@ -3,6 +3,7 @@
  * Only the surface Max's modals use is implemented.
  */
 import './shim';
+import { setIcon } from './icons';
 
 /**
  * Obsidian's ItemView gave the garden a `containerEl` and a `contentEl`
@@ -83,13 +84,91 @@ class ButtonComponent {
     }
 }
 
+/** A choice from a list, answered on change. */
+class DropdownComponent {
+    selectEl: HTMLSelectElement;
+    constructor(containerEl: HTMLElement) {
+        this.selectEl = containerEl.createEl('select', { cls: 'dropdown' });
+    }
+    addOption(value: string, display: string) { this.selectEl.createEl('option', { text: display, attr: { value } }); return this; }
+    getValue() { return this.selectEl.value; }
+    setValue(value: string) { this.selectEl.value = value; return this; }
+    onChange(cb: (value: string) => void) {
+        this.selectEl.addEventListener('change', () => cb(this.selectEl.value));
+        return this;
+    }
+}
+
+/** An on/off switch, marked up the way Obsidian's is so its styles apply there. */
+class ToggleComponent {
+    toggleEl: HTMLElement;
+    private value = false;
+    private listeners: ((value: boolean) => void)[] = [];
+    constructor(containerEl: HTMLElement) {
+        this.toggleEl = containerEl.createDiv({ cls: 'checkbox-container', attr: { role: 'switch', tabindex: '0' } });
+        const flip = () => {
+            this.setValue(!this.value);
+            for (const cb of this.listeners) cb(this.value);
+        };
+        this.toggleEl.addEventListener('click', flip);
+        this.toggleEl.addEventListener('keydown', (e) => {
+            if (e.key !== ' ' && e.key !== 'Enter') return;
+            e.preventDefault();
+            flip();
+        });
+    }
+    getValue() { return this.value; }
+    setValue(on: boolean) {
+        this.value = on;
+        this.toggleEl.toggleClass('is-enabled', on);
+        this.toggleEl.setAttribute('aria-checked', String(on));
+        return this;
+    }
+    onChange(cb: (value: boolean) => void) { this.listeners.push(cb); return this; }
+}
+
+/** A colour well. Answers when a colour is chosen, not on every step of the drag. */
+class ColorComponent {
+    colorPickerEl: HTMLInputElement;
+    constructor(containerEl: HTMLElement) {
+        this.colorPickerEl = containerEl.createEl('input', { type: 'color' });
+    }
+    getValue() { return this.colorPickerEl.value; }
+    setValue(hex: string) { this.colorPickerEl.value = hex; return this; }
+    onChange(cb: (value: string) => void) {
+        this.colorPickerEl.addEventListener('change', () => cb(this.colorPickerEl.value));
+        return this;
+    }
+}
+
+/** A small icon button beside the control, for revert and remove. Takes the SVG itself (see icons.ts). */
+class ExtraButtonComponent {
+    extraSettingsEl: HTMLElement;
+    constructor(containerEl: HTMLElement) {
+        this.extraSettingsEl = containerEl.createDiv({ cls: 'clickable-icon extra-setting-button', attr: { role: 'button', tabindex: '0' } });
+    }
+    setIcon(svg: string) { setIcon(this.extraSettingsEl, svg); return this; }
+    setTooltip(tooltip: string) { this.extraSettingsEl.setAttribute('aria-label', tooltip); this.extraSettingsEl.title = tooltip; return this; }
+    onClick(cb: () => unknown) {
+        this.extraSettingsEl.addEventListener('click', () => cb());
+        this.extraSettingsEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                cb();
+            }
+        });
+        return this;
+    }
+}
+
 export class Setting {
+    settingEl: HTMLElement;
     nameEl: HTMLElement;
     descEl: HTMLElement;
     controlEl: HTMLElement;
 
     constructor(containerEl: HTMLElement) {
-        const settingEl = containerEl.createDiv('setting-item');
+        const settingEl = this.settingEl = containerEl.createDiv('setting-item');
         const infoEl = settingEl.createDiv('setting-item-info');
         this.nameEl = infoEl.createDiv('setting-item-name');
         this.descEl = infoEl.createDiv('setting-item-description');
@@ -100,4 +179,9 @@ export class Setting {
     addText(cb: (text: InputComponent<HTMLInputElement>) => void) { cb(new InputComponent(this.controlEl.createEl('input', { type: 'text' }))); return this; }
     addTextArea(cb: (text: InputComponent<HTMLTextAreaElement>) => void) { cb(new InputComponent(this.controlEl.createEl('textarea'))); return this; }
     addButton(cb: (button: ButtonComponent) => void) { cb(new ButtonComponent(this.controlEl)); return this; }
+    addDropdown(cb: (dropdown: DropdownComponent) => void) { cb(new DropdownComponent(this.controlEl)); return this; }
+    addToggle(cb: (toggle: ToggleComponent) => void) { cb(new ToggleComponent(this.controlEl)); return this; }
+    addColorPicker(cb: (color: ColorComponent) => void) { cb(new ColorComponent(this.controlEl)); return this; }
+    addExtraButton(cb: (button: ExtraButtonComponent) => void) { cb(new ExtraButtonComponent(this.controlEl)); return this; }
+    setHeading() { this.settingEl.addClass('setting-item-heading'); return this; }
 }

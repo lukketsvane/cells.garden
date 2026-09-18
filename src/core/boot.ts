@@ -266,7 +266,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
             { label: 'Export or import', onClick: () => openGardenFiles(app) },
             {
                 label: 'Settings',
-                onClick: () => new SettingsModal(uid ? { client: supabase, userId: uid, onAvatar: (seed) => pill.setAvatar(seed) } : null).open(),
+                onClick: () => new SettingsModal(uid ? { client: supabase, userId: uid, onAvatar: (seed) => pill.setAvatar(seed) } : null, app).open(),
             },
         ];
         if (!uid || !(await sharingAvailable(supabase))) return common;
