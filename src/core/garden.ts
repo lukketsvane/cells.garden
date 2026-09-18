@@ -210,7 +210,20 @@ export class GardenView extends View {
             this._touchTap = null;
             const end = e.changedTouches[0];
             if (tap && end && Math.hypot(end.clientX - tap.x, end.clientY - tap.y) < 8 && performance.now() - tap.t < 400) {
-                this.peekTap(end.clientX, end.clientY);
+                // touchstart is preventDefault()'d so iOS does not reliably synthesize
+                // the click listener attached to a plant part. Resolve the part under
+                // the lifted finger and focus its board cell directly.
+                const target = this.containerEl.ownerDocument.elementFromPoint(end.clientX, end.clientY) as HTMLElement | null;
+                const part = target?.closest<HTMLElement>('.garden-part[data-item-id]') ?? null;
+                const wrapper = part?.closest<HTMLElement>('.garden-plant-wrapper') ?? null;
+                const itemId = part?.dataset.itemId;
+                const projectId = wrapper?.dataset.projectId;
+                if (!this.boardHidden() && part && itemId && projectId) {
+                    if (part.matches('.garden-stem-part, .garden-flower-part')) this.scareFireflies(projectId);
+                    this.focusKanbanCell(itemId, projectId);
+                } else {
+                    this.peekTap(end.clientX, end.clientY, target ?? e.target);
+                }
             }
             this.isTouchPanning = false;
             this.isPinching = false;
@@ -2222,36 +2235,58 @@ export class GardenView extends View {
     }
 
     
+    /** Find the board copy of one cell without relying on CSS-escaped ids. */
+    private kanbanCell(itemId: string, projectId: string): HTMLElement | null {
+        const board = this.containerEl.querySelector<HTMLElement>('.kanban-scroll-container');
+        if (!board) return null;
+        const column = Array.from(board.querySelectorAll<HTMLElement>('.project-column'))
+            .find((el) => el.dataset.projectId === projectId);
+        if (!column) return null;
+        return Array.from(column.querySelectorAll<HTMLElement>('.garden-item, .seed-content'))
+            .find((el) => el.dataset.id === itemId) ?? null;
+    }
+
+    /** Bring a plant part's corresponding card cell into view and make it unmistakable. */
+    private focusKanbanCell(itemId: string, projectId: string): boolean {
+        const cell = this.kanbanCell(itemId, projectId);
+        if (!cell) return false;
+
+        cell.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        cell.addClass('is-focus-highlighted');
+        cell.addClass('is-click-flash');
+
+        // A later tap on the same cell owns the highlight timer.
+        const token = String(performance.now());
+        cell.dataset.focusToken = token;
+        window.setTimeout(() => {
+            if (cell.dataset.focusToken !== token) return;
+            delete cell.dataset.focusToken;
+            cell.removeClass('is-focus-highlighted');
+            cell.removeClass('is-click-flash');
+        }, 900);
+        return true;
+    }
+
     private attachPlantPartEvents(partDiv: HTMLElement, itemId: string, projectId: string) {
         // Only scare fireflies if interacting with above-ground parts!
         const isAboveGround = partDiv.classList.contains('garden-stem-part') || partDiv.classList.contains('garden-flower-part');
 
         partDiv.addEventListener('mouseenter', () => {
             if (isAboveGround) this.scareFireflies(projectId);
-            const cell = this.containerEl.querySelector<HTMLElement>(`.garden-item[data-id="${itemId}"], .seed-content[data-id="${itemId}"]`);
+            const cell = this.kanbanCell(itemId, projectId);
             if (cell) cell.addClass('is-hover-highlighted');
         });
 
         partDiv.addEventListener('mouseleave', () => {
-            const cell = this.containerEl.querySelector<HTMLElement>(`.garden-item[data-id="${itemId}"], .seed-content[data-id="${itemId}"]`);
+            const cell = this.kanbanCell(itemId, projectId);
             if (cell) cell.removeClass('is-hover-highlighted');
         });
 
         partDiv.addEventListener('click', (e) => {
             e.stopPropagation();
             if (isAboveGround) this.scareFireflies(projectId);
-            const cell = this.containerEl.querySelector<HTMLElement>(`.garden-item[data-id="${itemId}"], .seed-content[data-id="${itemId}"]`);
-            if (cell) {
-                // Smoothly center the cell in the Kanban scroll container
-                cell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                
-                // Trigger the flash animation
-                cell.addClass('is-click-flash');
-                window.setTimeout(() => cell.removeClass('is-click-flash'), 800);
-            }
+            this.focusKanbanCell(itemId, projectId);
         });
-
-
     }
 
     /**
