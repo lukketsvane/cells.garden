@@ -2046,6 +2046,11 @@ export class GardenView extends View {
         addRightBtn.onclick = () => this.createNewProject('right');
 
         this.syncKanbanSeedLine(scrollContainer);
+        // Text wrapping/font metrics can settle one frame later (especially on iOS).
+        // Re-anchor once more after layout so the seed horizon is exact.
+        (this.containerEl.ownerDocument.defaultView || window).requestAnimationFrame(() => {
+            if (scrollContainer.isConnected) this.syncKanbanSeedLine(scrollContainer);
+        });
 
         Sortable.create(scrollContainer, {
             animation: 150,
@@ -2064,8 +2069,17 @@ export class GardenView extends View {
 
     
     /**
-     * Keep every seed row on one horizon without reintroducing the old subgrid
-     * gaps between Flowers and Stem. Only the whole above-seed stack is equalised.
+     * A kanban column is the plant abstracted into blocks:
+     *
+     *   Flowers / Stem  grow upward
+     *   Seed            is the shared horizon
+     *   Roots / Minerals grow downward
+     *
+     * Do not stretch the short plant's top stack to match a tall neighbour. That
+     * creates the "blocks floating in the air" gap. Instead move the whole short
+     * card down by exactly the difference between its natural above-ground height
+     * and the tallest one. The blocks stay magnetically packed while every seed
+     * lands on the same horizontal line.
      */
     private syncKanbanSeedLine(scrollContainer: HTMLElement) {
         const columns = Array.from(scrollContainer.querySelectorAll<HTMLElement>(':scope > .project-column'));
@@ -2074,17 +2088,22 @@ export class GardenView extends View {
             return;
         }
 
-        const topHalves = columns
-            .map(column => column.querySelector<HTMLElement>('.column-top-half'))
-            .filter((el): el is HTMLElement => !!el);
+        // Clear our previous offsets before measuring natural card heights.
+        for (const column of columns) column.style.marginTop = '';
 
-        for (const top of topHalves) top.style.minHeight = '';
-        const seedOffset = Math.max(0, ...topHalves.map(top => top.scrollHeight));
-        for (const top of topHalves) top.style.minHeight = `${seedOffset}px`;
+        const above = columns.map(column => {
+            const top = column.querySelector<HTMLElement>('.column-top-half');
+            return { column, height: top?.getBoundingClientRect().height ?? 0 };
+        });
+        const tallestAbove = Math.max(0, ...above.map(({ height }) => height));
+
+        for (const { column, height } of above) {
+            column.style.marginTop = `${Math.max(0, tallestAbove - height)}px`;
+        }
 
         const win = this.containerEl.ownerDocument.defaultView || window;
         const columnPaddingTop = parseFloat(win.getComputedStyle(columns[0]).paddingTop) || 0;
-        scrollContainer.style.setProperty('--kanban-seed-offset', `${columnPaddingTop + seedOffset}px`);
+        scrollContainer.style.setProperty('--kanban-seed-offset', `${columnPaddingTop + tallestAbove}px`);
     }
 
 

@@ -810,22 +810,18 @@
 
 /* Default grab cursor */
 /* ========================================
-   THE BOARD: compact card stacks
-   Each plant owns its vertical spacing. A tall plant no longer makes shorter
-   neighbours reserve empty flower/stem bands above their cards.
+   THE BOARD: seed-anchored plant stacks
+   The seed is the horizon. Above-ground blocks pack upward from it; below-ground
+   blocks pack downward. Short plants move down as a whole instead of growing
+   empty space inside their cards.
    ======================================== */
 
 .kanban-scroll-container {
-    display: grid;
+    display: flex;
+    align-items: flex-start;
     height: 100%;
     min-height: 0;
     overflow: auto;
-    grid-auto-flow: column;
-    /* A plant is exactly its column width, the add-a-plant buttons only as
-       wide as themselves. */
-    grid-auto-columns: min-content;
-    grid-template-rows: auto auto auto auto auto 1fr;
-    align-items: start;
     background: var(--background-primary);
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
@@ -837,9 +833,8 @@
 
 .kanban-scroll-container .project-column {
     display: flex;
+    flex: 0 0 var(--garden-column-width, 255px);
     flex-direction: column;
-    grid-row: 1 / -1;
-    align-self: stretch;
     width: var(--garden-column-width, 255px);
     min-width: 0;
     min-height: 0;
@@ -848,8 +843,13 @@
     box-shadow: none;
 }
 
-/* The wrappers use their ordinary flex/card layout here. Keeping them out of
-   the board grid is what makes every card start at its own top edge. */
+/* The visible blocks keep their natural height. The JS seed-anchor only offsets
+   the whole column; it never inserts space between Flowers, Stem and the seed. */
+.kanban-scroll-container .column-top-half,
+.kanban-scroll-container .column-bottom-half {
+    flex: none;
+}
+
 .kanban-scroll-container .garden-zone {
     pointer-events: auto;
 }
@@ -872,15 +872,10 @@
     border-radius: 4px;
 }
 
-/* Keep one seed horizon while preserving compact spacing inside each plant.
-   JS equalises only the combined Flowers+Stem stack, not every individual row. */
-.kanban-scroll-container .column-top-half {
-    min-height: var(--kanban-seed-stack, auto);
-}
-
+/* The + plant controls belong on the same soil/seed horizon, never at the top
+   of the strip. --kanban-seed-offset is the natural tallest above-ground stack. */
 .kanban-scroll-container:not(.is-empty) .add-column-btn {
-    grid-row: 1 / -1;
-    align-self: start;
+    align-self: flex-start;
     height: 44px;
     min-height: 44px;
     margin-top: var(--kanban-seed-offset, 8px);
