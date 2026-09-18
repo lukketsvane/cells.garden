@@ -1,7 +1,8 @@
 /*
  * The garden inside an Obsidian tab. The theme comes from Obsidian; this only
  * fits the app into the pane: no padding, and the corner controls sit in the
- * tab instead of the window.
+ * tab instead of the window. The kanban layout itself comes from
+ * src/core/styles.css, so the Obsidian build stays identical to the web app.
  */
 .view-content.cells-garden-host {
     position: relative;
