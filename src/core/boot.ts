@@ -10,7 +10,7 @@ import { GardenApp } from './app';
 import { AuthPill, type AuthOptions } from './auth';
 import type { MenuItem } from './menu';
 import { PlantSync } from './plants';
-import { LeaveGardenModal, ShareGardenModal } from './share';
+import { GardenQuestionModal, NewSpaceModal, ShareGardenModal } from './share';
 import { SharePlantModal } from './share-plant';
 import { FriendsModal } from './friends';
 import { applyScene } from './scene';
@@ -22,6 +22,9 @@ import {
     joinPlant,
     listPlantOffers,
     type SharedPlantRow,
+    createSpace,
+    deleteSpace,
+    listOwnSpaces,
     listSharedGardens,
     ownGardenId,
     plantTokenFromHash,
@@ -270,11 +273,14 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
             },
         ];
         if (!uid || !(await sharingAvailable(supabase))) return common;
-        const gardens = await listSharedGardens(supabase, uid);
+        const [gardens, spaces] = await Promise.all([listSharedGardens(supabase, uid), listOwnSpaces(supabase, uid)]);
         const items: MenuItem[] = [];
-        if (gardens.length > 0) {
+        if (gardens.length + spaces.length > 0) {
             items.push({ label: 'Gardens', heading: true });
             items.push({ label: 'My garden', active: !shared, onClick: () => { openGarden(uid, null).catch(fail); } });
+            for (const s of spaces) {
+                items.push({ label: s.name, active: shared?.id === s.id, onClick: () => { openGarden(uid, s).catch(fail); } });
+            }
             for (const g of gardens) {
                 items.push({
                     label: g.name,
@@ -290,7 +296,39 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
             sub: offers.length ? `${offers.length} new` : undefined,
             onClick: () => new FriendsModal(supabase, uid, plantOffered).open(),
         });
-        if (!shared) {
+        items.push({
+            label: 'New garden space',
+            onClick: () => new NewSpaceModal(async (name) => {
+                try {
+                    await openGarden(uid, await createSpace(supabase, uid, name));
+                } catch (e) {
+                    notify(host, `Could not make the space: ${(e as Error).message}`);
+                }
+            }).open(),
+        });
+        const ownSpace = shared && spaces.find(s => s.id === shared?.id);
+        if (ownSpace) {
+            items.push({ label: 'Share garden', onClick: () => new ShareGardenModal(supabase, ownSpace.id, ownSpace.name).open() });
+            items.push({
+                label: 'Delete garden space',
+                danger: true,
+                onClick: () => new GardenQuestionModal(
+                    `Delete ${ownSpace.name}?`,
+                    'Its plants go too, for everyone who shares it.',
+                    'Delete',
+                    async () => {
+                        try {
+                            // Leave it first, so nothing saves into a row that is going away.
+                            await openGarden(uid, null);
+                            await deleteSpace(supabase, ownSpace.id);
+                            notify(host, `Deleted ${ownSpace.name}.`);
+                        } catch (e) {
+                            fail(e);
+                        }
+                    },
+                ).open(),
+            });
+        } else if (!shared) {
             items.push({
                 label: 'Share garden',
                 onClick: async () => {
@@ -312,7 +350,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
             items.push({
                 label: 'Leave garden',
                 danger: true,
-                onClick: () => new LeaveGardenModal(leaving.name, async () => {
+                onClick: () => new GardenQuestionModal(`Leave ${leaving.name}?`, 'You can come back with a new link.', 'Leave', async () => {
                     try {
                         await removeMember(supabase, leaving.id, uid);
                         notify(host, `Left ${leaving.name}.`);
