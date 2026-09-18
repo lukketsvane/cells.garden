@@ -7,6 +7,7 @@ import { local } from './local';
 import { openMenu, type MenuItem } from './menu';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
+import { mineralOpacity, skyAt } from './garden-settings';
 import type { LayerItem, LayerName, ProjectData, ViewState } from './model';
 import {
     simpleHash,
@@ -46,9 +47,10 @@ const STAR_LIFE = 25;
 // The smallest sky and ground the world ever has, whatever the plants do.
 const BASE_SKY = 520;
 const BASE_GROUND = 400;
-// Squares in the worm, and fireflies over the garden.
+// Squares in the worm.
 const WORM_LENGTH = 7;
-const FIREFLY_COUNT = 8;
+// The most fireflies a garden setting can ask for.
+const MAX_FIREFLIES = 64;
 
 /** Cancel a timer or interval and hand back null, so `x = stop(x)` clears it. */
 function stop(handle: number | null): null {
@@ -58,22 +60,6 @@ function stop(handle: number | null): null {
     }
     return null;
 }
-
-/**
- * The sky through the day, as Scandinavia in July: a midnight sun that never
- * goes properly dark, only dips through a short twilight around midnight.
- * Each keyframe is the sky at that hour; in between, the two are mixed.
- */
-const SKY: { hour: number; color: [number, number, number]; stars: number }[] = [
-    { hour: 0, color: [0, 0, 0], stars: 0.35 },          // twilight, holding
-    { hour: 2.5, color: [0, 0, 0], stars: 0.35 },        // the deepest it gets
-    { hour: 4, color: [137, 224, 155], stars: 0 },       // dawn
-    { hour: 6, color: [135, 206, 235], stars: 0 },       // clear sky
-    { hour: 18, color: [135, 206, 235], stars: 0 },      // twelve hours of it
-    { hour: 20, color: [232, 188, 95], stars: 0 },       // warm orange dusk
-    { hour: 22, color: [0, 0, 0], stars: 0.35 },         // back to twilight
-    { hour: 24, color: [0, 0, 0], stars: 0.35 },
-];
 
 /** An image, once the browser knows its size. A broken one resolves too, at 0x0. */
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -864,7 +850,8 @@ export class GardenView extends View {
         this.fireflyState = [];
         parent.empty();
 
-        for (let i = 0; i < FIREFLY_COUNT; i++) {
+        const count = Math.min(MAX_FIREFLIES, Math.max(0, Math.round(this.app.settings.fireflies) || 0));
+        for (let i = 0; i < count; i++) {
             const el = parent.createDiv("garden-firefly");
 
             const cx = Math.random() * parent.offsetWidth;
@@ -2195,24 +2182,10 @@ export class GardenView extends View {
         };
     }
 
-    /**
-     * The sky right now: a colour and how far the stars have come out. Read
-     * off SKY, one keyframe an hour, interpolated between the two the clock
-     * falls between.
-     */
+    /** The sky right now: a colour and how far the stars have come out (the garden's sky settings). */
     private getDayNightState(): { skyColor: string; starOpacity: number } {
         const now = new Date();
-        const hour = now.getHours() + now.getMinutes() / 60;
-        const next = SKY.findIndex(k => k.hour > hour);
-        const to = SKY[next === -1 ? SKY.length - 1 : next];
-        const from = SKY[Math.max(0, (next === -1 ? SKY.length : next) - 1)];
-        const span = to.hour - from.hour;
-        const t = span > 0 ? (hour - from.hour) / span : 0;
-        const mix = (a: number, b: number) => a + (b - a) * t;
-        return {
-            skyColor: `rgb(${from.color.map((c, i) => Math.round(mix(c, to.color[i]))).join(', ')})`,
-            starOpacity: mix(from.stars, to.stars),
-        };
+        return skyAt(this.app.settings, now.getHours() + now.getMinutes() / 60);
     }
 
     /** A sprite's size on screen. A missing or unreadable one falls back to a stem's. */
@@ -2291,6 +2264,12 @@ export class GardenView extends View {
         // Standby paints the whole plant one colour, so a hue on top of it would fight it.
         stemContainer.style.filter = project.standby ? 'none' : `hue-rotate(${project.hue ?? 0}deg)`;
         stemContainer.toggleClass('is-standby-plant', !!project.standby);
+        const settings = this.app.settings;
+        if (project.standby && settings.silhouetteOpacity !== 100) {
+            stemContainer.style.opacity = String(Math.min(100, Math.max(0, settings.silhouetteOpacity)) / 100);
+        }
+        // A silhouette in a colour of the garden's choosing: the sprite as a mask over that colour.
+        const tint = project.standby && /^#[0-9a-f]{6}$/i.test(settings.silhouetteColor) ? settings.silhouetteColor : null;
 
         let maxWidth = 0;
 
@@ -2315,11 +2294,18 @@ export class GardenView extends View {
 
             const { width, height } = await this.getImageDimensions(url);
             maxWidth = Math.max(maxWidth, width);
-            el.style.backgroundImage = url ? `url(${url})` : 'none';
+            if (tint && url && (type === 'stem' || type === 'flower')) {
+                el.addClass('is-tinted');
+                el.style.backgroundColor = tint;
+                el.style.setProperty('mask-image', `url(${url})`);
+            } else {
+                el.style.backgroundImage = url ? `url(${url})` : 'none';
+            }
             el.style.width = `${width}px`;
             el.style.height = `${height}px`;
             el.style.top = `${top(height)}px`;
             el.style.transform = flipped ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%)';
+            return el;
         };
 
         // Above ground, nearest the horizon first: stems, then flowers on top.
@@ -2333,12 +2319,17 @@ export class GardenView extends View {
 
         await part('seed', { id: project.id, imagePath: project.seedImagePath }, () => 0, false);
 
-        // Below ground, a root and a mineral share each step. Standby keeps the roots only.
+        // Below ground, a root and a mineral share each step. Standby keeps the roots only, unless the garden says otherwise.
         const depth = Math.max(project.roots.length, project.minerals.length);
+        const showMinerals = !project.standby || !settings.standbyHidesMinerals;
         for (let i = 0; i < depth; i++) {
             const y = (i + 1) * FIXED_STACK_STEP;
             if (project.roots[i]) await part('root', project.roots[i], () => y, i % 2 !== 0);
-            if (project.minerals[i] && !project.standby) await part('mineral', project.minerals[i], () => y, i % 2 !== 0);
+            if (project.minerals[i] && showMinerals) {
+                const el = await part('mineral', project.minerals[i], () => y, i % 2 !== 0);
+                const opacity = mineralOpacity(settings, i, project.minerals.length);
+                if (opacity < 1) el.style.opacity = String(opacity);
+            }
         }
 
         // Centre the plant on its anchor, and leave the width where the fireflies can read it.

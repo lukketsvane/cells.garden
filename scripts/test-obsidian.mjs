@@ -2,8 +2,8 @@
 // Smoke test of the Obsidian plugin build in obsidian-plugin/. Obsidian itself
 // cannot run here, so the built main.js is loaded into Chromium behind a small
 // stand-in for the parts of Obsidian's API the plugin uses (Plugin, ItemView,
-// Notice, the workspace and the vault). It checks that the plugin loads, the
-// Open garden command puts the garden in a tab with the sign-in pill, the vault
+// Notice, the workspace and the vault). It checks that the plugin
+// loads, the Open garden command puts the garden in a tab with the sign-in pill, the vault
 // import command brings a Garden-Cells/ plant in, the garden keeps its device
 // storage in the vault's storage (copying the old shared keys once), and Obsidian
 // closing the tab tears the garden down without errors. Run with "npm run test:obsidian".
