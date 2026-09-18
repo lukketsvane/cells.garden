@@ -4,6 +4,7 @@
  * same person looks the same on every device. The picture is a small pixel
  * sprite in the garden's style, mirrored like a seed head, inside a circle.
  */
+import './shim';
 import { setIcon } from './icons';
 
 /** A string to a 32-bit seed (FNV-1a). */
@@ -61,8 +62,7 @@ function avatarSvg(seed: string, size = 24): string {
 
 /** An element holding the avatar, for lists and the pill. */
 export function avatarEl(seed: string, size = 24, cls = 'garden-avatar'): HTMLElement {
-    const el = document.createElement('span');
-    el.className = cls;
+    const el = createSpan(cls);
     setIcon(el, avatarSvg(seed, size));
     return el;
 }

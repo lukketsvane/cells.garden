@@ -31,8 +31,7 @@ export class Modal {
     };
 
     constructor() {
-        this.containerEl = document.createElement('div');
-        this.containerEl.addClass('modal-container');
+        this.containerEl = createDiv('modal-container');
 
         const bg = this.containerEl.createDiv('modal-bg');
         bg.addEventListener('click', () => this.close());

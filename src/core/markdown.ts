@@ -18,7 +18,7 @@
  *  - **Line breaks in a cell.** One list item is one line. Anything multi-line
  *    is flattened to spaces, as the plugin already does for the seed.
  */
-import { load as parseYaml } from 'js-yaml';
+import { parseDocument } from 'yaml';
 import type { LayerItem, ProjectData } from './model';
 import { simpleHash } from './model';
 
@@ -134,6 +134,23 @@ interface Frontmatter {
     minerals?: unknown[];
 }
 
+/** C0 control characters other than tab and line breaks; js-yaml refused them in any scalar. */
+const CONTROL_CHARACTER = /[^\P{Cc}\t\n\r\x7F-\x9F]/u;
+
+/**
+ * Frontmatter read as js-yaml's default schema read it: timestamps become
+ * Dates, `<<` merges, a lone `\r` is a line break, and unknown tags, duplicate
+ * keys or control characters refuse the file.
+ */
+function parseFrontmatter(src: string): Frontmatter | null {
+    if (CONTROL_CHARACTER.test(src)) throw new Error('control character in frontmatter');
+    const doc = parseDocument(src.replace(/\r\n?/g, '\n'), { customTags: ['timestamp'], merge: true });
+    const problem = doc.errors[0] ?? doc.warnings[0];
+    if (problem) throw problem;
+    const data: unknown = doc.toJS();
+    return data as Frontmatter | null;
+}
+
 /** Unique enough that two id-less files imported in the same millisecond differ. */
 let importCounter = 0;
 function fallbackProjectId(basename: string): string {
@@ -150,7 +167,7 @@ export function markdownToProject(contents: string, basename: string): ProjectDa
 
     let fm: Frontmatter;
     try {
-        fm = (parseYaml(fmMatch[1]) ?? {}) as Frontmatter;
+        fm = parseFrontmatter(fmMatch[1]) ?? {};
     } catch (e) {
         console.error("Garden Cells: frontmatter parse failed", basename, e);
         return null;
@@ -170,7 +187,7 @@ export function markdownToProject(contents: string, basename: string): ProjectDa
     if (isNewFormat) {
         const bodyMatch = contents.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?([\s\S]*)$/);
         const body = bodyMatch ? bodyMatch[1] : '';
-        const images = (fm.images || {}) as Record<string, string[]>;
+        const images = fm.images || {};
 
         // Parse body by splitting on ## headings (no regex $+m bug)
         const sections: Record<string, string> = {};

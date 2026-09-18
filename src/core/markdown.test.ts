@@ -264,6 +264,75 @@ test('a missing seed falls back to the file name', () => {
     assert.equal(back?.seed, 'From the file name');
 });
 
+// --- The YAML reader ------------------------------------------------------
+// These pin what js-yaml's default schema returned, which the reader keeps.
+
+/** A file shaped the way Max's plugin writes it: quotes escaped, nothing else. */
+function maxFile(frontmatter: string[], body: string[] = []): string {
+    return ['---', ...frontmatter, '---', ...(body.length ? ['', ...body] : [])].join('\n');
+}
+
+test('a file written by Max\'s plugin reads field by field', () => {
+    const back = markdownToProject(maxFile([
+        'id: proj_1712345678901',
+        'type: garden-cell',
+        'seed: "Say \\"hi\\" to the garden"',
+        'hue: 214',
+        'order: 3',
+        'plantType: plant_2',
+        `seedImagePath: "${ASSET_FOLDER}/seeds/seed_2.png"`,
+        'standby: true',
+        'images:',
+        `  flowers: ["${ASSET_FOLDER}/plant_2/flowers/f1.png"]`,
+        '  stem: ["", ""]',
+        '  roots: []',
+        '  minerals: []',
+    ], ['## Flowers', '- **Done**', '', '## Stem', '- One', '- Two']), 'Say hi to the garden');
+    assert.ok(back);
+    assert.deepEqual(comparable(back), {
+        id: 'proj_1712345678901',
+        seed: 'Say "hi" to the garden',
+        standby: true,
+        hue: 214,
+        order: 3,
+        plantType: 'plant_2',
+        seedImagePath: 'seeds/seed_2.png',
+        flowers: [{ content: 'Done', imagePath: 'plant_2/flowers/f1.png', highlighted: true }],
+        stem: [{ content: 'One', imagePath: undefined, highlighted: undefined }, { content: 'Two', imagePath: undefined, highlighted: undefined }],
+        roots: [],
+        minerals: [],
+    });
+});
+
+test('scalars resolve as js-yaml resolved them', () => {
+    const read = (lines: string[]) => markdownToProject(maxFile(['type: garden-cell', 'images:', ...lines]), 'File');
+    assert.equal(read(['hue: 0x1F'])?.hue, 31);
+    assert.equal(read(['hue: 1e3'])?.hue, 1000);
+    assert.equal(read(['hue: "12"'])?.hue, 0);
+    assert.equal(read(['standby: True'])?.standby, true);
+    assert.equal(read(['standby: yes'])?.standby, false);
+    assert.equal(read(['id: 12345'])?.id, 12345);
+    // A bare date is a Date, not a string, so it is no seed.
+    assert.equal(read(['seed: 2024-01-01'])?.seed, 'File');
+    assert.ok((read(['id: 2024-01-01'])?.id as unknown) instanceof Date);
+    assert.equal(read(['<<: {hue: 7}'])?.hue, 7);
+    assert.equal(read(['seed: "a\r b"'])?.seed, 'a b');
+});
+
+test('frontmatter js-yaml refused is still refused', () => {
+    const read = (lines: string[]) => markdownToProject(maxFile(['type: garden-cell', 'images:', ...lines]), 'File');
+    assert.equal(read(['hue: 1', 'hue: 2']), null, 'duplicate key');
+    assert.equal(read(['seed: !custom x']), null, 'unknown tag');
+    assert.equal(read(['seed: "a\u0001b"']), null, 'control character');
+    // Max's plugin does not escape backslashes, so this seed never parsed.
+    assert.equal(read(['seed: "C:\\Users\\Iver"']), null, 'bad escape');
+});
+
+test('an empty frontmatter is not a garden cell', () => {
+    assert.equal(markdownToProject('---\n\n---\n', 'Empty'), null);
+    assert.equal(markdownToProject('---\n# only a comment\n---\n', 'Empty'), null);
+});
+
 // --- File names -----------------------------------------------------------
 
 test('the file name is the plugin\'s file name', () => {

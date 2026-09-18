@@ -2893,7 +2893,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 this.live(project).standby = false;
                 void this.save();
             } else {
-                this.showSeedContextMenu(e as MouseEvent, project);
+                this.showSeedContextMenu(e, project);
             }
         };
 
@@ -3158,8 +3158,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         if (!list) return;
         list.querySelector('.garden-item.is-draft')?.remove();
 
-        const draft = document.createElement('div');
-        draft.className = 'garden-item draggable-cell is-editing is-draft';
+        const draft = createDiv('garden-item draggable-cell is-editing is-draft');
         draft.dataset.placeholder = placeholders[arrayName] ?? '';
         draft.contentEditable = 'true';
         list.prepend(draft);

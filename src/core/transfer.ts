@@ -41,7 +41,7 @@ async function gardenArchive(app: GardenApp): Promise<{ name: string; bytes: Uin
 function saveToDisk(name: string, bytes: Uint8Array) {
     // A standalone copy of the bytes: a Blob must not be handed a view onto a
     // buffer that something else may still be writing into.
-    const blob = new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/zip' });
+    const blob = new Blob([bytes.slice().buffer], { type: 'application/zip' });
     const url = URL.createObjectURL(blob);
     const link = document.body.createEl('a', { attr: { href: url, download: name } });
     link.click();
