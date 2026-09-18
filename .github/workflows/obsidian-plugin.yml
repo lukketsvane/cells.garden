@@ -11,6 +11,7 @@ on:
       - 'obsidian-plugin/**'
       - 'package.json'
       - 'package-lock.json'
+      - 'vite.config.ts'
       - 'vite.obsidian.config.ts'
       - '.env'
 

@@ -1,10 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { defineConfig, loadEnv, type Plugin } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { buildManifest, type ManifestEnv } from './ext/manifest';
+import { supabaseEnv } from './vite.config';
 
-// Env files live at the repo root (not in ext/, which is Vite's `root`).
-const repoRoot = fileURLToPath(new URL('.', import.meta.url));
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 /** Emits dist-ext/manifest.json from ext/manifest.ts as part of the bundle. */
@@ -21,16 +20,10 @@ function extensionManifest(env: ManifestEnv): Plugin {
     };
 }
 
-// The Chrome extension: New Tab + Side Panel around the same src/core code as
-// the web build. Output is an unpacked extension in dist-ext/.
+// The Chrome extension: New Tab, Side Panel and popup around the same src/core
+// code as the web build. Output is an unpacked extension in dist-ext/.
 export default defineConfig(({ mode }) => {
-    // Same env handling as vite.config.ts (kept in step by hand, not imported,
-    // so the two builds stay independent): .env* from the repo root plus the
-    // real environment; VITE_ prefix optional. The secret key is never read.
-    const env = loadEnv(mode, repoRoot, '');
-    const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
-    const supabaseKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || '';
-
+    const { url: supabaseUrl, define } = supabaseEnv(mode);
     const pkg = JSON.parse(readFileSync(fromRoot('./package.json'), 'utf8')) as {
         version: string;
         description: string;
@@ -41,11 +34,7 @@ export default defineConfig(({ mode }) => {
         // Extension pages load their assets relative to themselves.
         base: './',
         publicDir: 'public',
-        envDir: repoRoot,
-        define: {
-            'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
-            'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(supabaseKey),
-        },
+        define,
         plugins: [
             extensionManifest({ version: pkg.version, description: pkg.description, supabaseUrl }),
         ],

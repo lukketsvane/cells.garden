@@ -2,30 +2,30 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// Env files live at the repo root (not in src/web, which is Vite's `root`).
-const repoRoot = fileURLToPath(new URL('.', import.meta.url));
+/**
+ * The public Supabase values from .env* at the repo root plus the real
+ * environment, VITE_ prefix optional, so the same env works in dev, Vercel and
+ * CI. RLS protects the data. The secret key is never read. Every build uses this.
+ */
+export function supabaseEnv(mode: string) {
+    const env = loadEnv(mode, fileURLToPath(new URL('.', import.meta.url)), '');
+    const url = env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
+    const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || '';
+    return {
+        url,
+        define: {
+            'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(url),
+            'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(key),
+        },
+    };
+}
 
-// The web app is the core build. `ext/` (M2) will add a second entry that
-// wraps the same src/core code for New Tab + Side Panel.
+// The web app is the core build.
 export default defineConfig(({ mode }) => {
-    // .env, .env.local, .env.<mode> from the repo root, plus the real environment.
-    // Public Supabase values (URL + publishable key) are safe in the bundle; RLS
-    // protects the data. Accept the unprefixed names too so the same env works in
-    // dev, Vercel and CI. The secret key is never read here.
-    const env = loadEnv(mode, repoRoot, '');
-    const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
-    const supabaseKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || '';
-
     return {
         root: 'src/web',
         publicDir: '../../public',
-        envDir: repoRoot,
-        // "/" on Vercel; "/cells.garden/" when deployed as a GitHub project page.
-        base: env.VITE_BASE || '/',
-        define: {
-            'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
-            'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(supabaseKey),
-        },
+        define: supabaseEnv(mode).define,
         plugins: [
             // PWA: web manifest + Workbox service worker, so the garden installs on
             // a phone and opens offline. The manifest is generated here rather than
@@ -39,12 +39,11 @@ export default defineConfig(({ mode }) => {
                 registerType: 'prompt',
                 injectRegister: false,
                 // public/ files to precache on top of the manifest icons.
-                includeAssets: ['icon.svg', 'icon-maskable.svg', 'icon-180.png'],
+                includeAssets: ['icon-180.png'],
                 manifest: {
                     name: 'cells.garden',
                     short_name: 'Garden',
                     description: 'A kanban-style project garden where tasks grow into plants.',
-                    // Relative, so the same build also installs from a sub-path (VITE_BASE).
                     start_url: './',
                     scope: './',
                     display: 'standalone',

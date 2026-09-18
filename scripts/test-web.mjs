@@ -20,9 +20,7 @@ import { chromium } from 'playwright';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4173;
-// The build honours VITE_BASE; the test only sees it when it is in the environment.
-const BASE_PATH = process.env.VITE_BASE || '/';
-const BASE = `http://localhost:${PORT}${BASE_PATH}`;
+const BASE = `http://localhost:${PORT}/`;
 const VITE = join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
 const SHOTS = process.env.SCREENSHOTS || '';
 const ICONS = ['icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
