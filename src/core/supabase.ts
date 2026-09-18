@@ -35,7 +35,7 @@ interface GardenRow {
 /** At most this many fetch-merge-retry rounds before a save gives up. */
 const MAX_SAVE_ROUNDS = 4;
 
-const rowToGarden = (row: GardenRow): Garden => gardenFrom((row.data ?? {}) as Partial<Garden>, row.updated_at);
+const rowToGarden = (row: GardenRow): Garden => gardenFrom(row.data ?? {}, row.updated_at);
 
 export class SupabaseStore implements GardenStore {
     private rowId: string | null;

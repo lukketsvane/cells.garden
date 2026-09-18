@@ -46,8 +46,7 @@ export function openMenu(items: MenuItem[], anchor: MenuAnchor, doc: Document = 
     const win = doc.defaultView ?? window;
     doc.querySelector('.garden-context-menu')?.remove();
 
-    const menu = doc.createElement('div');
-    menu.className = 'garden-context-menu';
+    const menu = doc.body.createDiv('garden-context-menu');
 
     for (const item of items) {
         if (item.heading) {
@@ -70,7 +69,6 @@ export function openMenu(items: MenuItem[], anchor: MenuAnchor, doc: Document = 
         };
     }
 
-    doc.body.appendChild(menu);
     place(menu, anchor, win);
 
     const close = (e: Event) => {

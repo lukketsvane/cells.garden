@@ -192,7 +192,7 @@ export async function createSharedPlant(client: SupabaseClient, userId: string, 
         .select('id, owner_id, data, rev')
         .single();
     if (error) fail(error);
-    return row as unknown as SharedPlantRow;
+    return row;
 }
 
 /** Present a plant invite; the user becomes a member. Returns the plant row. */

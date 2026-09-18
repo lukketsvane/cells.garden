@@ -59,7 +59,7 @@ function streamCtor(name: 'CompressionStream' | 'DecompressionStream'): StreamCt
 async function pipeThrough(ctor: StreamCtor, bytes: Uint8Array): Promise<Uint8Array> {
     const stream = new ctor('deflate-raw');
     const source = new Blob([toArrayBuffer(bytes)]).stream();
-    const out = source.pipeThrough(stream as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
+    const out = source.pipeThrough(stream);
     return new Uint8Array(await new Response(out).arrayBuffer());
 }
 
@@ -83,7 +83,7 @@ async function inflate(bytes: Uint8Array): Promise<Uint8Array> {
 
 /** A copy of the bytes as a standalone ArrayBuffer (never the whole pool behind a view). */
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-    return bytes.slice().buffer as ArrayBuffer;
+    return bytes.slice().buffer;
 }
 
 // --- Writing --------------------------------------------------------------
