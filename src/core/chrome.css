@@ -253,7 +253,57 @@
     white-space: pre;
 }
 
-/* --- Garden settings: the sky's day as a bar, node numbers under their hours --- */
+/* --- Garden settings: keep the node editor folded away until it is needed. --- */
+.garden-sky-details {
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+.garden-sky-summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    list-style: none;
+    cursor: pointer;
+    color: var(--text-normal);
+    user-select: none;
+}
+.garden-sky-summary::-webkit-details-marker {
+    display: none;
+}
+.garden-sky-summary::after {
+    content: "›";
+    margin-left: 2px;
+    color: var(--text-muted);
+    font-size: 20px;
+    line-height: 1;
+    transform-origin: center;
+    transition: transform 120ms ease;
+}
+.garden-sky-details[open] > .garden-sky-summary::after {
+    transform: rotate(90deg);
+}
+.garden-sky-summary-title {
+    font-size: 14px;
+}
+.garden-sky-summary-count {
+    color: var(--text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+.garden-sky-summary-preview {
+    margin-left: auto;
+    width: 88px;
+    height: 10px;
+    flex: 0 1 88px;
+    border-radius: 999px;
+    border: 1px solid var(--background-modifier-border);
+}
+.garden-sky-details[open] > .garden-sky-summary {
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* The expanded editor: the sky's day as a bar, node numbers under their hours. */
 .garden-sky-day {
     padding: 4px 0 12px;
 }
