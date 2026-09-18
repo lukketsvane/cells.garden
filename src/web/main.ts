@@ -1,5 +1,6 @@
 import '../core/shim';
 import './app.css';
+import '../core/chrome.css';
 import '../core/ui.css';
 import '../core/styles.css';
 

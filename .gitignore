@@ -6,3 +6,4 @@ dist/
 dist-ext/
 .env.local
 .claude/
+dist-obsidian/

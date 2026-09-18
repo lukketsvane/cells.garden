@@ -1,0 +1,10 @@
+{
+  "id": "cells-garden",
+  "name": "cells.garden",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Your cells.garden, synced with the web app, the phone and the Chrome extension.",
+  "author": "tastefinger",
+  "authorUrl": "https://cells.garden",
+  "isDesktopOnly": false
+}

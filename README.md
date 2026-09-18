@@ -18,6 +18,8 @@ npm run typecheck      # tsc for the web app
 npm run typecheck:ext  # tsc for the extension entry
 npm run test:web       # Playwright smoke test of the web build + PWA offline start
 npm run test:ext       # Playwright test of the extension (new tab + side panel)
+npm run build:obsidian # Obsidian plugin into dist-obsidian/ (link that folder into a vault)
+npm run test:obsidian  # loads the plugin build behind a stand-in Obsidian API
 ```
 
 The tests use the repo's Playwright and a Chromium it can find; run `npx playwright install chromium` once on a fresh machine.
@@ -62,10 +64,21 @@ ext/           Chrome extension (Manifest V3): newtab.html, sidepanel.html, back
 public/        icons (SVG + PNG); the web manifest is generated at build time
 scripts/       make-icons.mjs, test-web.mjs, test-ext.mjs
 supabase/      migrations + README (auth, RLS, SMTP)
-obsidian/      Max's plugin, untouched. Hooks into the core later.
+obsidian/      Max's plugin, untouched. Keeps the garden in vault files, no sync.
+obsidian-plugin/  the synced Obsidian plugin: the same app in an Obsidian tab
 dist/          web build (ignored)
 dist-ext/      extension build (ignored)
 ```
+
+## Obsidian plugin
+
+`obsidian-plugin/` runs the same app in an Obsidian tab. Sign in with the same account and the garden syncs live with the web app, the phone and the extension. Build it with `npm run build:obsidian`; the result in `dist-obsidian/` is a complete plugin folder. Link it into a vault once, then every build shows up in Obsidian after a reload:
+
+```
+mklink /J "<vault>\.obsidian\plugins\cells-garden" "<repo>\dist-obsidian"
+```
+
+Then turn on cells.garden under Settings, Community plugins. Its id is `cells-garden`, so it sits next to Max's `garden-cells` without clashing. The command "Import this vault's garden" brings the plants Max's plugin keeps in `Garden-Cells/` into the synced garden.
 
 ## Storage and sync
 
