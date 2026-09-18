@@ -1,6 +1,8 @@
+import type { LayerName } from './model';
+
 /**
- * The line icons the buttons carry, as SVG markup. They are set with
- * innerHTML on a button, so they hold no text and inherit `currentColor`.
+ * The line icons, as SVG markup. They are set with innerHTML on a button or a
+ * label, so they hold no text and inherit `currentColor`.
  */
 const stroke = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 
@@ -14,4 +16,22 @@ export const ICONS = {
     dots: `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg>`,
     /** A pane split in two: show or hide the board. */
     board: `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.3"/></svg>`,
+};
+
+/**
+ * The four zone icons, drawn rather than typed: the symbols these replace were
+ * whichever characters a font happened to carry, and the stem one landed in a
+ * plane no system font covers, so every reader saw an empty box. Each is one
+ * plain line drawing on the same 24-square, to be redrawn without touching
+ * anything else.
+ */
+export const ZONE_ICONS: Record<LayerName, string> = {
+    /** A blossom: five petals around an eye. */
+    flowers: `<svg ${stroke}><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="6.5" r="2.8"></circle><circle cx="17.2" cy="10.3" r="2.8"></circle><circle cx="15.2" cy="16.4" r="2.8"></circle><circle cx="8.8" cy="16.4" r="2.8"></circle><circle cx="6.8" cy="10.3" r="2.8"></circle></svg>`,
+    /** A stalk carrying a leaf on either side. */
+    stem: `<svg ${stroke}><path d="M12 21V4"></path><path d="M12 11c-3.3 0-5-2.2-5-5 3.3 0 5 2.2 5 5z"></path><path d="M12 8c3.3 0 5-2.2 5-5-3.3 0-5 2.2-5 5z"></path></svg>`,
+    /** A taproot forking under the soil. */
+    roots: `<svg ${stroke}><path d="M12 2v7"></path><path d="M12 9v13"></path><path d="M12 9c0 4.5-2.2 7-5.5 9"></path><path d="M12 9c0 4.5 2.2 7 5.5 9"></path></svg>`,
+    /** A cut crystal, girdle and all. */
+    minerals: `<svg ${stroke}><path d="M12 3 4 9l8 12 8-12-8-6z"></path><path d="M4 9h16"></path></svg>`,
 };

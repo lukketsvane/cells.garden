@@ -2,7 +2,7 @@ import './shim';
 import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
 import { PLANT_TYPES } from './assets';
-import { ICONS } from './icons';
+import { ICONS, ZONE_ICONS } from './icons';
 import { openMenu, type MenuItem } from './menu';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
@@ -83,10 +83,10 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 const ZONE_LABELS: Record<LayerName, string> = {
-    flowers: '⚘✽ Flowers',
-    stem: '𖣂 Stem',
-    roots: '⫛ Roots',
-    minerals: '₊⊹˖ Minerals',
+    flowers: 'Flowers',
+    stem: 'Stem',
+    roots: 'Roots',
+    minerals: 'Minerals',
 };
 
 const stemParts: string[] = [
@@ -2910,7 +2910,9 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
     private createZone(parent: HTMLElement, project: ProjectData, arrayName: LayerName) {
         const zone = parent.createDiv(`garden-zone ${arrayName}-zone`);
         const label = zone.createDiv("garden-zone-label-row");
-        label.createDiv({ text: ZONE_LABELS[arrayName], cls: "zone-label" });
+        const name = label.createDiv({ cls: "zone-label" });
+        name.createSpan({ cls: "zone-icon" }).innerHTML = ZONE_ICONS[arrayName];
+        name.createSpan({ text: ZONE_LABELS[arrayName] });
         const add = label.createEl('button', { cls: 'zone-add-btn', text: '+' });
         add.onclick = () => this.addNewItem(project, arrayName);
         this.createSortableList(zone, project, arrayName);
