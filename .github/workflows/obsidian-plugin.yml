@@ -16,6 +16,7 @@ on:
       - 'vite.obsidian.config.ts'
       - 'manifest.json'
       - '.env'
+      - '.github/workflows/obsidian-plugin.yml'
 
 permissions:
   contents: write
@@ -47,7 +48,10 @@ jobs:
           fi
           git -c user.name=tastefinger -c user.email=41840333+lukketsvane@users.noreply.github.com \
             commit -m "Build the Obsidian plugin"
-          git push
+          # main/dev may have moved while this build was running (for example
+          # another quick push). Rebase the generated build instead of dropping it.
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
       - name: Attest the release files
         if: github.ref == 'refs/heads/main'
         uses: actions/attest-build-provenance@v2
