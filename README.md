@@ -81,7 +81,7 @@ interface GardenStore {
 }
 ```
 
-- Signed out: `LocalStore` (localStorage, key `cells.garden/v1`). Tabs stay in step through the `storage` event.
+- Signed out: `LocalStore` (localStorage, key `cells.garden/v1`). Tabs stay in step through the `storage` event. In Obsidian this storage is per vault (copied once from the old shared keys) and other Obsidian windows do not update live; the anonymous-garden claim stays device-wide.
 - Signed in: `SupabaseStore` is primary and a per-user `LocalStore` mirrors every save, so the device keeps an offline copy and sign-out never loses anything. The whole garden is one JSON blob per owner; saves are compare-and-swap on a server revision and merge by plant and cell id when someone wrote first; realtime pushes changes to the other devices.
 - Shared: an owner shares their garden by link (`#join=<token>`); members edit the same blob. See `supabase/README.md`.
 - Collaborative plants: one plant shared by link (`#plant=<token>`) into other people's gardens; everyone who has it edits it live.

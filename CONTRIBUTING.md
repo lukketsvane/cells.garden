@@ -37,5 +37,5 @@ Also run `npm run test:ext` when you touch `ext/`, and `npm run test:obsidian` w
 
 - English everywhere, short copy, no em-dashes.
 - The garden view follows Max's original plugin (the `original` branch); keep its graphics, animation and layout as they are.
-- Commits in this repository use the owner's identity: `tastefinger <41840333+lukketsvane@users.noreply.github.com>`, with no trailers.
+- No tool or assistant trailers in commit messages.
 - Branch names are short and descriptive, e.g. `feat/extension`.

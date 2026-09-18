@@ -17,6 +17,7 @@ import type { GardenApp } from '../src/core/app';
 import { bootGarden } from '../src/core/boot';
 import { LOCAL_PREFIX, setLocalBackend } from '../src/core/local';
 import { PLANT_FOLDER } from '../src/core/markdown';
+import { CLAIM_KEY } from '../src/core/store';
 import { mergeGarden, vaultFilesToGarden, type VaultFile } from '../src/core/vault';
 
 const VIEW_TYPE = 'cells-garden';
@@ -82,22 +83,35 @@ export default class CellsGardenPlugin extends Plugin {
             const value: unknown = app.loadLocalStorage(key);
             return typeof value === 'string' ? value : null;
         };
-        if (get(COPIED_KEY) === null) {
-            const shared = window.localStorage;
-            const keys: string[] = [];
-            for (let i = 0; i < shared.length; i++) {
-                const key = shared.key(i);
-                if (key?.startsWith(LOCAL_PREFIX)) keys.push(key);
+        const shared = window.localStorage;
+        try {
+            if (get(COPIED_KEY) === null) {
+                const keys: string[] = [];
+                for (let i = 0; i < shared.length; i++) {
+                    const key = shared.key(i);
+                    if (key?.startsWith(LOCAL_PREFIX)) keys.push(key);
+                }
+                for (const key of keys) {
+                    if (get(key) === null) app.saveLocalStorage(key, shared.getItem(key));
+                }
+                app.saveLocalStorage(COPIED_KEY, '1');
             }
-            for (const key of keys) {
-                if (get(key) === null) app.saveLocalStorage(key, shared.getItem(key));
-            }
-            app.saveLocalStorage(COPIED_KEY, '1');
+            // The anonymous-garden claim is device-wide: every vault shares one sign-in.
+            const claim = get(CLAIM_KEY);
+            if (claim !== null && shared.getItem(CLAIM_KEY) === null) shared.setItem(CLAIM_KEY, claim);
+        } catch (e) {
+            console.error('cells.garden: could not copy device storage into this vault', e);
         }
         setLocalBackend({
-            get,
-            set: (key, value) => app.saveLocalStorage(key, value),
-            remove: (key) => app.saveLocalStorage(key, null),
+            get: (key) => (key === CLAIM_KEY ? (shared.getItem(key) ?? get(key)) : get(key)),
+            set: (key, value) => {
+                app.saveLocalStorage(key, value);
+                if (key === CLAIM_KEY) shared.setItem(key, value);
+            },
+            remove: (key) => {
+                if (key === CLAIM_KEY) shared.removeItem(key);
+                app.saveLocalStorage(key, null);
+            },
         });
     }
 
