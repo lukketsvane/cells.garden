@@ -17,12 +17,14 @@
 //                                 short: Chromium puts Unix sockets under it and
 //                                 dies at startup when their path exceeds 108 bytes.
 
+import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { loadEnv } from 'vite';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist-ext');
@@ -36,10 +38,6 @@ const FLOWER = 'Side panel works';
 
 // Console / page errors that only mean "no network here" and are ignored.
 const NETWORK_FAILURE = [/ERR_TUNNEL_CONNECTION_FAILED/, /Failed to fetch/, /Failed to load resource/];
-
-function assert(condition, message) {
-    if (!condition) throw new Error(message);
-}
 
 // ---------------------------------------------------------------------------
 // 1. Build, unless dist-ext/ is newer than everything it is built from.
@@ -102,7 +100,9 @@ for (const page of ['newtab.html', 'sidepanel.html', 'popup.html']) {
 
 // Sign-in is only part of the build when it carries Supabase config, and the
 // manifest then also opens newtab.html to the auth server for the magic link.
-const supabaseUrl = readSupabaseUrl();
+// Read the way the build reads it (vite.config.ts): real environment over .env* files, VITE_ prefix optional.
+const env = loadEnv('production', ROOT, '');
+const supabaseUrl = (env.VITE_SUPABASE_URL || env.SUPABASE_URL || '').trim();
 const hasSupabase = supabaseUrl !== '';
 if (hasSupabase) {
     const war = manifest.web_accessible_resources;
@@ -113,23 +113,6 @@ if (hasSupabase) {
     assert(!('web_accessible_resources' in manifest), 'web_accessible_resources must be absent without Supabase config');
 }
 console.log(`test-ext: manifest ok (version ${manifest.version}, supabase ${hasSupabase ? 'configured' : 'not configured'})`);
-
-function readSupabaseUrl() {
-    // Same precedence as the Vite config: real environment, then .env files
-    // from the repo root, VITE_ prefix optional.
-    for (const name of ['VITE_SUPABASE_URL', 'SUPABASE_URL']) {
-        if (process.env[name]) return process.env[name].trim();
-    }
-    for (const file of ['.env.local', '.env']) {
-        const path = join(ROOT, file);
-        if (!existsSync(path)) continue;
-        for (const line of readFileSync(path, 'utf8').split('\n')) {
-            const match = line.match(/^\s*(?:VITE_)?SUPABASE_URL\s*=\s*"?([^"#\s]+)"?/);
-            if (match) return match[1].trim();
-        }
-    }
-    return '';
-}
 
 // ---------------------------------------------------------------------------
 // 3. Load the extension into Chromium and drive both surfaces.

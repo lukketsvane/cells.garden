@@ -239,22 +239,30 @@ class GardenFilesModal extends Modal {
         return this.status;
     }
 
-    private async download(button: HTMLButtonElement) {
+    /** One job at a time: `start` on the status line, then the job's own result or `failure`. */
+    private async run(start: string, failure: string, log: string, work: () => Promise<void>) {
         if (this.busy) return;
         this.busy = true;
-        button.disabled = true;
-        this.setStatus(['Packing…']);
+        this.setStatus([start]);
         try {
+            await work();
+        } catch (e) {
+            console.error(`Garden Cells: ${log} failed`, e);
+            this.setStatus([`${failure}: ${message(e)}`]);
+        } finally {
+            this.busy = false;
+        }
+    }
+
+    private async download(button: HTMLButtonElement) {
+        if (this.busy) return;
+        button.disabled = true;
+        await this.run('Packing…', 'Could not build the archive', 'export', async () => {
             const { name, bytes } = await gardenArchive(this.app);
             saveToDisk(name, bytes);
             this.setStatus([`Saved ${name}.`]);
-        } catch (e) {
-            console.error('Garden Cells: export failed', e);
-            this.setStatus([`Could not build the archive: ${message(e)}`]);
-        } finally {
-            button.disabled = false;
-            this.busy = false;
-        }
+        });
+        button.disabled = false;
     }
 
     private async readDrop(transfer: DataTransfer) {
@@ -263,21 +271,13 @@ class GardenFilesModal extends Modal {
     }
 
     private async read(picked: PickedFile[]) {
-        if (this.busy) return;
         if (picked.length === 0) return;
-        this.busy = true;
-        this.setStatus(['Reading…']);
-        try {
+        await this.run('Reading…', 'Could not read those files', 'import', async () => {
             const { files, unreadable } = await toVaultFiles(picked);
             const result = vaultFilesToGarden(files);
             const status = this.setStatus(describeImport(result, unreadable));
             if (result.projects.length > 0 && status) this.offerModes(status, result);
-        } catch (e) {
-            console.error('Garden Cells: import failed', e);
-            this.setStatus([`Could not read those files: ${message(e)}`]);
-        } finally {
-            this.busy = false;
-        }
+        });
     }
 
     private offerModes(status: HTMLElement, result: ImportResult) {
@@ -291,18 +291,10 @@ class GardenFilesModal extends Modal {
             .addButton((btn) => btn.setButtonText('Replace').setWarning().onClick(() => void this.apply(result, 'replace')));
     }
 
-    private async apply(result: ImportResult, mode: ImportMode) {
-        if (this.busy) return;
-        this.busy = true;
-        this.setStatus(['Planting…']);
-        try {
+    private apply(result: ImportResult, mode: ImportMode) {
+        return this.run('Planting…', 'Could not save the imported garden', 'import', async () => {
             this.setStatus([await applyImport(this.app, result, mode)]);
-        } catch (e) {
-            console.error('Garden Cells: import failed', e);
-            this.setStatus([`Could not save the imported garden: ${message(e)}`]);
-        } finally {
-            this.busy = false;
-        }
+        });
     }
 }
 

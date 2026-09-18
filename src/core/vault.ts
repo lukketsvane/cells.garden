@@ -5,8 +5,9 @@
  * root gives Max's plugin exactly what it expects:
  *
  *   Garden-Cells/<Plant>.md          one file per plant, his format
- *   Garden-Assets/custom/<hash>.png  art the user supplied
  *   garden-cells.json                sky, ant, worm, fireflies (ours; ignored by the plugin)
+ *
+ * Custom art under Garden-Assets/custom/ is only recognised on import.
  *
  * Import is deliberately forgiving: any `.md` anywhere in the dropped files is
  * offered to the parser and skipped unless its frontmatter says `garden-cell`,
@@ -38,33 +39,8 @@ const decoder = new TextDecoder();
 
 // --- Export ---------------------------------------------------------------
 
-export interface ExportOptions {
-    /**
-     * Custom art to carry along, keyed by pack-relative path. Paths that no
-     * plant references are dropped, so an export never grows stale art.
-     */
-    assets?: AssetBytes;
-    /** Stamped into garden-cells.json. Defaults to now. */
-    exportedAt?: Date;
-}
-
-/** Every custom path the garden actually points at. */
-export function referencedAssets(projects: ProjectData[]): Set<string> {
-    const paths = new Set<string>();
-    for (const project of projects) {
-        const add = (path?: string) => {
-            if (path && path.startsWith(CUSTOM_PREFIX)) paths.add(path);
-        };
-        add(project.seedImagePath);
-        for (const layer of [project.stem, project.flowers, project.roots, project.minerals]) {
-            for (const item of layer) add(item.imagePath);
-        }
-    }
-    return paths;
-}
-
-/** The garden as the files that make up its folder. */
-export function gardenToVaultFiles(garden: Garden, options: ExportOptions = {}): VaultFile[] {
+/** The garden as the files that make up its folder. `exportedAt` is stamped into garden-cells.json. */
+export function gardenToVaultFiles(garden: Garden, exportedAt = new Date()): VaultFile[] {
     const files: VaultFile[] = [];
     const used = new Set<string>();
 
@@ -75,19 +51,11 @@ export function gardenToVaultFiles(garden: Garden, options: ExportOptions = {}):
         });
     }
 
-    if (options.assets) {
-        // Only art a plant still points at; a deleted plant's art does not tag along.
-        for (const path of referencedAssets(garden.projects)) {
-            const bytes = options.assets.get(path);
-            if (bytes) files.push({ path: `${ASSET_FOLDER}/${path}`, bytes });
-        }
-    }
-
     files.push({
         path: SETTINGS_FILE,
         bytes: encoder.encode(JSON.stringify({
             version: 1,
-            exportedAt: (options.exportedAt ?? new Date()).toISOString(),
+            exportedAt: exportedAt.toISOString(),
             settings: withoutViewState(garden.settings),
         }, null, 2) + '\n'),
     });
@@ -198,7 +166,6 @@ export type ImportMode = 'merge' | 'replace';
 export interface MergeSummary {
     added: number;
     updated: number;
-    removed: number;
 }
 
 /**
@@ -223,7 +190,7 @@ export function mergeGarden(
                 settings: result.settings ?? current.settings,
                 updatedAt: current.updatedAt,
             },
-            summary: { added: projects.length, updated: 0, removed: current.projects.length },
+            summary: { added: projects.length, updated: 0 },
         };
     }
 
@@ -250,7 +217,7 @@ export function mergeGarden(
 
     return {
         garden: { ...current, projects: renumber(merged), settings: current.settings },
-        summary: { added, updated, removed: 0 },
+        summary: { added, updated },
     };
 }
 

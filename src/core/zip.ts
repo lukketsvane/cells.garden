@@ -104,11 +104,10 @@ class ByteWriter {
         this.length += bytes.length;
     }
 
-    pushRecord(size: number, fill: (view: DataView) => void): Uint8Array {
+    pushRecord(size: number, fill: (view: DataView) => void) {
         const bytes = new Uint8Array(size);
         fill(new DataView(bytes.buffer));
         this.push(bytes);
-        return bytes;
     }
 
     concat(): Uint8Array {
@@ -122,14 +121,9 @@ class ByteWriter {
     }
 }
 
-export interface ZipWriteOptions {
-    /** Timestamp stored on every entry. Defaults to now. */
-    modified?: Date;
-}
-
-/** Build a `.zip` from a list of entries. Folders are implied by `/` in names. */
-export async function zip(entries: ZipEntry[], options: ZipWriteOptions = {}): Promise<Uint8Array> {
-    const { time, date } = dosDateTime(options.modified ?? new Date());
+/** Build a `.zip` from a list of entries, stamped now. Folders are implied by `/` in names. */
+export async function zip(entries: ZipEntry[]): Promise<Uint8Array> {
+    const { time, date } = dosDateTime(new Date());
     const encoder = new TextEncoder();
     const files = new ByteWriter();
     const central = new ByteWriter();
@@ -226,7 +220,9 @@ export async function unzip(archive: Uint8Array): Promise<ZipEntry[]> {
         const extraLength = view.getUint16(offset + 30, true);
         const commentLength = view.getUint16(offset + 32, true);
         const localOffset = view.getUint32(offset + 42, true);
-        const name = decodeName(decoder, archive.subarray(offset + 46, offset + 46 + nameLength), flags);
+        // Writers that do not set the UTF-8 flag still tend to write UTF-8 names;
+        // ASCII is a subset either way, so decoding as UTF-8 is the safe guess.
+        const name = normalizeName(decoder.decode(archive.subarray(offset + 46, offset + 46 + nameLength)));
         offset += 46 + nameLength + extraLength + commentLength;
 
         if (name.endsWith('/')) continue; // a directory entry has no data
@@ -256,13 +252,6 @@ export async function unzip(archive: Uint8Array): Promise<ZipEntry[]> {
         entries.push({ name, bytes });
     }
     return entries;
-}
-
-function decodeName(decoder: TextDecoder, bytes: Uint8Array, flags: number): string {
-    // Writers that do not set the UTF-8 flag still tend to write UTF-8 names;
-    // ASCII is a subset either way, so decoding as UTF-8 is the safe guess.
-    void flags;
-    return normalizeName(decoder.decode(bytes));
 }
 
 function findEndOfCentralDirectory(view: DataView): number {
