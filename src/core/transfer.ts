@@ -20,6 +20,7 @@ import {
     type ImportResult,
     type VaultFile,
 } from './vault';
+import { local } from './local';
 import { unzip, zip } from './zip';
 
 /** A file the user handed over, with the path it had where it came from. */
@@ -318,21 +319,11 @@ export class BoardToggleButton {
     constructor(host: HTMLElement) {
         this.el = host.createEl('button', { cls: 'garden-board-toggle', attr: { type: 'button' } });
         setIcon(this.el, ICONS.board);
-        let hidden = false;
-        try {
-            hidden = localStorage.getItem(BoardToggleButton.KEY) === 'hidden';
-        } catch {
-            // Blocked storage: the board starts shown.
-        }
-        this.apply(hidden);
+        this.apply(local.get(BoardToggleButton.KEY) === 'hidden');
         this.el.addEventListener('click', (e) => {
             e.stopPropagation();
             const next = document.documentElement.dataset.board !== 'hidden';
-            try {
-                localStorage.setItem(BoardToggleButton.KEY, next ? 'hidden' : 'shown');
-            } catch {
-                // The board still toggles for this visit.
-            }
+            local.set(BoardToggleButton.KEY, next ? 'hidden' : 'shown'); // Blocked storage: it still toggles for this visit.
             this.apply(next);
         });
     }

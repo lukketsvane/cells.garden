@@ -6,14 +6,12 @@
  */
 export type Scene = 'forest' | 'mountains';
 
+import { local } from './local';
+
 const KEY = 'cells.garden/scene';
 
 export function currentScene(): Scene {
-    try {
-        return localStorage.getItem(KEY) === 'mountains' ? 'mountains' : 'forest';
-    } catch {
-        return 'forest';
-    }
+    return local.get(KEY) === 'mountains' ? 'mountains' : 'forest';
 }
 
 export function applyScene(scene: Scene = currentScene()) {
@@ -21,11 +19,7 @@ export function applyScene(scene: Scene = currentScene()) {
 }
 
 export function setScene(scene: Scene) {
-    try {
-        localStorage.setItem(KEY, scene);
-    } catch {
-        // Blocked storage: the scene still changes for this visit.
-    }
+    local.set(KEY, scene); // Blocked storage: the scene still changes for this visit.
     applyScene(scene);
 }
 
