@@ -29,6 +29,8 @@ const mainJs = readFileSync(join(DIST, 'main.js'), 'utf8');
 const css = readFileSync(join(DIST, 'styles.css'), 'utf8');
 assert(!/import\.meta\.glob/.test(mainJs), 'main.js still contains an unresolved import.meta.glob');
 assert(/require\(["']obsidian["']\)/.test(mainJs), 'main.js should require obsidian at runtime');
+assert(!/navigator\.clipboard|\.clipboardData\b/.test(mainJs), 'Obsidian build must not access the system clipboard');
+assert(!/loadLocalStorage|saveLocalStorage/.test(mainJs), 'Obsidian build must use Plugin.loadData/saveData instead of legacy local storage APIs');
 assert(
     /\.kanban-scroll-container\s+\.project-column\s*\{[^}]*display:\s*flex/s.test(css),
     'Obsidian must ship the compact per-plant kanban layout'
@@ -61,6 +63,8 @@ window.__commands = [];
 const views = {};
 class Plugin {
     constructor(app, manifest) { this.app = app; this.manifest = manifest; }
+    async loadData() { return structuredClone(window.__pluginData ?? {}); }
+    async saveData(data) { window.__pluginData = structuredClone(data); }
     registerView(type, factory) { views[type] = factory; }
     addRibbonIcon() { return document.createElement('div'); }
     addCommand(cmd) { window.__commands.push(cmd); }
@@ -98,15 +102,6 @@ const leaves = [];
 window.__app = {
     // Max's plugin is on in this stand-in, so the clash warning must show.
     plugins: { enabledPlugins: new Set(['garden-cells']) },
-    // As Obsidian does it: JSON under the vault's id.
-    loadLocalStorage(key) {
-        const raw = localStorage.getItem('testvault-' + key);
-        return raw === null ? null : JSON.parse(raw);
-    },
-    saveLocalStorage(key, data) {
-        if (data === null) localStorage.removeItem('testvault-' + key);
-        else localStorage.setItem('testvault-' + key, JSON.stringify(data));
-    },
     workspace: {
         getLeavesOfType: (type) => leaves.filter((l) => l.type === type),
         getLeaf: () => {
@@ -165,8 +160,10 @@ try {
     await page.addScriptTag({ content: STUB });
     await page.addScriptTag({ content: `var module = { exports: {} }; var exports = module.exports;\n${mainJs}\nwindow.__Plugin = module.exports.default || module.exports;` });
 
-    // What an earlier version kept in the shared localStorage.
-    await page.evaluate(() => localStorage.setItem('cells.garden/scene', 'mountains'));
+    // Plugin data is the only persistence surface for this build.
+    await page.evaluate(() => {
+        window.__pluginData = { local: { 'cells.garden/scene': 'mountains' } };
+    });
     const commands = await page.evaluate(async () => {
         const plugin = new window.__Plugin(window.__app, { id: 'cells-garden' });
         window.__plugin = plugin;
@@ -177,12 +174,8 @@ try {
     const warned = await page.evaluate(() => window.__notices.some((n) => /original plugin/.test(n)));
     assert(warned, "with Max's plugin on, a notice should say the two clash");
     await page.evaluate(() => { window.__notices.length = 0; });
-    const copied = await page.evaluate(() => ({
-        vault: localStorage.getItem('testvault-cells.garden/scene'),
-        old: localStorage.getItem('cells.garden/scene'),
-    }));
-    assert(copied.vault === '"mountains"', `the old shared keys should be copied into the vault storage: ${copied.vault}`);
-    assert(copied.old === 'mountains', 'the old shared keys must stay');
+    const pluginScene = await page.evaluate(() => window.__pluginData?.local?.['cells.garden/scene']);
+    assert(pluginScene === 'mountains', `the scene should come from Plugin.loadData: ${pluginScene}`);
     assert(commands.includes('open') && commands.includes('import-vault-garden'), 'expected the open and import commands');
 
     await page.evaluate(async () => { await window.__commands.find((c) => c.id === 'open').callback(); });
@@ -207,12 +200,9 @@ try {
     const notices = await page.evaluate(() => window.__notices);
     console.log('test-obsidian: import notice', notices);
     assert(notices.some((n) => /1 new/.test(n)), `the import should report one new plant: ${JSON.stringify(notices)}`);
-    const stored = await page.evaluate(() => ({
-        vault: localStorage.getItem('testvault-cells.garden/v1') ?? '',
-        shared: localStorage.getItem('cells.garden/v1'),
-    }));
-    assert(stored.vault.includes('From the vault'), 'the garden should be kept in the vault storage');
-    assert(stored.shared === null, 'the garden should not be kept in the shared localStorage');
+    await page.waitForFunction(() => (window.__pluginData?.local?.['cells.garden/v1'] ?? '').includes('From the vault'));
+    const stored = await page.evaluate(() => window.__pluginData?.local?.['cells.garden/v1'] ?? '');
+    assert(stored.includes('From the vault'), 'the garden should be kept with Plugin.saveData');
     assert(await page.evaluate(() => document.documentElement.dataset.scene) === 'mountains', 'the copied scene should apply');
 
     // Obsidian closes the tab (the plugin must not detach it itself on unload).
