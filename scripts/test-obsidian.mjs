@@ -7,6 +7,7 @@
 // import command brings a Garden-Cells/ plant in, and closing the tab tears the
 // garden down without errors. Run with "npm run test:obsidian".
 
+import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -15,10 +16,6 @@ import { chromium } from 'playwright';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'obsidian-plugin');
-
-function assert(condition, message) {
-    if (!condition) throw new Error(message);
-}
 
 if (process.env.OBSIDIAN_TEST_FORCE_BUILD || !existsSync(join(DIST, 'main.js'))) {
     execSync('npm run build:obsidian', { cwd: ROOT, stdio: 'inherit' });
@@ -74,8 +71,7 @@ class ItemView {
     }
 }
 class Notice { constructor(message) { window.__notices.push(message); } }
-class TFile {}
-const obsidian = { Plugin, ItemView, Notice, TFile };
+const obsidian = { Plugin, ItemView, Notice };
 const leaves = [];
 window.__app = {
     // Max's plugin is on in this stand-in, so the clash warning must show.

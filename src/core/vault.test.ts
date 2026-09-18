@@ -7,7 +7,6 @@ import {
     CUSTOM_PREFIX,
     gardenToVaultFiles,
     mergeGarden,
-    referencedAssets,
     SETTINGS_FILE,
     vaultFilesToGarden,
     type VaultFile,
@@ -86,41 +85,13 @@ test('plants that reduce to the same file name each get their own', () => {
 
 test('the settings file carries the settings but never the camera', () => {
     const settings = { ...DEFAULT_SETTINGS, fireflyCount: 3, viewState: { zoom: 2, translateX: 10, translateY: 20, kanbanScrollLeft: 0, kanbanScrollTop: 0 } };
-    const files = gardenToVaultFiles(garden([], settings), { exportedAt: new Date('2026-09-17T06:00:00.000Z') });
+    const files = gardenToVaultFiles(garden([], settings), new Date('2026-09-17T06:00:00.000Z'));
 
     const parsed = JSON.parse(dec.decode(fileNamed(files, SETTINGS_FILE).bytes));
     assert.equal(parsed.version, 1);
     assert.equal(parsed.exportedAt, '2026-09-17T06:00:00.000Z');
     assert.equal(parsed.settings.fireflyCount, 3);
     assert.ok(!('viewState' in parsed.settings), 'the camera is per device and must not travel');
-});
-
-test('only art a plant still points at is carried along', () => {
-    const png = new Uint8Array([137, 80, 78, 71]);
-    const used = `${CUSTOM_PREFIX}used.png`;
-    const files = gardenToVaultFiles(
-        garden([plant({ seedImagePath: used, stem: [item('a', { imagePath: 'plant_1/stem/plant_1_part1.png' })] })]),
-        { assets: new Map([[used, png], [`${CUSTOM_PREFIX}orphan.png`, png]]) },
-    );
-
-    assert.ok(pathsOf(files).includes(`${ASSET_FOLDER}/${used}`));
-    assert.ok(!pathsOf(files).some(p => p.includes('orphan')), 'art no plant references must not tag along');
-});
-
-test('referencedAssets sees every layer, and ignores the bundled pack', () => {
-    const paths = referencedAssets([plant({
-        seedImagePath: `${CUSTOM_PREFIX}seed.png`,
-        stem: [item('s', { imagePath: `${CUSTOM_PREFIX}stem.png` })],
-        flowers: [item('f', { imagePath: 'plant_1/flowers/plant_1_flower1.png' })],
-        roots: [item('r', { imagePath: `${CUSTOM_PREFIX}root.png` })],
-        minerals: [item('m')],
-    })]);
-
-    assert.deepEqual([...paths].sort(), [
-        `${CUSTOM_PREFIX}root.png`,
-        `${CUSTOM_PREFIX}seed.png`,
-        `${CUSTOM_PREFIX}stem.png`,
-    ]);
 });
 
 test('the archive is named after the day it was made', () => {
@@ -227,7 +198,7 @@ test('merge updates a plant that came from here and plants the rest after it', (
         plant({ id: 'c', seed: 'Gamma', order: 0 }),
     ]), 'merge');
 
-    assert.deepEqual(summary, { added: 1, updated: 1, removed: 0 });
+    assert.deepEqual(summary, { added: 1, updated: 1 });
     assert.deepEqual(next.projects.map(p => [p.seed, p.order]), [
         ['Alpha, edited', 0],
         ['Beta', 1],
@@ -252,7 +223,7 @@ test('replace throws the open garden away and takes the settings too', () => {
     };
     const { garden: next, summary } = mergeGarden(current, incoming, 'replace');
 
-    assert.deepEqual(summary, { added: 2, updated: 0, removed: 1 });
+    assert.deepEqual(summary, { added: 2, updated: 0 });
     assert.deepEqual(next.projects.map(p => [p.seed, p.order]), [['X', 0], ['Y', 1]]);
     assert.equal(next.settings.fireflyCount, 30);
 });
@@ -270,6 +241,6 @@ test('importing the same files twice changes nothing the second time', () => {
     const once = mergeGarden(first, incoming, 'merge');
     const twice = mergeGarden(once.garden, incoming, 'merge');
 
-    assert.deepEqual(twice.summary, { added: 0, updated: 1, removed: 0 });
+    assert.deepEqual(twice.summary, { added: 0, updated: 1 });
     assert.deepEqual(twice.garden.projects.map(p => p.id), ['a']);
 });

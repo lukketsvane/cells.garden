@@ -36,6 +36,8 @@ import stem8Url from '../assets/pack/plant_1/stem/stem8.png';
 
 /** Empty world on each side of the plants, in world px. Also where the first plant stands. */
 const WORLD_PADDING = 320;
+/** The middle of plant slot `i`, in world coordinates. */
+const plantCentre = (i: number) => WORLD_PADDING + i * PLANT_SPACING + PLANT_SPACING / 2;
 // How far past an edge a drag can stretch, in screen pixels, before it stops.
 const RUBBER_REACH = 120;
 // Frames a shooting star lives, long enough to fade in and out again.
@@ -136,8 +138,7 @@ export class GardenView extends View {
     // --- Mobile Touch Handlers ---
     private handleTouchStart = (e: TouchEvent) => {
         if (this.inPeek(e.target)) {
-            this._peekPinned = true;
-            this._peekPinnedId = this._peekProjectId;
+            this.pinPeek();
             return;
         }
         // Prevent the browser from doing its own scrolling/zooming
@@ -1490,8 +1491,7 @@ export class GardenView extends View {
     private handleMouseDown = (e: MouseEvent) => {
         // Working in a plant's card: keep it open, and do not pan the garden under it.
         if (this.inPeek(e.target)) {
-            this._peekPinned = true;
-            this._peekPinnedId = this._peekProjectId;
+            this.pinPeek();
             return;
         }
         // Middle mouse pans even in drawing mode!
@@ -1597,14 +1597,14 @@ export class GardenView extends View {
 
     /**
      * Aim the camera at one plant so it fills the viewport: as wide as one
-     * plant slot, or smaller when the plant is tall or deep. Used by the popup.
-     * Returns false when there is nothing to show yet.
+     * plant slot, or smaller when the plant is tall or deep. Used by the popup;
+     * does nothing while there is nothing to show.
      */
-    focusProject(index: number): boolean {
+    focusProject(index: number) {
         const viewport = this.viewport;
         const world = this.world;
         const count = this.app.gardenData.length;
-        if (!viewport || !world || count === 0) return false;
+        if (!viewport || !world || count === 0) return;
         const i = Math.max(0, Math.min(count - 1, index));
         const project = this.app.gardenData[i];
         const vw = viewport.offsetWidth || 320;
@@ -1622,13 +1622,11 @@ export class GardenView extends View {
         const widthBasis = Math.max(spriteWidth + 2 * margin, 240);
         const fit = Math.min(vw / widthBasis, (vh * horizon) / above, (vh * (1 - horizon)) / below);
         this.zoom = Math.max(this.zoomMin, Math.min(this.zoomMax, fit));
-        const plantX = WORLD_PADDING + i * PLANT_SPACING + PLANT_SPACING / 2;
-        this.currentTranslateX = vw / 2 - plantX * this.zoom;
+        this.currentTranslateX = vw / 2 - plantCentre(i) * this.zoom;
         this.currentTranslateY = vh * horizon - this._dynamicGroundLineY * this.zoom;
         this.applyWorldTransform(world, viewport);
         this.settleCamera(false);
         this.scheduleViewStateSave();
-        return true;
     }
 
     /** The two elements the camera works on. Null between renders. */
@@ -1770,17 +1768,11 @@ export class GardenView extends View {
         const wy = (clientY - rect.top - this.currentTranslateY) / this.zoom;
         const index = Math.round((wx - WORLD_PADDING - PLANT_SPACING / 2) / PLANT_SPACING);
         const project = this.app.gardenData[index];
-        if (!project) return null;
-        const centre = WORLD_PADDING + index * PLANT_SPACING + PLANT_SPACING / 2;
-        if (Math.abs(wx - centre) > PLANT_SPACING * 0.3) return null;
+        if (!project || Math.abs(wx - plantCentre(index)) > PLANT_SPACING * 0.3) return null;
         const extents = this.calculateProjectExtents(project);
         const ground = this._dynamicGroundLineY;
         if (wy < ground - extents.aboveHeight - 60 || wy > ground + extents.undergroundDepth + 60) return null;
-        return {
-            project,
-            x: rect.left + this.currentTranslateX + centre * this.zoom - rect.left,
-            top: this.currentTranslateY + (ground - extents.aboveHeight - 20) * this.zoom,
-        };
+        return this.plantHit(index);
     }
 
     private showPeek(hit: { project: ProjectData; x: number; top: number }) {
@@ -1833,19 +1825,23 @@ export class GardenView extends View {
         this._peekEl?.removeClass('is-visible');
     }
 
+    /** Keep the open card open, across re-renders too. */
+    private pinPeek() {
+        this._peekPinned = true;
+        this._peekPinnedId = this._peekProjectId;
+    }
+
     private inPeek(target: EventTarget | null): boolean {
         return !!this._peekEl && target instanceof Node && this._peekEl.contains(target);
     }
 
-    /** Where a plant stands on screen, for placing its card without a pointer. */
-    private plantHit(project: ProjectData): { project: ProjectData; x: number; top: number } | null {
-        const index = this.app.gardenData.findIndex(p => p.id === project.id);
-        if (index === -1) return null;
+    /** Where plant `index` stands on screen: its centre and its top, for placing its card. */
+    private plantHit(index: number): { project: ProjectData; x: number; top: number } {
+        const project = this.app.gardenData[index];
         const extents = this.calculateProjectExtents(project);
-        const centre = WORLD_PADDING + index * PLANT_SPACING + PLANT_SPACING / 2;
         return {
             project,
-            x: this.currentTranslateX + centre * this.zoom,
+            x: this.currentTranslateX + plantCentre(index) * this.zoom,
             top: this.currentTranslateY + (this._dynamicGroundLineY - extents.aboveHeight - 20) * this.zoom,
         };
     }
@@ -1854,14 +1850,13 @@ export class GardenView extends View {
     private restorePeek() {
         const id = this._peekPinnedId;
         if (!this._peekPinned || !id || !this.boardHidden()) return;
-        const project = this.app.gardenData.find(p => p.id === id);
-        const hit = project ? this.plantHit(project) : null;
-        if (!hit) {
+        const index = this.app.gardenData.findIndex(p => p.id === id);
+        if (index === -1) {
             this._peekPinned = false;
             return;
         }
         this._peekEl = null;
-        this.showPeek(hit);
+        this.showPeek(this.plantHit(index));
         (this._peekEl as HTMLElement | null)?.addClass('is-instant');
         this._peekPinned = true;
         const win = this.containerEl.ownerDocument.defaultView || window;
@@ -1891,8 +1886,7 @@ export class GardenView extends View {
         const hit = this.plantAt(clientX, clientY);
         if (hit) {
             this.showPeek(hit);
-            this._peekPinned = true;
-            this._peekPinnedId = hit.project.id;
+            this.pinPeek();
         } else {
             this.hidePeek();
         }
@@ -2617,7 +2611,7 @@ export class GardenView extends View {
             const project = this.shortcutProject();
             if (!project) return;
             e.preventDefault();
-            void this.addNewItem(project, zones[lower] as 'flowers' | 'stem' | 'roots' | 'minerals');
+            void this.addNewItem(project, zones[lower]);
         } else if (lower === 'n') {
             e.preventDefault();
             void this.createNewProject('right');
@@ -2722,7 +2716,7 @@ export class GardenView extends View {
         }
     }
 
-    private async deleteCell(el: HTMLElement, item: LayerItem, project: ProjectData, arrayName: 'stem' | 'flowers' | 'minerals' | 'roots') {
+    private async deleteCell(item: LayerItem, project: ProjectData, arrayName: LayerName) {
         const target = this.live(project);
         const index = target[arrayName].findIndex(i => i.id === item.id);
         if (index !== -1) {
@@ -2772,7 +2766,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
     private showCellContextMenu(
         e: MouseEvent,
         cells: HTMLElement[],
-        one: { el: HTMLElement; item: LayerItem; project: ProjectData; arrayName: LayerName },
+        one: { item: LayerItem; project: ProjectData; arrayName: LayerName },
     ) {
         const multi = cells.length > 1;
         const locations = () => cells.map(c => this.locateCell(c)).filter((l): l is NonNullable<typeof l> => l !== null);
@@ -2784,7 +2778,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 label: 'Delete',
                 onClick: () => {
                     if (multi) void this.deleteSelectedCells();
-                    else void this.deleteCell(one.el, one.item, one.project, one.arrayName);
+                    else void this.deleteCell(one.item, one.project, one.arrayName);
                 },
             },
             {
@@ -2961,11 +2955,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         this.createSortableList(zone, project, arrayName);
     }
 
-    createSortableList(
-        parent: HTMLElement,
-        project: ProjectData,
-        arrayName: 'stem' | 'flowers' | 'minerals' | 'roots'
-    ): HTMLElement {
+    createSortableList(parent: HTMLElement, project: ProjectData, arrayName: LayerName) {
         const listContainer = parent.createDiv({ cls: "kanban-list" });
         listContainer.dataset.projectId = project.id;
         listContainer.dataset.array = arrayName;
@@ -3044,7 +3034,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 if (editing && el.getText().trim() !== "") return;
                 e.preventDefault();
                 if (!editing && this.selectedCells.length > 1) void this.deleteSelectedCells();
-                else void this.deleteCell(el, item, project, arrayName);
+                else void this.deleteCell(item, project, arrayName);
             });
 
             el.addEventListener("contextmenu", (e: MouseEvent) => {
@@ -3052,7 +3042,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 e.stopPropagation();
                 const multi = this.selectedCells.includes(el) && this.selectedCells.length > 1;
                 if (!multi) this.selectSingleCell(el);
-                this.showCellContextMenu(e, multi ? this.selectedCells : [el], { el, item, project, arrayName });
+                this.showCellContextMenu(e, multi ? this.selectedCells : [el], { item, project, arrayName });
             });
         });
 
@@ -3066,15 +3056,13 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
             ghostClass: 'sortable-ghost',
             onEnd: (evt: SortableEvent) => this.handleDrop(evt)
         });
-
-        return listContainer;
     }
 
     async handleDrop(evt: SortableEvent) {
         const targetProjectId = evt.to.dataset.projectId;
         const sourceProjectId = evt.from.dataset.projectId;
-        const targetArrayName = evt.to.dataset.array as 'stem' | 'flowers' | 'minerals' | 'roots';
-        const sourceArrayName = evt.from.dataset.array as 'stem' | 'flowers' | 'minerals' | 'roots';
+        const targetArrayName = evt.to.dataset.array as LayerName;
+        const sourceArrayName = evt.from.dataset.array as LayerName;
         const itemId = evt.item.dataset.id;
 
         if (!targetProjectId || !sourceProjectId || !targetArrayName || !sourceArrayName || !itemId) return;

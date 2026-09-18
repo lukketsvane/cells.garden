@@ -8,7 +8,7 @@
  *   pack/<category>/*.png               shared roots / minerals / seeds
  *
  * `imagePath` on an item is the path relative to `pack/`, so it round-trips
- * through the markdown export unchanged. User uploads come later (M3).
+ * through the markdown export unchanged.
  */
 
 import { legacyImagePath } from './asset-paths';
@@ -45,29 +45,12 @@ export const PLANT_TYPES: string[] = Array.from(
             .map(parts => parts[0])
     )
 ).sort();
-if (PLANT_TYPES.length === 0) PLANT_TYPES.push('plant_1');
 
 export class AssetManager {
-    private getPathsInFolder(folderPath: string): string[] {
-        const cleanPath = folderPath.replace(/\/$/, "");
-        return FOLDERS.get(cleanPath) ?? [];
-    }
-
+    /** The plant's own folder first, else the shared one (roots, minerals, seeds). No folder is ever empty. */
     assignRandomImage(category: string, plantType?: string): string | null {
-        let paths: string[] = [];
-
-        // 1. If plantType is provided, try the plant-specific folder first
-        if (plantType) {
-            paths = this.getPathsInFolder(`${plantType}/${category}/`);
-        }
-
-        // 2. Fallback to the shared category folder (used for roots, minerals, seeds, or if plant folder is empty)
-        if (paths.length === 0) {
-            paths = this.getPathsInFolder(`${category}/`);
-        }
-
-        if (paths.length === 0) return null;
-        return paths[Math.floor(Math.random() * paths.length)];
+        const paths = (plantType && FOLDERS.get(`${plantType}/${category}`)) || FOLDERS.get(category) || [];
+        return paths.length ? paths[Math.floor(Math.random() * paths.length)] : null;
     }
 
     getImageUrlSync(path: string): string | null {

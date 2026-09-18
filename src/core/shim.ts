@@ -11,47 +11,35 @@
  * runs unchanged in the vault, in the browser and in the extension.
  */
 
-export interface DomElementInfo {
-    /** One class or a list of classes to add. */
-    cls?: string | string[];
-    /** Text content. */
-    text?: string | DocumentFragment;
-    /** HTML attributes. `null` removes the attribute. */
-    attr?: { [key: string]: string | number | boolean | null };
-    title?: string;
-    placeholder?: string;
-    href?: string;
+interface DomElementInfo {
+    /** Classes to add, space-separated. */
+    cls?: string;
+    text?: string;
+    attr?: Record<string, string>;
     type?: string;
     value?: string;
-    /** Insert as the first child instead of appending. */
-    prepend?: boolean;
 }
 
 declare global {
     interface Node {
-        createEl<K extends keyof HTMLElementTagNameMap>(
-            tag: K,
-            o?: DomElementInfo | string,
-            callback?: (el: HTMLElementTagNameMap[K]) => void
-        ): HTMLElementTagNameMap[K];
-        createDiv(o?: DomElementInfo | string, callback?: (el: HTMLDivElement) => void): HTMLDivElement;
-        createSpan(o?: DomElementInfo | string, callback?: (el: HTMLSpanElement) => void): HTMLSpanElement;
+        createEl<K extends keyof HTMLElementTagNameMap>(tag: K, o?: DomElementInfo | string): HTMLElementTagNameMap[K];
+        createDiv(o?: DomElementInfo | string): HTMLDivElement;
+        createSpan(o?: DomElementInfo | string): HTMLSpanElement;
         /** Remove every child node. */
         empty(): void;
     }
     interface Element {
         addClass(...classes: string[]): void;
         removeClass(...classes: string[]): void;
-        toggleClass(classes: string | string[], value: boolean): void;
+        toggleClass(classes: string, value: boolean): void;
         hasClass(cls: string): boolean;
-        setText(val: string | DocumentFragment): void;
+        setText(val: string): void;
         getText(): string;
     }
 }
 
-function splitClasses(classes: string | string[]): string[] {
-    const list = Array.isArray(classes) ? classes : [classes];
-    return list.flatMap(c => c.split(/\s+/)).filter(Boolean);
+function splitClasses(classes: string[]): string[] {
+    return classes.flatMap(c => c.split(/\s+/)).filter(Boolean);
 }
 
 function applyInfo(el: HTMLElement, o?: DomElementInfo | string) {
@@ -60,15 +48,9 @@ function applyInfo(el: HTMLElement, o?: DomElementInfo | string) {
         el.addClass(o);
         return;
     }
-    if (o.cls) el.addClass(...splitClasses(o.cls));
+    if (o.cls) el.addClass(o.cls);
     if (o.text !== undefined) el.setText(o.text);
-    for (const [name, value] of Object.entries(o.attr ?? {})) {
-        if (value === null) el.removeAttribute(name);
-        else el.setAttribute(name, String(value));
-    }
-    if (o.title !== undefined) el.title = o.title;
-    if (o.placeholder !== undefined) (el as HTMLInputElement).placeholder = o.placeholder;
-    if (o.href !== undefined) (el as HTMLAnchorElement).href = o.href;
+    for (const [name, value] of Object.entries(o.attr ?? {})) el.setAttribute(name, value);
     if (o.type !== undefined) (el as HTMLInputElement).type = o.type;
     if (o.value !== undefined) (el as HTMLInputElement).value = o.value;
 }
@@ -82,28 +64,18 @@ function install<T extends object>(proto: T, name: keyof T & string, value: unkn
     Object.defineProperty(proto, name, { value, writable: true, configurable: true, enumerable: false });
 }
 
-install(Node.prototype, 'createEl', function <K extends keyof HTMLElementTagNameMap>(
-    this: Node,
-    tag: K,
-    o?: DomElementInfo | string,
-    callback?: (el: HTMLElementTagNameMap[K]) => void
-): HTMLElementTagNameMap[K] {
-    const doc = this.ownerDocument ?? (this as unknown as Document);
-    const el = doc.createElement(tag);
+install(Node.prototype, 'createEl', function <K extends keyof HTMLElementTagNameMap>(this: Node, tag: K, o?: DomElementInfo | string) {
+    const el = (this.ownerDocument ?? (this as unknown as Document)).createElement(tag);
     applyInfo(el, o);
-    const prepend = typeof o === 'object' && o?.prepend;
-    if (prepend && this.firstChild) this.insertBefore(el, this.firstChild);
-    else this.appendChild(el);
-    callback?.(el);
-    return el;
+    return this.appendChild(el);
 });
 
-install(Node.prototype, 'createDiv', function (this: Node, o?: DomElementInfo | string, callback?: (el: HTMLDivElement) => void) {
-    return this.createEl('div', o, callback);
+install(Node.prototype, 'createDiv', function (this: Node, o?: DomElementInfo | string) {
+    return this.createEl('div', o);
 });
 
-install(Node.prototype, 'createSpan', function (this: Node, o?: DomElementInfo | string, callback?: (el: HTMLSpanElement) => void) {
-    return this.createEl('span', o, callback);
+install(Node.prototype, 'createSpan', function (this: Node, o?: DomElementInfo | string) {
+    return this.createEl('span', o);
 });
 
 install(Node.prototype, 'empty', function (this: Node) {
@@ -116,18 +88,14 @@ install(Element.prototype, 'addClass', function (this: Element, ...classes: stri
 install(Element.prototype, 'removeClass', function (this: Element, ...classes: string[]) {
     this.classList.remove(...splitClasses(classes));
 });
-install(Element.prototype, 'toggleClass', function (this: Element, classes: string | string[], value: boolean) {
-    for (const c of splitClasses(classes)) this.classList.toggle(c, value);
+install(Element.prototype, 'toggleClass', function (this: Element, classes: string, value: boolean) {
+    for (const c of splitClasses([classes])) this.classList.toggle(c, value);
 });
 install(Element.prototype, 'hasClass', function (this: Element, cls: string) {
     return this.classList.contains(cls);
 });
-install(Element.prototype, 'setText', function (this: Element, val: string | DocumentFragment) {
-    if (typeof val === 'string') this.textContent = val;
-    else {
-        this.empty();
-        this.appendChild(val);
-    }
+install(Element.prototype, 'setText', function (this: Element, val: string) {
+    this.textContent = val;
 });
 install(Element.prototype, 'getText', function (this: Element) {
     return this.textContent ?? '';

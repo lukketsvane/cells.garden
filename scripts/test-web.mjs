@@ -12,7 +12,8 @@
 // console error or page error fails the run. Set SCREENSHOTS=<dir> to save
 // screenshots along the way.
 
-import { spawn, spawnSync } from 'node:child_process';
+import assert from 'node:assert/strict';
+import { execSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,10 +35,6 @@ function isBlockedNetworkNoise(text, url = '') {
     if (BLOCKED_HOSTS.test(url) || BLOCKED_HOSTS.test(text)) return true;
     // "TypeError: Failed to fetch" carries no URL; only the Supabase client uses fetch() here.
     return /Failed to fetch/.test(text) && !/localhost|127\.0\.0\.1/.test(text);
-}
-
-function assert(condition, message) {
-    if (!condition) throw new Error(message);
 }
 
 async function shot(page, name) {
@@ -62,9 +59,7 @@ function watchErrors(page, label, errors) {
 function ensureBuild() {
     if (existsSync(join(ROOT, 'dist', 'index.html'))) return;
     console.log('dist/index.html missing, running "npm run build" first');
-    const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    const result = spawnSync(npm, ['run', 'build'], { cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32' });
-    if (result.status !== 0) throw new Error(`npm run build failed (exit code ${result.status})`);
+    execSync('npm run build', { cwd: ROOT, stdio: 'inherit' });
 }
 
 async function startPreview() {

@@ -6,7 +6,7 @@
  * Max's original plugin (obsidian/) keeps the garden in vault files instead; the
  * "Import this vault's garden" command brings that garden into the synced one.
  */
-import { ItemView, Notice, Plugin, TFile, type WorkspaceLeaf } from 'obsidian';
+import { ItemView, Notice, Plugin } from 'obsidian';
 
 import '../src/core/shim';
 import '../src/core/ui.css';
@@ -23,10 +23,6 @@ const VIEW_TYPE = 'cells-garden';
 
 class GardenTabView extends ItemView {
     garden: GardenApp | null = null;
-
-    constructor(leaf: WorkspaceLeaf) {
-        super(leaf);
-    }
 
     getViewType() {
         return VIEW_TYPE;
@@ -88,7 +84,7 @@ export default class CellsGardenPlugin extends Plugin {
 
     /** Fold the plants Max's plugin keeps as markdown files into the synced garden. */
     private async importVaultGarden() {
-        const files = this.app.vault.getFiles().filter((f: TFile) => f.path.startsWith(`${PLANT_FOLDER}/`));
+        const files = this.app.vault.getFiles().filter((f) => f.path.startsWith(`${PLANT_FOLDER}/`));
         if (files.length === 0) {
             new Notice(`No ${PLANT_FOLDER}/ folder in this vault.`);
             return;
