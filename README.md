@@ -85,6 +85,7 @@ interface GardenStore {
 - Signed in: `SupabaseStore` is primary and a per-user `LocalStore` mirrors every save, so the device keeps an offline copy and sign-out never loses anything. The whole garden is one JSON blob per owner; saves are compare-and-swap on a server revision and merge by plant and cell id when someone wrote first; realtime pushes changes to the other devices.
 - Shared: an owner shares their garden by link (`#join=<token>`); members edit the same blob. See `supabase/README.md`.
 - Garden spaces: more gardens than your own (New garden space in the pill menu), shared the same way.
+- Garden settings (pill menu, Settings): fireflies, the sky's colours through the day or one fixed colour, minerals that fade with depth, and the standby look. They belong to the garden, so everyone who shares it sees the same; the defaults are Max's original garden.
 - Collaborative plants: one plant shared by link (`#plant=<token>`) into other people's gardens; everyone who has it edits it live.
 - First sign-in on a device offers the anonymous garden to an account that has none yet, once.
 - Camera, kanban scroll and the divider between them are per surface (web, new tab, side panel) and stay on the device.
