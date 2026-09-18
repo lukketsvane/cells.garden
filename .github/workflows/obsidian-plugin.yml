@@ -1,0 +1,45 @@
+# Keeps the committed Obsidian plugin build (obsidian-plugin/main.js and
+# styles.css) in step with the code, so pulling the repo is all it takes to
+# update the plugin in a vault that links to that folder.
+name: Build the Obsidian plugin
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'src/**'
+      - 'obsidian-plugin/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.obsidian.config.ts'
+      - '.env'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: obsidian-plugin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build:obsidian
+      # A push made with the workflow's own token does not start the workflow again.
+      - name: Commit the build if it changed
+        run: |
+          git add obsidian-plugin/main.js obsidian-plugin/styles.css
+          if git diff --cached --quiet; then
+            echo "The committed build is current."
+            exit 0
+          fi
+          git -c user.name=tastefinger -c user.email=41840333+lukketsvane@users.noreply.github.com \
+            commit -m "Build the Obsidian plugin"
+          git push
