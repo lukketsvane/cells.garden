@@ -47,17 +47,22 @@ export class SettingsModal extends Modal {
             try {
                 const profile = await getProfile(client, userId);
 
-                const picture = new Setting(contentEl).setName('Picture').setDesc('Made for you. Roll a new one if you like.');
-                const holder = picture.controlEl.createDiv('settings-avatar');
+                const picture = new Setting(contentEl).setName('Picture').setDesc('Tap your picture to roll a new one.');
+                const holder = picture.controlEl.createEl('button', {
+                    cls: 'settings-avatar',
+                    type: 'button',
+                    attr: { 'aria-label': 'Roll a new picture', title: 'Roll a new picture' },
+                });
                 holder.appendChild(avatarEl(profile.avatar, 48));
-                picture.addButton((b) => b.setButtonText('New picture').onClick(() => void attempt(say, 'save the picture', async () => {
+                const rollPicture = () => void attempt(say, 'save the picture', async () => {
                     const next = randomSeed();
                     await updateProfile(client, userId, { avatar: next });
                     holder.empty();
                     holder.appendChild(avatarEl(next, 48));
                     onAvatar(next);
                     say('');
-                })));
+                });
+                holder.addEventListener('click', rollPicture);
 
                 let name = profile.name;
                 new Setting(contentEl)
@@ -125,6 +130,9 @@ export function gardenSettings(el: HTMLElement, app: GardenApp, heading = true) 
 }
 
 function drawGardenSettings(el: HTMLElement, app: GardenApp, heading: boolean, shown: (s: GardenSettings) => void, redrawAll: () => void) {
+    // The node editor is a disclosure, not the settings screen. Remember its
+    // local open state when a setting redraws this block.
+    const skyDetailsOpen = el.dataset.skyDetailsOpen === 'true';
     el.empty();
     const s = app.settings;
     shown(s);
@@ -166,11 +174,26 @@ function drawGardenSettings(el: HTMLElement, app: GardenApp, heading: boolean, s
         .addDropdown((d) => d.addOption('cycle', 'Cycle').addOption('static', 'Static').setValue(s.skyMode)
             .onChange((mode) => set({ skyMode: mode === 'static' ? 'static' : 'cycle' }, true)));
 
-    const day = el.createDiv('garden-sky-day');
+    const details = el.createEl('details', { cls: 'garden-sky-details' });
+    details.open = skyDetailsOpen;
+    details.addEventListener('toggle', () => {
+        el.dataset.skyDetailsOpen = String(details.open);
+    });
+    const summary = details.createEl('summary', { cls: 'garden-sky-summary' });
+    summary.createSpan({ cls: 'garden-sky-summary-title', text: 'Sky details' });
+    summary.createSpan({
+        cls: 'garden-sky-summary-count',
+        text: `${s.skyNodes.length} ${s.skyNodes.length === 1 ? 'node' : 'nodes'}`,
+    });
+    const preview = summary.createSpan('garden-sky-summary-preview');
+
+    const day = details.createDiv('garden-sky-day');
     const bar = day.createDiv('garden-sky-bar');
     const marks = day.createDiv('garden-sky-marks');
     const drawBar = () => {
-        bar.style.background = skyGradient(app.settings);
+        const gradient = skyGradient(app.settings);
+        bar.style.background = gradient;
+        preview.style.background = gradient;
         marks.empty();
         app.settings.skyNodes.forEach((node, i) => {
             const mark = marks.createSpan({ cls: 'garden-sky-mark', text: String(i + 1) });
@@ -185,7 +208,7 @@ function drawGardenSettings(el: HTMLElement, app: GardenApp, heading: boolean, s
         drawBar();
     };
     s.skyNodes.forEach((node, i) => {
-        const row = new Setting(el).setName(`Node ${i + 1}`);
+        const row = new Setting(details).setName(`Node ${i + 1}`);
         row.settingEl.addClass('garden-sky-node');
         row.settingEl.toggleClass('is-dimmed', isStatic && i > 0);
         row.addColorPicker((c) => c.setValue(node.color).onChange((color) => editNode(i, { color })));
@@ -203,7 +226,7 @@ function drawGardenSettings(el: HTMLElement, app: GardenApp, heading: boolean, s
                 .onClick(() => set({ skyNodes: app.settings.skyNodes.filter((_, j) => j !== i) }, true)));
         }
     });
-    new Setting(el)
+    new Setting(details)
         .addButton((b) => b.setButtonText('Add node').onClick(() => {
             // At noon, in the colour the sky already has then, so adding it changes nothing yet.
             const noon = skyAt({ ...app.settings, skyMode: 'cycle' }, 12).skyColor.match(/\d+/g) ?? [];
