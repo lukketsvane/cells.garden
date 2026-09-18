@@ -25,7 +25,11 @@ export default defineConfig(({ mode }) => {
     return {
         root: 'src/web',
         publicDir: '../../public',
-        define: supabaseEnv(mode).define,
+        define: {
+            ...supabaseEnv(mode).define,
+            __CELLS_BROWSER_STORAGE__: 'true',
+            __CELLS_SYSTEM_CLIPBOARD__: 'true',
+        },
         plugins: [
             // PWA: web manifest + Workbox service worker, so the garden installs on
             // a phone and opens offline. The manifest is generated here rather than
