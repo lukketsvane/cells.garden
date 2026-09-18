@@ -472,12 +472,26 @@
 }
 
 .zone-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
     font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-faint);
     margin-bottom: 3px;
+}
+
+/* The drawing sits on the cap height of the word beside it. */
+.zone-icon {
+    display: flex;
+    flex-shrink: 0;
+}
+.zone-icon svg {
+    width: 11px;
+    height: 11px;
+    display: block;
 }
 
 /* A zone's name, and its + pushed to the far end of the row. */
