@@ -1,34 +1,18 @@
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { defineConfig, loadEnv, type Plugin } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
 // The Obsidian plugin: the same core as the web build, bundled as one CommonJS
 // file Obsidian can load, with every sprite inlined and the CSS in styles.css.
-// Output is a ready plugin folder in dist-obsidian/.
+// Built into obsidian-plugin/ next to manifest.json and committed, so that folder
+// is the plugin: link it into a vault and every pull updates it.
 const repoRoot = fileURLToPath(new URL('.', import.meta.url));
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url));
-
-/** Emits manifest.json with the version from package.json. */
-function pluginManifest(version: string): Plugin {
-    return {
-        name: 'cells-garden:obsidian-manifest',
-        generateBundle() {
-            const manifest = JSON.parse(readFileSync(fromRoot('./obsidian-plugin/manifest.json'), 'utf8'));
-            this.emitFile({
-                type: 'asset',
-                fileName: 'manifest.json',
-                source: JSON.stringify({ ...manifest, version }, null, 2) + '\n',
-            });
-        },
-    };
-}
 
 export default defineConfig(({ mode }) => {
     // Same env handling as vite.config.ts: public values only, VITE_ prefix optional.
     const env = loadEnv(mode, repoRoot, '');
     const supabaseUrl = env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
     const supabaseKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || '';
-    const pkg = JSON.parse(readFileSync(fromRoot('./package.json'), 'utf8')) as { version: string };
 
     return {
         publicDir: false,
@@ -38,10 +22,10 @@ export default defineConfig(({ mode }) => {
             'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(supabaseKey),
             'process.env.NODE_ENV': JSON.stringify('production'),
         },
-        plugins: [pluginManifest(pkg.version)],
         build: {
-            outDir: 'dist-obsidian',
-            emptyOutDir: true,
+            outDir: 'obsidian-plugin',
+            // Only main.js and styles.css are written; the sources beside them stay.
+            emptyOutDir: false,
             target: 'es2020',
             cssCodeSplit: false,
             assetsInlineLimit: 100 * 1024 * 1024,

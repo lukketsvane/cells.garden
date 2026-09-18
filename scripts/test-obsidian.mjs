@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Smoke test of the Obsidian plugin build in dist-obsidian/. Obsidian itself
+// Smoke test of the Obsidian plugin build in obsidian-plugin/. Obsidian itself
 // cannot run here, so the built main.js is loaded into Chromium behind a small
 // stand-in for the parts of Obsidian's API the plugin uses (Plugin, ItemView,
 // Notice, the workspace and the vault). It checks that the plugin loads, the
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const DIST = join(ROOT, 'dist-obsidian');
+const DIST = join(ROOT, 'obsidian-plugin');
 
 function assert(condition, message) {
     if (!condition) throw new Error(message);
