@@ -22,7 +22,3 @@
 .cells-garden-host .garden-files-button {
     position: absolute;
 }
-
-.cells-garden-host .garden-canvas-viewport {
-    touch-action: none;
-}

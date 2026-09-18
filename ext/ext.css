@@ -1,23 +1,21 @@
 /*
- * Extension-only tweaks on top of src/web/app.css. Both pages boot the same
- * core; <html data-context="newtab|sidepanel"> says which surface this is.
+ * Extension-only tweaks on top of src/web/app.css. Every page boots the same
+ * core; <html data-context="newtab|sidepanel|popup"> says which surface this is.
  */
 
-/* The side panel is a 320-400px strip. The page itself must never scroll
-   sideways (the kanban strip scrolls on its own), and the chrome stays
-   compact so the pill covers as little of the sky as possible. */
-html[data-context="sidepanel"],
-html[data-context="sidepanel"] body {
-    overflow: hidden;
-    min-width: 0;
-}
-
-html[data-context="sidepanel"] .auth-pill {
+/* The side panel is a 320-400px strip and the popup a small window: the chrome
+   stays compact so the pill covers as little of the sky as possible. */
+html[data-context="sidepanel"] .auth-pill,
+html[data-context="popup"] .auth-pill {
     top: 6px;
     left: 6px;
     max-width: 150px;
     padding: 3px 8px 3px 5px;
     font-size: 11px;
+}
+
+html[data-context="popup"] .auth-pill {
+    max-width: 140px;
 }
 
 html[data-context="sidepanel"] .garden-board-toggle {
@@ -42,14 +40,11 @@ html[data-context="popup"],
 html[data-context="popup"] body {
     width: 320px;
     height: 440px;
-    margin: 0;
-    overflow: hidden;
 }
 
 html[data-context="popup"] body {
     display: flex;
     flex-direction: column;
-    background: var(--background-primary);
 }
 
 html[data-context="popup"] #app {
@@ -70,14 +65,6 @@ html[data-context="popup"] .garden-board-toggle {
 
 html[data-context="popup"].popup-aimed .garden-world {
     transition: transform 220ms ease;
-}
-
-html[data-context="popup"] .auth-pill {
-    top: 6px;
-    left: 6px;
-    max-width: 140px;
-    padding: 3px 8px 3px 5px;
-    font-size: 11px;
 }
 
 .popup-footer {
@@ -139,7 +126,7 @@ html[data-context="popup"] .auth-pill {
 
 .popup-arrow:not(:disabled):hover,
 .popup-action:hover {
-    background: var(--background-modifier-hover, var(--background-secondary));
+    background: var(--background-modifier-hover);
 }
 
 .popup-actions {

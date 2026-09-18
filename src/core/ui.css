@@ -146,12 +146,6 @@
     font-weight: 600;
 }
 
-.share-modal .share-link {
-    width: 100%;
-    min-width: 0;
-    font-size: 12px;
-}
-
 .share-modal .setting-item-control:has(.share-link) {
     flex-wrap: wrap;
     gap: 6px;
