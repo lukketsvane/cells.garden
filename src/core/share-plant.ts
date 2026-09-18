@@ -84,7 +84,6 @@ export class SharePlantModal extends Modal {
         }
         for (const project of this.app.gardenData) {
             const row = new Setting(contentEl).setName(project.seed || project.name);
-            row.settingEl.addClass('share-plant-row');
             if (project.sharedPlantId) {
                 row.setDesc('Shared');
                 row.addButton((b) => b.setButtonText('Open').onClick(() => void this.showPlant(project.id)));

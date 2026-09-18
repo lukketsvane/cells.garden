@@ -304,10 +304,6 @@ class GardenFilesModal extends Modal {
             this.busy = false;
         }
     }
-
-    onClose() {
-        this.contentEl.empty();
-    }
 }
 
 function message(e: unknown): string {

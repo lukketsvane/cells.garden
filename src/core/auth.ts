@@ -345,10 +345,8 @@ export class AuthPill {
             this.el.appendChild(avatarEl(this.avatar ?? this.session.user.id, 18, 'auth-pill-avatar'));
             this.el.createSpan({ cls: 'auth-pill-label', text: this.label ?? email });
             this.el.toggleClass('is-shared', this.label !== null);
-            this.el.addClass('is-signed-in');
         } else {
             this.el.createSpan({ cls: 'auth-pill-label', text: 'Sign in' });
-            this.el.removeClass('is-signed-in');
         }
     }
 

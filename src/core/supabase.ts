@@ -95,15 +95,6 @@ export class SupabaseStore implements GardenStore {
         this.rowId = target?.gardenId ?? null;
     }
 
-    /** The row this store is on, once known. */
-    get gardenId(): string | null {
-        return this.rowId;
-    }
-
-    get isShared(): boolean {
-        return !!this.target;
-    }
-
     private get baseKey(): string {
         return `${LOCAL_KEY}/base/${this.target ? this.target.gardenId : `user/${this.userId}`}`;
     }

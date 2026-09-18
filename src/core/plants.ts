@@ -86,11 +86,6 @@ export class PlantSync {
         this.tracked.clear();
     }
 
-    /** Owner of a tracked plant, once known. */
-    ownerOf(plantId: string): string | null {
-        return this.tracked.get(plantId)?.ownerId ?? null;
-    }
-
     /** Start following a plant that was just shared or joined, with its row as the base. */
     adopt(row: { id: string; owner_id: string; data: PlantData; rev: number }) {
         this.unreachable.delete(row.id);
