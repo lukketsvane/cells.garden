@@ -23,7 +23,7 @@ import {
     removePlantMember,
     renewPlantInvite,
 } from './sharing';
-import { inviteSection } from './share-ui';
+import { attempt, inviteSection } from './share-ui';
 import { Modal, Setting } from './ui';
 
 export class SharePlantModal extends Modal {
@@ -33,15 +33,14 @@ export class SharePlantModal extends Modal {
         private readonly app: GardenApp,
         private readonly sync: PlantSync,
         /** Opened from a plant's card: straight to that plant, sharing it first if need be. */
-        private readonly projectId: string | null = null,
+        private readonly projectId: string,
     ) {
         super();
     }
 
     onOpen() {
         this.modalEl.addClass('share-modal');
-        if (this.projectId) void this.openOne(this.projectId);
-        else this.showList();
+        void this.openOne(this.projectId);
     }
 
     private async openOne(projectId: string) {
@@ -111,13 +110,6 @@ export class SharePlantModal extends Modal {
         contentEl.createEl('h2', { text: project.seed || project.name });
         const status = contentEl.createDiv('auth-status');
         const say = (text: string) => status.setText(text);
-        const attempt = async (what: string, run: () => Promise<void>) => {
-            try {
-                await run();
-            } catch (e) {
-                say(`Could not ${what}: ${(e as Error).message}`);
-            }
-        };
 
         const unlink = async (text: string) => {
             const live = this.live(projectId);
@@ -168,7 +160,7 @@ export class SharePlantModal extends Modal {
                 const row = new Setting(people).setName(member.userId === this.userId ? `${member.name} (you)` : member.name);
                 row.nameEl.prepend(avatarEl(member.avatar, 20));
                 if (isOwner) {
-                    row.addButton((b) => b.setButtonText('Remove').onClick(() => void attempt('remove', async () => {
+                    row.addButton((b) => b.setButtonText('Remove').onClick(() => void attempt(say, 'remove', async () => {
                         await removePlantMember(this.client, plantId, member.userId);
                         await this.showPlant(projectId, `Removed ${member.name}.`);
                     })));
@@ -191,7 +183,7 @@ export class SharePlantModal extends Modal {
                     if (sent.has(friend.userId)) {
                         row.setDesc('Sent');
                     } else {
-                        row.addButton((b) => b.setButtonText('Send').onClick(() => void attempt('send it', async () => {
+                        row.addButton((b) => b.setButtonText('Send').onClick(() => void attempt(say, 'send it', async () => {
                             await offerPlant(this.client, plantId, friend.userId);
                             await this.showPlant(projectId, `Sent to ${friend.name}.`);
                         })));
@@ -203,14 +195,13 @@ export class SharePlantModal extends Modal {
         }
 
         const footer = new Setting(contentEl);
-        if (!this.projectId) footer.addButton((b) => b.setButtonText('Back').onClick(() => this.showList()));
         if (isOwner) {
-            footer.addButton((b) => b.setButtonText('Stop sharing').setWarning().onClick(() => void attempt('stop sharing', async () => {
+            footer.addButton((b) => b.setButtonText('Stop sharing').setWarning().onClick(() => void attempt(say, 'stop sharing', async () => {
                 await deleteSharedPlant(this.client, plantId);
                 await unlink('Stopped sharing. Everyone keeps their own copy.');
             })));
         } else {
-            footer.addButton((b) => b.setButtonText('Leave').setWarning().onClick(() => void attempt('leave', async () => {
+            footer.addButton((b) => b.setButtonText('Leave').setWarning().onClick(() => void attempt(say, 'leave', async () => {
                 await removePlantMember(this.client, plantId, this.userId);
                 await unlink('Left. Your copy stays in your garden.');
             })));
@@ -218,9 +209,5 @@ export class SharePlantModal extends Modal {
 
         contentEl.appendChild(status);
         say(message);
-    }
-
-    onClose() {
-        this.contentEl.empty();
     }
 }

@@ -3,13 +3,8 @@ import { Modal, Setting } from './ui';
 // --- The Confirm Delete Modal ---
 
 export class ConfirmDeleteModal extends Modal {
-    onSubmit: () => void;
-    plantName: string;
-
-    constructor(plantName: string, onSubmit: () => void) {
+    constructor(private plantName: string, private onSubmit: () => void) {
         super();
-        this.onSubmit = onSubmit;
-        this.plantName = plantName;
     }
 
     onOpen() {
@@ -17,7 +12,6 @@ export class ConfirmDeleteModal extends Modal {
         contentEl.createEl("h2", { text: "♻️ Recycle Plant?" });
         contentEl.createEl("p", {
             text: `Are you sure you want to recycle "${this.plantName}"? This will permanently delete the plant and all its tasks.`,
-            cls: "modal-warning-text"
         });
 
         new Setting(contentEl)
@@ -33,20 +27,13 @@ export class ConfirmDeleteModal extends Modal {
                     });
             });
     }
-
-    onClose() {
-        this.contentEl.empty();
-    }
 }
 
 // --- The Create Project Modal ---
 
 export class CreateProjectModal extends Modal {
-    onSubmit: (seed: string) => void;
-
-    constructor(onSubmit: (seed: string) => void) {
+    constructor(private onSubmit: (seed: string) => void) {
         super();
-        this.onSubmit = onSubmit;
     }
 
     onOpen() {
@@ -54,25 +41,24 @@ export class CreateProjectModal extends Modal {
         contentEl.createEl("h2", { text: "🌱 Plant a New Seed" });
 
         let projectSeed = "";
+        const submit = () => {
+            if (projectSeed.trim()) {
+                this.close();
+                this.onSubmit(projectSeed);
+            }
+        };
 
         new Setting(contentEl)
             .setName("Goal / Seed")
             .setDesc("This will also act as the plant's title.")
             .addTextArea((text) => {
                 text.onChange((value) => { projectSeed = value; });
-
-                // --- THE SPELL ---
                 text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
                     if (e.key === 'Enter' && !e.shiftKey) { // Allow Shift+Enter for new lines!
                         e.preventDefault();
-                        if (projectSeed.trim()) {
-                            this.close();
-                            this.onSubmit(projectSeed);
-                        }
+                        submit();
                     }
                 });
-                // ----------------
-
                 setTimeout(() => text.inputEl.focus(), 50);
             });
 
@@ -83,17 +69,8 @@ export class CreateProjectModal extends Modal {
             .addButton((btn) => {
                 btn.setButtonText("Plant Seed")
                     .setCta()
-                    .onClick(() => {
-                        if (projectSeed.trim()) {
-                            this.close();
-                            this.onSubmit(projectSeed);
-                        }
-                    });
+                    .onClick(submit);
             });
-    }
-
-    onClose() {
-        this.contentEl.empty();
     }
 }
 
@@ -121,9 +98,5 @@ export class ShortcutsModal extends Modal {
             table.createEl('kbd', { text: keys });
             table.createSpan({ text: what });
         }
-    }
-
-    onClose() {
-        this.contentEl.empty();
     }
 }

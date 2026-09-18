@@ -52,19 +52,15 @@ export class Modal {
     close() {
         if (!this.containerEl.isConnected) return;
         document.removeEventListener('keydown', this._onKeyDown);
-        this.onClose();
         this.containerEl.remove();
     }
 
     onOpen() {}
-    onClose() {}
 }
 
-export class TextComponent {
-    inputEl: HTMLInputElement;
-    constructor(containerEl: HTMLElement) {
-        this.inputEl = containerEl.createEl('input', { type: 'text' });
-    }
+/** A text input or a textarea: the same four methods either way. */
+class InputComponent<E extends HTMLInputElement | HTMLTextAreaElement> {
+    constructor(public inputEl: E) {}
     getValue() { return this.inputEl.value; }
     setValue(value: string) { this.inputEl.value = value; return this; }
     setPlaceholder(placeholder: string) { this.inputEl.placeholder = placeholder; return this; }
@@ -74,21 +70,7 @@ export class TextComponent {
     }
 }
 
-export class TextAreaComponent {
-    inputEl: HTMLTextAreaElement;
-    constructor(containerEl: HTMLElement) {
-        this.inputEl = containerEl.createEl('textarea');
-    }
-    getValue() { return this.inputEl.value; }
-    setValue(value: string) { this.inputEl.value = value; return this; }
-    setPlaceholder(placeholder: string) { this.inputEl.placeholder = placeholder; return this; }
-    onChange(cb: (value: string) => void) {
-        this.inputEl.addEventListener('input', () => cb(this.inputEl.value));
-        return this;
-    }
-}
-
-export class ButtonComponent {
+class ButtonComponent {
     buttonEl: HTMLButtonElement;
     constructor(containerEl: HTMLElement) {
         this.buttonEl = containerEl.createEl('button', { type: 'button' });
@@ -103,22 +85,20 @@ export class ButtonComponent {
 }
 
 export class Setting {
-    settingEl: HTMLElement;
-    infoEl: HTMLElement;
     nameEl: HTMLElement;
     descEl: HTMLElement;
     controlEl: HTMLElement;
 
     constructor(containerEl: HTMLElement) {
-        this.settingEl = containerEl.createDiv('setting-item');
-        this.infoEl = this.settingEl.createDiv('setting-item-info');
-        this.nameEl = this.infoEl.createDiv('setting-item-name');
-        this.descEl = this.infoEl.createDiv('setting-item-description');
-        this.controlEl = this.settingEl.createDiv('setting-item-control');
+        const settingEl = containerEl.createDiv('setting-item');
+        const infoEl = settingEl.createDiv('setting-item-info');
+        this.nameEl = infoEl.createDiv('setting-item-name');
+        this.descEl = infoEl.createDiv('setting-item-description');
+        this.controlEl = settingEl.createDiv('setting-item-control');
     }
     setName(name: string) { this.nameEl.setText(name); return this; }
     setDesc(desc: string) { this.descEl.setText(desc); return this; }
-    addText(cb: (text: TextComponent) => void) { cb(new TextComponent(this.controlEl)); return this; }
-    addTextArea(cb: (text: TextAreaComponent) => void) { cb(new TextAreaComponent(this.controlEl)); return this; }
+    addText(cb: (text: InputComponent<HTMLInputElement>) => void) { cb(new InputComponent(this.controlEl.createEl('input', { type: 'text' }))); return this; }
+    addTextArea(cb: (text: InputComponent<HTMLTextAreaElement>) => void) { cb(new InputComponent(this.controlEl.createEl('textarea'))); return this; }
     addButton(cb: (button: ButtonComponent) => void) { cb(new ButtonComponent(this.controlEl)); return this; }
 }

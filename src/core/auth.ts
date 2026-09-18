@@ -23,8 +23,6 @@ import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { openMenu, type MenuItem } from './menu';
 import { Modal, Setting } from './ui';
 
-export type { MenuItem };
-
 export interface AuthOptions {
     /** Where the magic link should land. Defaults to the current page. */
     redirectTo?: string;
@@ -35,8 +33,22 @@ export interface AuthOptions {
 /** Checked when a password is chosen, never when one is typed to sign in. */
 const MIN_PASSWORD_LENGTH = 8;
 
-function looksLikeEmail(value: string): boolean {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+/** The typed address trimmed, or null after saying on `status` that it is not one. */
+function validEmail(value: string, status: HTMLElement): string | null {
+    const email = value.trim();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return email;
+    status.setText('That does not look like an email address.');
+    return null;
+}
+
+/** Enter in a field does what the step's main button does. */
+function onEnter(input: HTMLInputElement, run: () => void) {
+    input.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            run();
+        }
+    });
 }
 
 /** What the owner has to fix, said once where the owner will see it. */
@@ -73,6 +85,21 @@ class SignInModal extends Modal {
         this.showPasswordStep();
     }
 
+    /** The Email field of both ways in; Enter runs `submit`. */
+    private emailField(submit: () => void) {
+        new Setting(this.contentEl)
+            .setName('Email')
+            .addText((text) => {
+                text.setPlaceholder('you@example.com');
+                text.setValue(this.email);
+                text.inputEl.type = 'email';
+                text.inputEl.autocomplete = 'email';
+                text.onChange((v) => { this.email = v; });
+                onEnter(text.inputEl, submit);
+                setTimeout(() => text.inputEl.focus(), 50);
+            });
+    }
+
     /** The default way in: email and password, no message sent either way. */
     private showPasswordStep() {
         const { contentEl } = this;
@@ -85,11 +112,8 @@ class SignInModal extends Modal {
         const status = contentEl.createDiv('auth-status');
 
         const submit = async (mode: 'in' | 'up') => {
-            const email = this.email.trim();
-            if (!looksLikeEmail(email)) {
-                status.setText('That does not look like an email address.');
-                return;
-            }
+            const email = validEmail(this.email, status);
+            if (!email) return;
             if (!password) {
                 status.setText('Type a password too.');
                 return;
@@ -143,23 +167,7 @@ class SignInModal extends Modal {
             status.setText(SIGN_UP_UNAVAILABLE);
         };
 
-        new Setting(contentEl)
-            .setName('Email')
-            .addText((text) => {
-                text.setPlaceholder('you@example.com');
-                text.setValue(this.email);
-                text.inputEl.type = 'email';
-                text.inputEl.autocomplete = 'email';
-                text.onChange((v) => { this.email = v; });
-                text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        void submit('in');
-                    }
-                });
-                setTimeout(() => text.inputEl.focus(), 50);
-            });
-
+        this.emailField(() => void submit('in'));
         new Setting(contentEl)
             .setName('Password')
             .addText((text) => {
@@ -167,12 +175,7 @@ class SignInModal extends Modal {
                 text.inputEl.type = 'password';
                 text.inputEl.autocomplete = 'current-password';
                 text.onChange((v) => { password = v; });
-                text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        void submit('in');
-                    }
-                });
+                onEnter(text.inputEl, () => void submit('in'));
             });
 
         new Setting(contentEl)
@@ -194,11 +197,8 @@ class SignInModal extends Modal {
         const status = contentEl.createDiv('auth-status');
 
         const submit = async () => {
-            const value = this.email.trim();
-            if (!looksLikeEmail(value)) {
-                status.setText('That does not look like an email address.');
-                return;
-            }
+            const value = validEmail(this.email, status);
+            if (!value) return;
             status.setText('Sending…');
             const redirectTo = this.options.redirectTo ?? (window.location.origin + window.location.pathname);
             const { error } = await this.client.auth.signInWithOtp({
@@ -212,23 +212,7 @@ class SignInModal extends Modal {
             this.showCodeStep(value);
         };
 
-        new Setting(contentEl)
-            .setName('Email')
-            .addText((text) => {
-                text.setPlaceholder('you@example.com');
-                text.setValue(this.email);
-                text.inputEl.type = 'email';
-                text.inputEl.autocomplete = 'email';
-                text.onChange((v) => { this.email = v; });
-                text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        void submit();
-                    }
-                });
-                setTimeout(() => text.inputEl.focus(), 50);
-            });
-
+        this.emailField(() => void submit());
         new Setting(contentEl)
             .addButton((btn) => btn.setButtonText('Back').onClick(() => this.showPasswordStep()))
             .addButton((btn) => btn.setButtonText('Send link').setCta().onClick(() => void submit()));
@@ -265,22 +249,13 @@ class SignInModal extends Modal {
                 text.inputEl.inputMode = 'numeric';
                 text.inputEl.autocomplete = 'one-time-code';
                 text.onChange((v) => { code = v; });
-                text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        void verify();
-                    }
-                });
+                onEnter(text.inputEl, () => void verify());
                 setTimeout(() => text.inputEl.focus(), 50);
             });
 
         new Setting(contentEl)
             .addButton((btn) => btn.setButtonText('Close').onClick(() => this.close()))
             .addButton((btn) => btn.setButtonText('Verify code').setCta().onClick(() => void verify()));
-    }
-
-    onClose() {
-        this.contentEl.empty();
     }
 }
 
