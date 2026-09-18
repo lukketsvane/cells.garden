@@ -18,7 +18,7 @@ import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import type { GardenApp } from './app';
 import { mergePlant, plantData, sameData, type PlantData } from './merge';
 import type { ProjectData } from './model';
-import { LOCAL_KEY, snapshot } from './store';
+import { LOCAL_KEY, readJson, snapshot, writeJson } from './store';
 
 interface PlantRow {
     id: string;
@@ -39,22 +39,12 @@ interface Tracked {
 const MAX_ROUNDS = 4;
 const baseKey = (plantId: string) => `${LOCAL_KEY}/plant/${plantId}`;
 
-function remember(plantId: string, rev: number, base: PlantData) {
-    try {
-        localStorage.setItem(baseKey(plantId), JSON.stringify({ rev, base }));
-    } catch {
-        // Storage full or blocked: the next offline merge is a union.
-    }
-}
+/** Not kept (storage full or blocked): the next offline merge is a union. */
+const remember = (plantId: string, rev: number, base: PlantData) => writeJson(baseKey(plantId), { rev, base });
 
 function remembered(plantId: string): { rev: number; base: PlantData } | null {
-    try {
-        const raw = localStorage.getItem(baseKey(plantId));
-        const parsed = raw ? (JSON.parse(raw) as { rev?: unknown; base?: PlantData }) : null;
-        return parsed && typeof parsed.rev === 'number' && parsed.base ? { rev: parsed.rev, base: parsed.base } : null;
-    } catch {
-        return null;
-    }
+    const parsed = readJson<{ rev?: unknown; base?: PlantData }>(baseKey(plantId));
+    return parsed && typeof parsed.rev === 'number' && parsed.base ? { rev: parsed.rev, base: parsed.base } : null;
 }
 
 export class PlantSync {
@@ -158,8 +148,8 @@ export class PlantSync {
             const prior = remembered(plantId);
             const merged = mergePlant(prior ? prior.base : null, plantData(local), remote);
             remember(plantId, row.rev, t.base);
-            if (!sameData(merged, plantData(local))) await this.app.patchProject(local.id, merged, false);
             const patched = !sameData(merged, plantData(local));
+            if (patched) await this.app.patchProject(local.id, merged);
             if (!sameData(merged, remote)) this.enqueue(plantId, () => this.write(plantId, patched));
             else if (patched) await this.app.saveGardenData();
         })().finally(() => this.attaching.delete(plantId));
@@ -203,7 +193,7 @@ export class PlantSync {
         t.rev = row.rev;
         remember(plantId, t.rev, t.base);
         const patched = !sameData(merged, plantData(local));
-        if (patched) await this.app.patchProject(local.id, merged, false);
+        if (patched) await this.app.patchProject(local.id, merged);
         // Unsaved edits here that the arrival did not include still need to go out.
         if (!sameData(merged, remote)) await this.write(plantId, patched);
         else if (patched) await this.app.saveGardenData();
@@ -257,7 +247,7 @@ export class PlantSync {
             const merged = mergePlant(t.base, outgoing, row.data);
             t.base = snapshot(row.data);
             t.rev = row.rev;
-            await this.app.patchProject(local.id, merged, false);
+            await this.app.patchProject(local.id, merged);
             dirty = true;
         }
         throw new Error('Garden Cells: a shared plant kept changing while saving.');

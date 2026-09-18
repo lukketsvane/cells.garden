@@ -1,5 +1,5 @@
 import type { Garden } from './model';
-import { emptyGarden } from './model';
+import { DEFAULT_SETTINGS, emptyGarden } from './model';
 
 /**
  * Where the garden lives. The app only ever talks to this interface, so the
@@ -27,14 +27,34 @@ export interface GardenStore {
 /** The anonymous garden of this device (no account). */
 export const LOCAL_KEY = 'cells.garden/v1';
 
-/** The offline mirror of one account's garden on this device. */
-export function userStoreKey(userId: string): string {
-    return `${LOCAL_KEY}/user/${userId}`;
+/** A JSON value from localStorage; null when missing, unreadable or blocked. */
+export function readJson<T>(key: string): T | null {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? (JSON.parse(raw) as T) : null;
+    } catch {
+        return null;
+    }
 }
 
-/** The offline mirror of a garden someone shared with this account. */
-export function gardenStoreKey(gardenId: string): string {
-    return `${LOCAL_KEY}/garden/${gardenId}`;
+/** Keep a JSON value in localStorage (null removes it). Blocked or full: it just does not survive a reload. */
+export function writeJson(key: string, value: unknown) {
+    try {
+        if (value === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+        // Storage blocked or full.
+    }
+}
+
+/** A stored or fetched garden with every field filled in. */
+export function gardenFrom(data: Partial<Garden>, updatedAt: string): Garden {
+    return {
+        version: 1,
+        projects: Array.isArray(data.projects) ? data.projects : [],
+        settings: { ...DEFAULT_SETTINGS, ...(data.settings ?? {}) },
+        updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : updatedAt,
+    };
 }
 
 /** A deep copy that shares nothing with the live data the view edits in place. */
@@ -111,13 +131,7 @@ function parseGarden(raw: string): Garden | null {
     try {
         const parsed = JSON.parse(raw) as Partial<Garden>;
         if (!parsed || !Array.isArray(parsed.projects)) return null;
-        const base = emptyGarden();
-        return {
-            version: 1,
-            projects: parsed.projects,
-            settings: { ...base.settings, ...(parsed.settings ?? {}) },
-            updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : base.updatedAt,
-        };
+        return gardenFrom(parsed, emptyGarden().updatedAt);
     } catch (e) {
         console.error('Garden Cells: stored garden is not valid JSON', e);
         return null;

@@ -6,16 +6,10 @@ import '../core/styles.css';
 
 import { registerSW } from 'virtual:pwa-register';
 
-import type { GardenApp } from '../core/app';
 import { bootGarden } from '../core/boot';
 
 const host = document.getElementById('app');
 if (!host) throw new Error('cells.garden: #app element missing');
-
-// Handy in the console while developing.
-declare global {
-    interface Window { garden: GardenApp | undefined }
-}
 
 bootGarden(host).then((app) => {
     window.garden = app;

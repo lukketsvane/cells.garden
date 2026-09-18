@@ -3,29 +3,12 @@
  * the other pages show. Left and right cycle through the plants; the garden
  * itself is the same GardenView, aimed by focusProject(), with the kanban
  * hidden by ext.css. Buttons open the full garden in a tab or the side panel.
+ * The garden itself is booted by main.ts, as on the other extension pages.
  */
-import '../src/core/shim';
-import '../src/web/app.css';
-import '../src/core/chrome.css';
-import '../src/core/ui.css';
-import '../src/core/styles.css';
-import './ext.css';
-
-import type { GardenApp } from '../src/core/app';
-import { bootGarden } from '../src/core/boot';
-
-const host = document.getElementById('app');
-if (!host) throw new Error('cells.garden: #app element missing');
-
-declare global {
-    interface Window { garden: GardenApp | undefined }
-}
+import { inExtension, ready } from './main';
 
 /** Which plant the popup showed last. Per device, like the camera. */
 const INDEX_KEY = 'cells.garden/popup/index';
-
-const inExtension = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
-const redirectTo = inExtension ? chrome.runtime.getURL('newtab.html') : undefined;
 
 function readIndex(): number {
     try {
@@ -44,9 +27,7 @@ function writeIndex(i: number) {
     }
 }
 
-bootGarden(host, { redirectTo }).then((app) => {
-    window.garden = app;
-
+ready.then((app) => {
     const footer = document.body.createDiv('popup-footer');
     const row = footer.createDiv('popup-row');
     const prev = row.createEl('button', { cls: 'popup-arrow', text: '<', attr: { 'aria-label': 'Previous plant' } });

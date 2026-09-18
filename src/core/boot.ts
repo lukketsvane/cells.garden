@@ -7,7 +7,8 @@
  */
 import './shim';
 import { GardenApp } from './app';
-import { AuthPill, type MenuItem } from './auth';
+import { AuthPill, type AuthOptions } from './auth';
+import type { MenuItem } from './menu';
 import { PlantSync } from './plants';
 import { LeaveGardenModal, ShareGardenModal } from './share';
 import { SharePlantModal } from './share-plant';
@@ -15,8 +16,6 @@ import { FriendsModal } from './friends';
 import { applyScene } from './scene';
 import { SettingsModal } from './settings';
 import {
-    GardenFullError,
-    InvalidInviteError,
     inviteTokenFromHash,
     joinGarden,
     getProfile,
@@ -27,25 +26,25 @@ import {
     ownGardenId,
     plantTokenFromHash,
     removeMember,
+    ShareError,
     sharingAvailable,
-    SharingUnavailableError,
 } from './sharing';
 import {
     anonymousGardenClaimedBy,
     claimAnonymousGarden,
-    gardenStoreKey,
     GardenGoneError,
     LOCAL_KEY,
     LocalStore,
-    userStoreKey,
+    readJson,
+    writeJson,
 } from './store';
 import { createSupabase, SupabaseStore } from './supabase';
 import { installTouchAdapter } from './touch';
 import { BoardToggleButton, GardenFilesButton, openGardenFiles } from './transfer';
 
-export interface BootOptions {
-    /** Where a magic link should land. Defaults to the current page. */
-    redirectTo?: string;
+declare global {
+    /** The mounted app, handy in the console while developing. */
+    interface Window { garden: GardenApp | undefined }
 }
 
 interface OpenGarden {
@@ -58,33 +57,14 @@ const PENDING_JOIN_KEY = `${LOCAL_KEY}/pendingJoin`;
 const PENDING_JOIN_TTL = 24 * 60 * 60 * 1000;
 const activeKey = (uid: string) => `${LOCAL_KEY}/active/${uid}`;
 
-function readJson<T>(key: string): T | null {
-    try {
-        const raw = localStorage.getItem(key);
-        return raw ? (JSON.parse(raw) as T) : null;
-    } catch {
-        return null;
-    }
-}
-
-function writeJson(key: string, value: unknown) {
-    try {
-        if (value === null) localStorage.removeItem(key);
-        else localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-        // Storage blocked: the choice just does not survive a reload.
-    }
-}
+type InviteKind = 'garden' | 'plant';
 
 /**
  * Read `#join=<token>` from the address, keep it until a sign-in can use it, and
  * take it out of the address so it is not bookmarked or passed on by accident.
  * Kept in localStorage because the emailed sign-in link opens a new tab.
  */
-type InviteKind = 'garden' | 'plant';
-
 function stashInviteFromUrl() {
-    if (typeof location === 'undefined') return;
     const garden = inviteTokenFromHash(location.hash);
     const plant = plantTokenFromHash(location.hash);
     const token = garden ?? plant;
@@ -103,10 +83,6 @@ function peekPendingJoin(): { token: string; kind: InviteKind } | null {
     return { token: pending.token, kind: pending.kind === 'plant' ? 'plant' : 'garden' };
 }
 
-function takePendingJoin(): string | null {
-    return peekPendingJoin()?.token ?? null;
-}
-
 /** A one-line notice over the garden that goes away by itself. */
 function notify(host: HTMLElement, text: string) {
     host.querySelector('.garden-notice')?.remove();
@@ -114,7 +90,8 @@ function notify(host: HTMLElement, text: string) {
     setTimeout(() => el.remove(), 5000);
 }
 
-export async function bootGarden(host: HTMLElement, options: BootOptions = {}): Promise<GardenApp> {
+/** `options.redirectTo`: where a magic link should land. Defaults to the current page. */
+export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): Promise<GardenApp> {
     applyScene();
     // Extension pages never receive a link, so only the web app looks.
     const inExtension = !!(globalThis as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
@@ -145,14 +122,14 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
     if (!supabase) {
         // No pill menu to hold export and import, so they keep a button.
         new GardenFilesButton(app, host);
-        if (takePendingJoin()) {
+        if (peekPendingJoin()) {
             writeJson(PENDING_JOIN_KEY, null);
             notify(host, 'Sharing needs an account. This build has none.');
         }
         return app;
     }
 
-    const pill = new AuthPill(supabase, host, { redirectTo: options.redirectTo });
+    const pill = new AuthPill(supabase, host, options);
     app.onSyncState = (state) => pill.setSyncState(state);
 
     let currentUser: string | null = null;
@@ -167,8 +144,8 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         pill.setLabel(target?.name ?? null);
         if (target) {
             try {
-                await app.useStore(new SupabaseStore(supabase, uid, { gardenId: target.id }), {
-                    mirror: new LocalStore(gardenStoreKey(target.id)),
+                await app.useStore(new SupabaseStore(supabase, uid, target.id), {
+                    mirror: new LocalStore(`${LOCAL_KEY}/garden/${target.id}`),
                 });
             } catch (e) {
                 if (!(e instanceof GardenGoneError)) throw e;
@@ -182,7 +159,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         const claimedBy = anonymousGardenClaimedBy();
         const seed = app.store === anonymous && (!claimedBy || claimedBy === uid) ? app.toGarden() : null;
         await app.useStore(new SupabaseStore(supabase, uid), {
-            mirror: new LocalStore(userStoreKey(uid)),
+            mirror: new LocalStore(`${LOCAL_KEY}/user/${uid}`),
             seed,
             onSeedUsed: () => claimAnonymousGarden(uid),
         });
@@ -191,6 +168,13 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
     const fail = (e: unknown) => {
         console.error('Garden Cells: could not switch gardens', e);
         pill.setSyncState('error');
+    };
+
+    /** An invite that could not be used: say why when the reason is worded for the user. */
+    const linkFailed = (e: unknown, kind: InviteKind) => {
+        if (e instanceof ShareError) return notify(host, e.message.replace('garden', kind));
+        console.error('Garden Cells: could not use the invite', e);
+        notify(host, 'Could not open that link. Try it again.');
     };
 
     app.onGone = () => {
@@ -216,12 +200,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
             notify(host, `Opened ${garden.name}.`);
             return garden;
         } catch (e) {
-            if (e instanceof InvalidInviteError || e instanceof GardenFullError || e instanceof SharingUnavailableError) {
-                notify(host, e.message);
-            } else {
-                console.error('Garden Cells: could not use the invite', e);
-                notify(host, 'Could not open that link. Try it again.');
-            }
+            linkFailed(e, 'garden');
             return null;
         }
     };
@@ -277,12 +256,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
             const planted = await plantShared(row, sync);
             notify(host, planted ? `Planted ${row.data.seed || row.data.name}.` : 'That plant is already in your garden.');
         } catch (e) {
-            if (e instanceof InvalidInviteError || e instanceof GardenFullError || e instanceof SharingUnavailableError) {
-                notify(host, e.message.replace('garden', 'plant'));
-            } else {
-                console.error('Garden Cells: could not use the plant link', e);
-                notify(host, 'Could not open that link. Try it again.');
-            }
+            linkFailed(e, 'plant');
         }
     };
 
@@ -330,7 +304,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
                         notify(host, 'Could not share yet. Try again in a moment.');
                         return;
                     }
-                    new ShareGardenModal(supabase, own.id, own.name, () => {}).open();
+                    new ShareGardenModal(supabase, own.id, own.name).open();
                 },
             });
         } else {
@@ -357,7 +331,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         pill.setSession(session);
         const uid = session?.user.id ?? null;
         // An invite is waiting and nobody is signed in: ask once, on the first answer.
-        if (!uid && !askedToSignIn && takePendingJoin()) {
+        if (!uid && !askedToSignIn && peekPendingJoin()) {
             askedToSignIn = true;
             setTimeout(() => pill.signIn('Sign in to open the garden you were invited to.'), 0);
         }
