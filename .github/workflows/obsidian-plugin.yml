@@ -56,6 +56,11 @@ jobs:
           if (/loadLocalStorage|saveLocalStorage/.test(js)) {
             throw new Error('Obsidian build still uses legacy local storage APIs');
           }
+          const gardenSource = fs.readFileSync('src/core/garden.ts', 'utf8');
+          const seedSync = gardenSource.split('private syncKanbanSeedLine')[1]?.split('private async renderGardenCanvas')[0] ?? '';
+          if (/\.style\./.test(seedSync)) {
+            throw new Error('Seed-horizon code uses direct style assignment instead of Obsidian CSS helpers');
+          }
           NODE
       - name: Attest the release files
         if: github.ref == 'refs/heads/main'
