@@ -46,8 +46,9 @@ jobs:
             echo "The committed build is current."
             exit 0
           fi
-          git -c user.name=tastefinger -c user.email=41840333+lukketsvane@users.noreply.github.com \
-            commit -m "Build the Obsidian plugin"
+          git config user.name tastefinger
+          git config user.email 41840333+lukketsvane@users.noreply.github.com
+          git commit -m "Build the Obsidian plugin"
           # main/dev may have moved while this build was running (for example
           # another quick push). Rebase the generated build instead of dropping it.
           git pull --rebase origin "$GITHUB_REF_NAME"
