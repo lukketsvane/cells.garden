@@ -42,10 +42,7 @@ function saveToDisk(name: string, bytes: Uint8Array) {
     // buffer that something else may still be writing into.
     const blob = new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/zip' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = name;
-    document.body.appendChild(link);
+    const link = document.body.createEl('a', { attr: { href: url, download: name } });
     link.click();
     link.remove();
     // Revoking straight away can cancel the download in some browsers.

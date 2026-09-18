@@ -310,7 +310,7 @@
 .garden-bottom-half {
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
+    flex: var(--garden-board-flex, 1 1 auto);
     min-height: 100px;
     background: var(--background-primary);
     overflow: hidden;
@@ -960,9 +960,14 @@
     }
 
     /* A finger needs more than 4px to grab the divider. */
+    .garden-resizer,
+    .garden-resizer:hover,
+    .garden-resizer.is-dragging {
+        background: var(--background-secondary);
+    }
+
     .garden-resizer {
-        flex-basis: 14px !important;
-        background: var(--background-secondary) !important;
+        flex-basis: 14px;
         border-top: 1px solid var(--background-modifier-border);
         border-bottom: 1px solid var(--background-modifier-border);
         touch-action: none;
@@ -1107,6 +1112,7 @@
 /* The split: garden above, board below, a draggable divider between them.
    Only the canvas pane's share of the height comes from the view. */
 .garden-canvas-area {
+    flex: var(--garden-canvas-flex);
     position: relative;
     min-height: 100px;
     overflow: hidden;
