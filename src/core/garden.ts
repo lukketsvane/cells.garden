@@ -45,8 +45,10 @@ const RUBBER_REACH = 120;
 // Frames a shooting star lives, long enough to fade in and out again.
 const STAR_LIFE = 25;
 // The smallest sky and ground the world ever has, whatever the plants do.
-const BASE_SKY = 520;
-const BASE_GROUND = 400;
+const BASE_SKY = 620;
+const BASE_GROUND = 480;
+/** Comfortable opening scale: enough scene around the plants to breathe. */
+const DEFAULT_GARDEN_ZOOM = 0.34;
 // Squares in the worm.
 const WORM_LENGTH = 7;
 // The most fireflies a garden setting can ask for.
@@ -102,7 +104,7 @@ export class GardenView extends View {
     private startY = 0;
     private currentTranslateX = 0;
     private currentTranslateY = 0;
-    private zoom = 1;
+    private zoom = DEFAULT_GARDEN_ZOOM;
     private zoomMin = 0.15;
     private zoomMax = 3;
 
@@ -1164,12 +1166,12 @@ export class GardenView extends View {
                             const viewport = this.viewport;
                             const world = this.world;
                             if (viewport && world) {
-                                this.zoom = 0.4;
+                                this.zoom = DEFAULT_GARDEN_ZOOM;
                                 const vpWidth = viewport.offsetWidth || 800;
                                 const vpHeight = viewport.offsetHeight || 600;
                                 const plantCount = this.app.gardenData.length;
                                 const middlePlantIndex = Math.floor(plantCount / 2);
-                                const middlePlantWorldX = 320 + (middlePlantIndex * 300) + 150;
+                                const middlePlantWorldX = plantCentre(middlePlantIndex);
                                 
                                 this.currentTranslateX = (vpWidth / 2) - (middlePlantWorldX * this.zoom);
                                 this.currentTranslateY = (vpHeight * 0.65) - (this._dynamicGroundLineY * this.zoom);
@@ -1593,18 +1595,20 @@ export class GardenView extends View {
         const vw = viewport.offsetWidth || 320;
         const vh = viewport.offsetHeight || 320;
         const extents = this.calculateProjectExtents(project);
-        const margin = 24;
-        // The horizon sits low in the window: the plant above ground is what you
-        // came to see, the roots only need a strip below it.
-        const horizon = 0.68;
+        const margin = 42;
+        // Leave more of the scene around a focused plant. The popup used to zoom
+        // tiny seedlings until they filled nearly the whole window.
+        const horizon = 0.64;
         const above = extents.aboveHeight + margin;
         const below = Math.max(extents.undergroundDepth, 40) + margin;
         // Width: the sprite itself (renderPlantSprite leaves it on the wrapper) plus room on each side.
         const wrapper = this.contentEl.querySelector<HTMLElement>(`.garden-plant-wrapper[data-project-id="${project.id}"]`);
         const spriteWidth = Number(wrapper?.dataset.width) || STEM_ORIGIN_WIDTH * PIXEL_SCALE;
-        const widthBasis = Math.max(spriteWidth + 2 * margin, 240);
+        const widthBasis = Math.max(spriteWidth + 2 * margin, 300);
         const fit = Math.min(vw / widthBasis, (vh * horizon) / above, (vh * (1 - horizon)) / below);
-        this.zoom = Math.max(this.zoomMin, Math.min(this.zoomMax, fit));
+        // A little breathing room after fitting keeps the focused plant contextual.
+        const comfortableFit = fit * 0.84;
+        this.zoom = Math.max(this.zoomMin, Math.min(this.zoomMax, 0.9, comfortableFit));
         this.currentTranslateX = vw / 2 - plantCentre(i) * this.zoom;
         this.currentTranslateY = vh * horizon - this._dynamicGroundLineY * this.zoom;
         this.applyWorldTransform(world, viewport);
@@ -2006,7 +2010,10 @@ export class GardenView extends View {
         scrollContainer.addEventListener('mousedown', this.handleKanbanMouseDown);
         scrollContainer.addEventListener('auxclick', (e) => e.preventDefault()); // Prevent middle-click autoscroll bug
 
-        const addLeftBtn = scrollContainer.createDiv({ cls: "add-column-btn" });
+        const addLeftBtn = scrollContainer.createEl('button', {
+            cls: "add-column-btn",
+            attr: { type: 'button', 'aria-label': 'Add plant on the left' },
+        });
         addLeftBtn.createDiv({ cls: "add-column-btn-inner", text: "+" });
         addLeftBtn.onclick = () => this.createNewProject('left');
 
@@ -2027,9 +2034,14 @@ export class GardenView extends View {
             
         }
 
-        const addRightBtn = scrollContainer.createDiv({ cls: "add-column-btn" });
+        const addRightBtn = scrollContainer.createEl('button', {
+            cls: "add-column-btn",
+            attr: { type: 'button', 'aria-label': 'Add plant on the right' },
+        });
         addRightBtn.createDiv({ cls: "add-column-btn-inner", text: "+" });
         addRightBtn.onclick = () => this.createNewProject('right');
+
+        this.syncKanbanSeedLine(scrollContainer);
 
         Sortable.create(scrollContainer, {
             animation: 150,
@@ -2047,6 +2059,31 @@ export class GardenView extends View {
 
 
     
+    /**
+     * Keep every seed row on one horizon without reintroducing the old subgrid
+     * gaps between Flowers and Stem. Only the whole above-seed stack is equalised.
+     */
+    private syncKanbanSeedLine(scrollContainer: HTMLElement) {
+        const columns = Array.from(scrollContainer.querySelectorAll<HTMLElement>(':scope > .project-column'));
+        if (columns.length === 0) {
+            scrollContainer.style.removeProperty('--kanban-seed-offset');
+            return;
+        }
+
+        const topHalves = columns
+            .map(column => column.querySelector<HTMLElement>('.column-top-half'))
+            .filter((el): el is HTMLElement => !!el);
+
+        for (const top of topHalves) top.style.minHeight = '';
+        const seedOffset = Math.max(0, ...topHalves.map(top => top.scrollHeight));
+        for (const top of topHalves) top.style.minHeight = `${seedOffset}px`;
+
+        const win = this.containerEl.ownerDocument.defaultView || window;
+        const columnPaddingTop = parseFloat(win.getComputedStyle(columns[0]).paddingTop) || 0;
+        scrollContainer.style.setProperty('--kanban-seed-offset', `${columnPaddingTop + seedOffset}px`);
+    }
+
+
     private async renderGardenCanvas(parent: HTMLElement) {
         // The old pane's watcher would fire as it leaves, against this world half built.
         this._viewportObserver?.disconnect();

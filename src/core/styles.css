@@ -322,6 +322,12 @@
     position: relative;
     cursor: pointer;
     flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
 }
 
 .add-column-btn-inner {
@@ -339,9 +345,11 @@
     color: var(--text-faint);
     transition: all 0.2s ease;
     user-select: none;
+    pointer-events: none;
 }
 
-.add-column-btn:hover .add-column-btn-inner {
+.add-column-btn:hover .add-column-btn-inner,
+.add-column-btn:focus-visible .add-column-btn-inner {
     background: var(--background-modifier-hover);
     color: var(--text-normal);
     font-weight: 400;
@@ -864,13 +872,23 @@
     border-radius: 4px;
 }
 
-/* There is no shared seed horizon in compact mode, so the add-plant controls
-   sit at the top of the strip rather than creating another vertical band. */
-.kanban-scroll-container .add-column-btn {
-    grid-row: 1;
+/* Keep one seed horizon while preserving compact spacing inside each plant.
+   JS equalises only the combined Flowers+Stem stack, not every individual row. */
+.kanban-scroll-container .column-top-half {
+    min-height: var(--kanban-seed-stack, auto);
+}
+
+.kanban-scroll-container:not(.is-empty) .add-column-btn {
+    grid-row: 1 / -1;
     align-self: start;
     height: 44px;
     min-height: 44px;
+    margin-top: var(--kanban-seed-offset, 8px);
+}
+
+.kanban-scroll-container:not(.is-empty) .add-column-btn-inner {
+    top: 0;
+    transform: none;
 }
 
 /* With nothing planted there is no card track to size the message against. */
@@ -887,6 +905,7 @@
 
     .kanban-scroll-container .project-column {
         scroll-snap-align: start;
+        scroll-snap-stop: always;
     }
 }
 
