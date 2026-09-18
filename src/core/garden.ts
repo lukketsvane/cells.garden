@@ -2084,12 +2084,12 @@ export class GardenView extends View {
     private syncKanbanSeedLine(scrollContainer: HTMLElement) {
         const columns = Array.from(scrollContainer.querySelectorAll<HTMLElement>(':scope > .project-column'));
         if (columns.length === 0) {
-            scrollContainer.style.removeProperty('--kanban-seed-offset');
+            scrollContainer.setCssProps({ '--kanban-seed-offset': '' });
             return;
         }
 
         // Clear our previous offsets before measuring natural card heights.
-        for (const column of columns) column.style.marginTop = '';
+        for (const column of columns) column.setCssStyles({ marginTop: '' });
 
         const above = columns.map(column => {
             const top = column.querySelector<HTMLElement>('.column-top-half');
@@ -2098,12 +2098,12 @@ export class GardenView extends View {
         const tallestAbove = Math.max(0, ...above.map(({ height }) => height));
 
         for (const { column, height } of above) {
-            column.style.marginTop = `${Math.max(0, tallestAbove - height)}px`;
+            column.setCssStyles({ marginTop: `${Math.max(0, tallestAbove - height)}px` });
         }
 
         const win = this.containerEl.ownerDocument.defaultView || window;
         const columnPaddingTop = parseFloat(win.getComputedStyle(columns[0]).paddingTop) || 0;
-        scrollContainer.style.setProperty('--kanban-seed-offset', `${columnPaddingTop + tallestAbove}px`);
+        scrollContainer.setCssProps({ '--kanban-seed-offset': `${columnPaddingTop + tallestAbove}px` });
     }
 
 
