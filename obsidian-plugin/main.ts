@@ -16,9 +16,8 @@ import './plugin.css';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GardenApp } from '../src/core/app';
 import { bootGarden } from '../src/core/boot';
-import { LOCAL_PREFIX, setLocalBackend } from '../src/core/local';
+import { setLocalBackend } from '../src/core/local';
 import { PLANT_FOLDER } from '../src/core/markdown';
-import { CLAIM_KEY } from '../src/core/store';
 import { mergeGarden, vaultFilesToGarden, type VaultFile } from '../src/core/vault';
 
 const VIEW_TYPE = 'cells-garden';
@@ -26,8 +25,6 @@ const VIEW_TYPE = 'cells-garden';
 const RETURN_URL = 'obsidian://cells-garden';
 /** The open garden's sign-in client, which holds the code verifier Google's answer is checked against. */
 let client: SupabaseClient | null = null;
-/** Set in a vault's storage once the shared localStorage keys were copied into it. */
-const COPIED_KEY = `${LOCAL_PREFIX}vault-copied`;
 
 class GardenTabView extends ItemView {
     garden: GardenApp | null = null;
@@ -62,9 +59,17 @@ class GardenTabView extends ItemView {
     }
 }
 
+interface CellsGardenPluginData {
+    local?: Record<string, string>;
+}
+
 export default class CellsGardenPlugin extends Plugin {
+    private pluginData: CellsGardenPluginData = {};
+    private localValues: Record<string, string> = {};
+    private saveTail: Promise<void> = Promise.resolve();
+
     async onload() {
-        this.useVaultStorage();
+        await this.usePluginStorage();
         this.registerView(VIEW_TYPE, (leaf) => new GardenTabView(leaf));
         this.registerObsidianProtocolHandler('cells-garden', (params) => void this.finishSignIn(params));
         this.addRibbonIcon('sprout', 'Open cells.garden', () => void this.openGarden());
@@ -85,43 +90,43 @@ export default class CellsGardenPlugin extends Plugin {
 
 
     /**
-     * Keep the garden's device storage per vault. Earlier versions used the
-     * shared localStorage: copy those keys in once, and leave them in place.
+     * Keep all device state in Obsidian's plugin data file. The core expects a
+     * synchronous key/value backend, so reads and writes hit an in-memory mirror
+     * and each mutation queues a Plugin.saveData snapshot.
      */
-    private useVaultStorage() {
-        const app = this.app;
-        const get = (key: string): string | null => {
-            const value: unknown = app.loadLocalStorage(key);
-            return typeof value === 'string' ? value : null;
-        };
-        const shared = window.localStorage;
-        try {
-            if (get(COPIED_KEY) === null) {
-                const keys: string[] = [];
-                for (let i = 0; i < shared.length; i++) {
-                    const key = shared.key(i);
-                    if (key?.startsWith(LOCAL_PREFIX)) keys.push(key);
-                }
-                for (const key of keys) {
-                    if (get(key) === null) app.saveLocalStorage(key, shared.getItem(key));
-                }
-                app.saveLocalStorage(COPIED_KEY, '1');
+    private async usePluginStorage() {
+        const loaded = await this.loadData() as CellsGardenPluginData | null;
+        this.pluginData = loaded && typeof loaded === 'object' ? loaded : {};
+
+        const values: Record<string, string> = {};
+        if (this.pluginData.local && typeof this.pluginData.local === 'object') {
+            for (const [key, value] of Object.entries(this.pluginData.local)) {
+                if (typeof value === 'string') values[key] = value;
             }
-            // The anonymous-garden claim is device-wide: every vault shares one sign-in.
-            const claim = get(CLAIM_KEY);
-            if (claim !== null && shared.getItem(CLAIM_KEY) === null) shared.setItem(CLAIM_KEY, claim);
-        } catch (e) {
-            console.error('cells.garden: could not copy device storage into this vault', e);
         }
+        this.localValues = values;
+
+        const persist = () => {
+            const snapshot: CellsGardenPluginData = {
+                ...this.pluginData,
+                local: { ...this.localValues },
+            };
+            this.pluginData = snapshot;
+            this.saveTail = this.saveTail
+                .catch(() => {})
+                .then(() => this.saveData(snapshot))
+                .catch((e) => { console.error('cells.garden: could not save plugin data', e); });
+        };
+
         setLocalBackend({
-            get: (key) => (key === CLAIM_KEY ? (shared.getItem(key) ?? get(key)) : get(key)),
+            get: (key) => this.localValues[key] ?? null,
             set: (key, value) => {
-                app.saveLocalStorage(key, value);
-                if (key === CLAIM_KEY) shared.setItem(key, value);
+                this.localValues[key] = value;
+                persist();
             },
             remove: (key) => {
-                if (key === CLAIM_KEY) shared.removeItem(key);
-                app.saveLocalStorage(key, null);
+                delete this.localValues[key];
+                persist();
             },
         });
     }
