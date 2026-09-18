@@ -27,6 +27,8 @@ export default defineConfig(({ mode }) => {
         define: {
             ...supabaseEnv(mode).define,
             'process.env.NODE_ENV': JSON.stringify('production'),
+            __CELLS_BROWSER_STORAGE__: 'false',
+            __CELLS_SYSTEM_CLIPBOARD__: 'false',
         },
         build: {
             outDir: 'obsidian-plugin',
