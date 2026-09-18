@@ -9,6 +9,8 @@ on:
     branches: [main, dev]
     paths:
       - 'src/**'
+      - 'ext/**'
+      - 'public/privacy/oauth-return.html'
       - 'obsidian-plugin/**'
       - 'package.json'
       - 'package-lock.json'
