@@ -21,6 +21,7 @@ import {
 
 const host = document.getElementById('app');
 if (!host) throw new Error('cells.garden: #app element missing');
+const appHost: HTMLElement = host;
 
 /** False when a built page is opened from disk while debugging: no chrome.* APIs. */
 export const inExtension = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
@@ -33,8 +34,8 @@ function oauthBridgeUrl(): string {
 }
 
 function notice(text: string) {
-    host.querySelector('.garden-notice')?.remove();
-    const el = host.createDiv({ cls: 'garden-notice', text, attr: { role: 'status' } });
+    appHost.querySelector('.garden-notice')?.remove();
+    const el = appHost.createDiv({ cls: 'garden-notice', text, attr: { role: 'status' } });
     window.setTimeout(() => el.remove(), 5000);
 }
 
@@ -71,7 +72,7 @@ async function completePendingOAuth() {
     }
 }
 
-export const ready = bootGarden(host, inExtension ? {
+export const ready = bootGarden(appHost, inExtension ? {
     redirectTo: oauthBridgeUrl(),
     // Always keep the extension surface alive while Google runs in a normal tab.
     openOAuth: (url) => void chrome.tabs.create({ url }),
