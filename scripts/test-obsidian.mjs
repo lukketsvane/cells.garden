@@ -29,6 +29,14 @@ const mainJs = readFileSync(join(DIST, 'main.js'), 'utf8');
 const css = readFileSync(join(DIST, 'styles.css'), 'utf8');
 assert(!/import\.meta\.glob/.test(mainJs), 'main.js still contains an unresolved import.meta.glob');
 assert(/require\(["']obsidian["']\)/.test(mainJs), 'main.js should require obsidian at runtime');
+assert(
+    /\.kanban-scroll-container\s+\.project-column\s*\{[^}]*display:\s*flex/s.test(css),
+    'Obsidian must ship the compact per-plant kanban layout'
+);
+assert(
+    !/\.kanban-scroll-container\s+\.project-column\s*\{[^}]*grid-template-rows:\s*subgrid/s.test(css),
+    'Obsidian still ships the shared-row kanban spacing'
+);
 console.log(`test-obsidian: manifest ok, main.js ${Math.round(mainJs.length / 1024)} kB, styles.css ${Math.round(css.length / 1024)} kB`);
 
 const PLANT_MD = `---
