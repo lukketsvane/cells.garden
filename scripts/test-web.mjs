@@ -376,6 +376,25 @@ async function scenario(browser, errors) {
     assert(surface.card !== surface.board, `the plants should be cards on the board: ${JSON.stringify(surface)}`);
     assert(surface.colBorder === '1px', 'a line should run between plants');
 
+    const mobileBoardLayout = await mpage.evaluate(() => {
+        const board = document.querySelector('.kanban-scroll-container');
+        const column = document.querySelector('.project-column');
+        const app = document.querySelector('#app');
+        const boardStyle = getComputedStyle(board);
+        return {
+            columnDisplay: getComputedStyle(column).display,
+            boardPaddingBottom: parseFloat(boardStyle.paddingBottom),
+            appPaddingBottom: parseFloat(getComputedStyle(app).paddingBottom),
+            boardBottom: board.getBoundingClientRect().bottom,
+            viewportHeight: window.innerHeight,
+        };
+    });
+    console.log('mobile board layout:', mobileBoardLayout);
+    assert(mobileBoardLayout.columnDisplay === 'flex', 'plant cards should use the compact stacked kanban layout');
+    assert(mobileBoardLayout.boardPaddingBottom >= 16, `the board needs bottom scroll clearance: ${JSON.stringify(mobileBoardLayout)}`);
+    assert(mobileBoardLayout.appPaddingBottom === 0, `the PWA shell must not clip itself above the home indicator: ${JSON.stringify(mobileBoardLayout)}`);
+    assert(mobileBoardLayout.boardBottom <= mobileBoardLayout.viewportHeight + 1, `the board is cut off below the mobile viewport: ${JSON.stringify(mobileBoardLayout)}`);
+
     // Tap selects, a second tap edits, at 16px so iOS does not zoom.
     await tapAt('.garden-item >> nth=0');
     await mpage.waitForSelector('.garden-item.is-selected');
