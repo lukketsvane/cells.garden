@@ -13,7 +13,7 @@
 
 
 /* ========================================
-   TOP HALF — Interactive Canvas
+   TOP HALF: interactive canvas
    ======================================== */
 
 .garden-canvas-viewport {
@@ -294,7 +294,7 @@
 }
 
 /* ========================================
-   BOTTOM HALF — Kanban Strip
+   BOTTOM HALF: kanban strip
    ======================================== */
 
 .garden-bottom-half {

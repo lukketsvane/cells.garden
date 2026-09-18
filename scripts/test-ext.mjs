@@ -171,7 +171,7 @@ try {
     await newtab.goto(`chrome-extension://${extId}/newtab.html`);
     await newtab.waitForSelector('.garden-canvas-viewport');
     assert(await newtab.getAttribute('html', 'data-context') === 'newtab', 'newtab.html must set data-context="newtab"');
-    assert((await newtab.textContent('.kanban-empty-message h3')).includes('Empty'), 'a fresh profile should start with an empty garden');
+    assert(/empty/i.test(await newtab.textContent('.kanban-empty-message h3')), 'a fresh profile should start with an empty garden');
 
     await newtab.click('.add-column-btn-inner >> nth=1');
     await newtab.waitForSelector('.modal textarea');

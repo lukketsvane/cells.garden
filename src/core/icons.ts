@@ -1,8 +1,8 @@
 import type { LayerName } from './model';
 
 /**
- * The line icons, as SVG markup. They are set with innerHTML on a button or a
- * label, so they hold no text and inherit `currentColor`.
+ * The line icons, as SVG markup. setIcon() puts one into a button or a label,
+ * so it holds no text and inherits `currentColor`.
  */
 const stroke = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 
@@ -35,3 +35,12 @@ export const ZONE_ICONS: Record<LayerName, string> = {
     /** A cut crystal, girdle and all. */
     minerals: `<svg ${stroke}><path d="M12 3 4 9l8 12 8-12-8-6z"></path><path d="M4 9h16"></path></svg>`,
 };
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** Put an SVG string into an element, parsed as SVG rather than set as HTML. */
+export function setIcon(el: Element, svg: string) {
+    const markup = svg.includes('xmlns=') ? svg : svg.replace('<svg', `<svg xmlns="${SVG_NS}"`);
+    const doc = new DOMParser().parseFromString(markup, 'image/svg+xml');
+    el.replaceChildren(document.importNode(doc.documentElement, true));
+}

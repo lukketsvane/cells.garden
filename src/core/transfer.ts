@@ -9,7 +9,7 @@
  * `GardenView.onOpen()` empties and rebuilds its container on every render.
  */
 import type { GardenApp } from './app';
-import { ICONS } from './icons';
+import { ICONS, setIcon } from './icons';
 import { Modal, Setting } from './ui';
 import {
     archiveFileName,
@@ -320,7 +320,7 @@ export class BoardToggleButton {
 
     constructor(host: HTMLElement) {
         this.el = host.createEl('button', { cls: 'garden-board-toggle', attr: { type: 'button' } });
-        this.el.innerHTML = ICONS.board;
+        setIcon(this.el, ICONS.board);
         let hidden = false;
         try {
             hidden = localStorage.getItem(BoardToggleButton.KEY) === 'hidden';

@@ -4,8 +4,8 @@
 // stand-in for the parts of Obsidian's API the plugin uses (Plugin, ItemView,
 // Notice, the workspace and the vault). It checks that the plugin loads, the
 // Open garden command puts the garden in a tab with the sign-in pill, the vault
-// import command brings a Garden-Cells/ plant in, and closing the tab tears the
-// garden down without errors. Run with "npm run test:obsidian".
+// import command brings a Garden-Cells/ plant in, and Obsidian closing the tab
+// tears the garden down without errors. Run with "npm run test:obsidian".
 
 import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
@@ -169,7 +169,9 @@ try {
     console.log('test-obsidian: import notice', notices);
     assert(notices.some((n) => /1 new/.test(n)), `the import should report one new plant: ${JSON.stringify(notices)}`);
 
-    await page.evaluate(async () => { await window.__plugin.onunload(); });
+    // Obsidian closes the tab (the plugin must not detach it itself on unload).
+    assert(await page.evaluate(() => typeof window.__plugin.onunload !== 'function' || !/detachLeaves/.test(String(window.__plugin.onunload))), 'onunload must not detach leaves');
+    await page.evaluate(async () => { await window.__app.workspace.detachLeavesOfType('cells-garden'); });
     assert((await page.$('.cells-garden-host')) === null, 'closing the tab should remove the garden');
     await page.waitForTimeout(300);
 } catch (e) {

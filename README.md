@@ -2,6 +2,10 @@
 
 A kanban-style project garden where tasks grow into pixel-art plants. Web port of Max's Obsidian plugin **Garden Cells**.
 
+Use it at [cells.garden](https://cells.garden), as an app on your phone's home screen, as a Chrome extension, or in Obsidian: search for **cells.garden** under Settings, Community plugins, and open it from the sprout in the ribbon. Without an account the garden stays on your device. Sign in to have the same garden everywhere and to share gardens and plants with others.
+
+**Disclosures (Obsidian plugin).** Network: when you sign in, the garden syncs with the cells.garden server (Supabase), and only then. Account: optional, needed only to sync or share. No telemetry, no ads, no payments. It reads your vault only when you run "Import this vault's garden", and never writes to it. Open source under Apache-2.0.
+
 The original code is ~4,200 lines of vanilla TypeScript in one file: DOM + CSS transforms, no canvas engine, touch and pinch already in place. The Obsidian coupling was thin, so the port was a port, not a rewrite: Max's code lives on in `src/core/garden.ts`, with the same structure and rather less of it.
 
 ## Getting started
@@ -59,7 +63,7 @@ dist-ext/      extension build (ignored)
 mklink /J "<vault>\.obsidian\plugins\cells-garden" "<repo>\obsidian-plugin"
 ```
 
-Then turn on cells.garden under Settings, Community plugins. From then on a pull (GitHub Desktop: Fetch origin, then Pull) is the update: reload the plugin, or restart Obsidian, to pick it up. With the Hot Reload community plugin installed, the empty `.hotreload` file makes it reload on its own. Its id is `cells-garden`, so it sits next to Max's `garden-cells` without clashing. The command "Import this vault's garden" brings the plants Max's plugin keeps in `Garden-Cells/` into the synced garden.
+Then turn on cells.garden under Settings, Community plugins. From then on a pull (GitHub Desktop: Fetch origin, then Pull) is the update: reload the plugin, or restart Obsidian, to pick it up. With the Hot Reload community plugin installed, the empty `.hotreload` file makes it reload on its own. Its id is `cells-garden`. Turn Max's `garden-cells` off in the same vault: both style the same class names, and the plugin says so if both are on. A release is made from the root `manifest.json`: bump its `version` (and `versions.json`), push to `main`, and CI publishes the release Obsidian installs from. The command "Import this vault's garden" brings the plants Max's plugin keeps in `Garden-Cells/` into the synced garden.
 
 ## Storage and sync
 

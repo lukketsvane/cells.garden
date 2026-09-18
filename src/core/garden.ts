@@ -2,7 +2,7 @@ import './shim';
 import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
 import { PLANT_TYPES } from './assets';
-import { ICONS, ZONE_ICONS } from './icons';
+import { ICONS, setIcon, ZONE_ICONS } from './icons';
 import { openMenu, type MenuItem } from './menu';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
@@ -1348,7 +1348,7 @@ export class GardenView extends View {
         const row = toolbar.createDiv('drawing-toolbar-row');
 
         const tools: { glyph: string; label: string; onClick: () => void }[] = [
-            { glyph: '✏', label: 'Drawing mode', onClick: () => this.selectTool(false) },
+            { glyph: '✎', label: 'Drawing mode', onClick: () => this.selectTool(false) },
             { glyph: '◇', label: 'Eraser', onClick: () => this.selectTool(true) },
             { glyph: '⌫', label: 'Clear canvas', onClick: () => this.clearDrawing() },
             { glyph: '✕', label: 'Exit drawing mode', onClick: () => this.exitDrawingMode() },
@@ -1995,7 +1995,7 @@ export class GardenView extends View {
             // The + buttons then fill the height, so they sit centred.
             scrollContainer.addClass("is-empty");
             const emptyMsg = scrollContainer.createDiv("kanban-empty-message");
-            emptyMsg.createEl("h3", { text: "🌱 Your Garden is Empty" });
+            emptyMsg.createEl("h3", { text: "Your garden is empty" });
             emptyMsg.createEl("p", { text: "Click + to plant your first seed!" });
         } else {
             this.app.gardenData.forEach(project => {
@@ -2735,16 +2735,16 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         const others = PLANT_TYPES.filter(pt => pt !== project.plantType);
         const items: MenuItem[] = [
             {
-                label: project.standby ? 'Wake Up ⏻' : 'Standby ⏻',
+                label: project.standby ? 'Wake up' : 'Standby',
                 onClick: () => {
                     const live = this.live(project);
                     live.standby = project.standby = !live.standby;
                     void this.save();
                 },
             },
-            { label: 'Recycle Plant ♻', danger: true, onClick: () => this.confirmRecycle(project) },
+            { label: 'Recycle plant', danger: true, onClick: () => this.confirmRecycle(project) },
         ];
-        if (others.length > 0) items.push({ label: 'Change Plant Type', heading: true });
+        if (others.length > 0) items.push({ label: 'Change plant type', heading: true });
         for (const pt of others) {
             items.push({
                 label: rename(pt),
@@ -2782,14 +2782,14 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 },
             },
             {
-                label: highlighted ? 'Remove Highlight' : 'Highlight',
+                label: highlighted ? 'Remove highlight' : 'Highlight',
                 onClick: async () => {
                     for (const { item } of locations()) item.highlighted = !highlighted || undefined;
                     await this.save();
                 },
             },
             {
-                label: 'Convert to Stem ✔️',
+                label: 'Convert to stem',
                 disabled: !allMinerals,
                 onClick: async () => {
                     // By id, not by index: each move renumbers the list behind it.
@@ -2891,7 +2891,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 cls: 'seed-context-btn seed-share-btn',
                 attr: { type: 'button', title: 'Share this plant', 'aria-label': 'Share this plant' },
             });
-            shareBtn.innerHTML = ICONS.share;
+            setIcon(shareBtn, ICONS.share);
             shareBtn.toggleClass('is-shared', !!project.sharedPlantId);
             shareBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -2902,7 +2902,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         // --- Standby, and the menu ---
         const menuBtn = seedCell.createEl('button', { cls: 'seed-context-btn', attr: { type: 'button' } });
         const updateMenuBtn = () => {
-            menuBtn.innerHTML = project.standby ? ICONS.eyeClosed : ICONS.dots;
+            setIcon(menuBtn, project.standby ? ICONS.eyeClosed : ICONS.dots);
             menuBtn.toggleClass('is-standby-eye', !!project.standby);
             column.toggleClass('is-standby', !!project.standby);
         };
@@ -2922,10 +2922,10 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         // Hover effect: swap to open eye
         // On a sleeping plant the shut eye opens under the pointer: click to wake it.
         menuBtn.addEventListener('mouseenter', () => {
-            if (project.standby) menuBtn.innerHTML = ICONS.eyeOpen;
+            if (project.standby) setIcon(menuBtn, ICONS.eyeOpen);
         });
         menuBtn.addEventListener('mouseleave', () => {
-            if (project.standby) menuBtn.innerHTML = ICONS.eyeClosed;
+            if (project.standby) setIcon(menuBtn, ICONS.eyeClosed);
         });
 
         // Right-click on seed text also opens the menu
@@ -2948,7 +2948,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         const zone = parent.createDiv(`garden-zone ${arrayName}-zone`);
         const label = zone.createDiv("garden-zone-label-row");
         const name = label.createDiv({ cls: "zone-label" });
-        name.createSpan({ cls: "zone-icon" }).innerHTML = ZONE_ICONS[arrayName];
+        setIcon(name.createSpan({ cls: "zone-icon" }), ZONE_ICONS[arrayName]);
         name.createSpan({ text: ZONE_LABELS[arrayName] });
         const add = label.createEl('button', { cls: 'zone-add-btn', text: '+' });
         add.onclick = () => this.addNewItem(project, arrayName);

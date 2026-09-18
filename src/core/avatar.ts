@@ -4,6 +4,7 @@
  * same person looks the same on every device. The picture is a small pixel
  * sprite in the garden's style, mirrored like a seed head, inside a circle.
  */
+import { setIcon } from './icons';
 
 /** A string to a 32-bit seed (FNV-1a). */
 function hash(text: string): number {
@@ -62,6 +63,6 @@ function avatarSvg(seed: string, size = 24): string {
 export function avatarEl(seed: string, size = 24, cls = 'garden-avatar'): HTMLElement {
     const el = document.createElement('span');
     el.className = cls;
-    el.innerHTML = avatarSvg(seed, size);
+    setIcon(el, avatarSvg(seed, size));
     return el;
 }

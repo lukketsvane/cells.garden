@@ -9,7 +9,7 @@ export class ConfirmDeleteModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        contentEl.createEl("h2", { text: "♻️ Recycle Plant?" });
+        contentEl.createEl("h2", { text: "Recycle plant?" });
         contentEl.createEl("p", {
             text: `Are you sure you want to recycle "${this.plantName}"? This will permanently delete the plant and all its tasks.`,
         });
@@ -38,7 +38,7 @@ export class CreateProjectModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        contentEl.createEl("h2", { text: "🌱 Plant a New Seed" });
+        contentEl.createEl("h2", { text: "Plant a new seed" });
 
         let projectSeed = "";
         const submit = () => {
