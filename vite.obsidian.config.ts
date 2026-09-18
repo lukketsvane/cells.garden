@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { copyFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { supabaseEnv } from './vite.config';
@@ -8,7 +8,8 @@ import { supabaseEnv } from './vite.config';
 // Built into obsidian-plugin/ and committed, so that folder is the plugin: link
 // it into a vault and every pull updates it. The manifest's source is the one in
 // the repo root, which is where Obsidian's plugin directory reads it; the build
-// copies it into the folder.
+// copies it into the folder. It also copies main.js and styles.css back to the
+// root, beside manifest.json, where the plugin directory's build check looks.
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 export default defineConfig(({ mode }) => {
@@ -18,6 +19,9 @@ export default defineConfig(({ mode }) => {
             name: 'cells-garden:obsidian-manifest',
             generateBundle() {
                 this.emitFile({ type: 'asset', fileName: 'manifest.json', source: readFileSync(fromRoot('./manifest.json'), 'utf8') });
+            },
+            writeBundle() {
+                for (const file of ['main.js', 'styles.css']) copyFileSync(fromRoot(`./obsidian-plugin/${file}`), fromRoot(`./${file}`));
             },
         }],
         define: {

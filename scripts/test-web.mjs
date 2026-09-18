@@ -58,8 +58,8 @@ function watchErrors(page, label, errors) {
 
 function ensureBuild() {
     if (existsSync(join(ROOT, 'dist', 'index.html'))) return;
-    console.log('dist/index.html missing, running "npm run build" first');
-    execSync('npm run build', { cwd: ROOT, stdio: 'inherit' });
+    console.log('dist/index.html missing, running "npm run build:web" first');
+    execSync('npm run build:web', { cwd: ROOT, stdio: 'inherit' });
 }
 
 async function startPreview() {

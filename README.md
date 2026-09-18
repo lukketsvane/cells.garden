@@ -10,10 +10,13 @@ The original code is ~4,200 lines of vanilla TypeScript in one file: DOM + CSS t
 
 ## Getting started
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and conventions.
+
 ```sh
 npm install
 npm run dev            # http://localhost:5173, with the Sign in pill (reads .env)
-npm run build          # typecheck + static web build into dist/
+npm run build          # everything: web, extension and Obsidian plugin
+npm run build:web      # typecheck + static web build into dist/
 npm run preview        # serves dist/ on http://localhost:4173
 npm run build:ext      # Chrome extension into dist-ext/
 npm run dev:ext        # extension build in watch mode
@@ -22,7 +25,7 @@ npm run typecheck      # tsc for the web app (also :ext, :obsidian and :test)
 npm run test:unit      # node --test over src/**/*.test.ts
 npm run test:web       # Playwright smoke test of the web build + PWA offline start
 npm run test:ext       # Playwright test of the extension (new tab, side panel, popup)
-npm run build:obsidian # Obsidian plugin into obsidian-plugin/ (committed; CI rebuilds it)
+npm run build:obsidian # Obsidian plugin into obsidian-plugin/ (committed; CI rebuilds it), copied to the root
 npm run test:obsidian  # loads the plugin build behind a stand-in Obsidian API
 ```
 
@@ -51,6 +54,7 @@ public/        icons (SVG + PNG); the web manifest is generated at build time
 scripts/       the icon generator, the three browser tests, the .ts loader for the unit tests
 supabase/      migrations + README (auth, RLS, sharing)
 obsidian-plugin/  the synced Obsidian plugin; main.js and styles.css are its committed build
+main.js, styles.css  copies of that build beside manifest.json (ignored)
 dist/          web build (ignored)
 dist-ext/      extension build (ignored)
 ```
@@ -63,7 +67,7 @@ dist-ext/      extension build (ignored)
 mklink /J "<vault>\.obsidian\plugins\cells-garden" "<repo>\obsidian-plugin"
 ```
 
-Then turn on cells.garden under Settings, Community plugins. From then on a pull (GitHub Desktop: Fetch origin, then Pull) is the update: reload the plugin, or restart Obsidian, to pick it up. With the Hot Reload community plugin installed, the empty `.hotreload` file makes it reload on its own. Its id is `cells-garden`. Turn Max's `garden-cells` off in the same vault: both style the same class names, and the plugin says so if both are on. A release is made from the root `manifest.json`: bump its `version` (and `versions.json`), push to `main`, and CI publishes the release Obsidian installs from, with build attestations. `npm run lint` runs the rules Obsidian's review applies. The command "Import this vault's garden" brings the plants Max's plugin keeps in `Garden-Cells/` into the synced garden.
+Then turn on cells.garden under Settings, Community plugins. From then on a pull (GitHub Desktop: Fetch origin, then Pull) is the update: reload the plugin, or restart Obsidian, to pick it up. With the Hot Reload community plugin installed, the empty `.hotreload` file makes it reload on its own. Its id is `cells-garden`. Turn Max's `garden-cells` off in the same vault: both style the same class names, and the plugin says so if both are on. A release is made from the root `manifest.json`: bump its `version` (and `versions.json`), push to `main`, and CI publishes the release Obsidian installs from, with build attestations. `npm run lint` runs the rules Obsidian's review applies. The review builds with `npm run build` and looks for `main.js` beside `manifest.json`, so the plugin build copies `main.js` and `styles.css` to the root too; those copies are ignored. The command "Import this vault's garden" brings the plants Max's plugin keeps in `Garden-Cells/` into the synced garden.
 
 ## Storage and sync
 
