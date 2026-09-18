@@ -822,16 +822,27 @@
     display: contents;
 }
 
-/* Every zone fills its band, so the card has no gaps where a neighbour's band
-   is taller. Placed by row and column, because the seed row spans to the
-   bottom. */
+/* A zone is as tall as its own cells, so a plant with one flower is a short
+   card and a plant with nine is a tall one. The rows still line the bands up
+   across plants; what changes is that a plant no longer pads itself out to its
+   neighbour's height. Above the seed row a zone hangs from the bottom of its
+   band, below it a zone sits at the top, so both grow away from the horizon. */
 .kanban-scroll-container .garden-zone {
     /* Explicit, or the seed row's long area pushes roots and minerals into a
        column of their own. */
     grid-column: 1;
-    align-self: stretch;
     background: var(--background-secondary);
     border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.kanban-scroll-container .flowers-zone,
+.kanban-scroll-container .stem-zone {
+    align-self: end;
+}
+
+.kanban-scroll-container .roots-zone,
+.kanban-scroll-container .minerals-zone {
+    align-self: start;
 }
 
 .kanban-scroll-container .flowers-zone { grid-row: 1; border-radius: 4px 4px 0 0; }
