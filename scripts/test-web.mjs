@@ -151,25 +151,39 @@ async function scenario(browser, errors) {
     await page.waitForFunction(() => document.querySelectorAll('.project-column').length === 2);
     console.log('columns:', await page.$eval('.seed-content', (els) => els.map((e) => e.textContent)));
 
-    // Different amounts of Flowers/Stem content still share one seed horizon.
-    // The +/- plant controls live on that horizon too, not at the top of the board.
+    // A kanban column is an abstract plant: the seed is one shared horizon,
+    // blocks above it stay packed upward, blocks below stay packed downward.
     const kanbanHorizon = await page.evaluate(() => {
-        const seeds = [...document.querySelectorAll('.kanban-scroll-container > .project-column .seed-cell')]
-            .map((el) => el.getBoundingClientRect());
+        const columns = [...document.querySelectorAll('.kanban-scroll-container > .project-column')];
+        const seeds = columns.map((column) => column.querySelector('.seed-cell').getBoundingClientRect());
         const pluses = [...document.querySelectorAll('.kanban-scroll-container > .add-column-btn .add-column-btn-inner')]
             .map((el) => el.getBoundingClientRect());
         const seedTop = seeds.map((r) => r.top);
         const seedMid = seeds.reduce((sum, r) => sum + r.top + r.height / 2, 0) / Math.max(1, seeds.length);
+        const topStacks = columns.map((column) => {
+            const top = column.querySelector('.column-top-half');
+            const zones = [...top.children];
+            const rect = top.getBoundingClientRect();
+            const zoneHeight = zones.reduce((sum, zone) => sum + zone.getBoundingClientRect().height, 0);
+            return {
+                height: rect.height,
+                zoneHeight,
+                extra: rect.height - zoneHeight,
+                marginTop: parseFloat(getComputedStyle(column).marginTop) || 0,
+            };
+        });
         return {
             seedTop,
             seedSpread: Math.max(...seedTop) - Math.min(...seedTop),
             plusMid: pluses.map((r) => r.top + r.height / 2),
             seedMid,
+            topStacks,
         };
     });
     console.log('kanban seed horizon:', kanbanHorizon);
     assert(kanbanHorizon.seedSpread <= 1.5, `seed rows drifted apart: ${JSON.stringify(kanbanHorizon)}`);
     assert(kanbanHorizon.plusMid.every((y) => Math.abs(y - kanbanHorizon.seedMid) <= 2), `add-plant controls are not aligned with seeds: ${JSON.stringify(kanbanHorizon)}`);
+    assert(kanbanHorizon.topStacks.every((s) => Math.abs(s.extra) <= 1.5), `above-ground blocks contain floating gaps: ${JSON.stringify(kanbanHorizon)}`);
 
     // Context menu on a cell -> highlight
     await page.click('.garden-item >> nth=0', { button: 'right' });
