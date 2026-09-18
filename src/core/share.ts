@@ -13,7 +13,7 @@ import {
     renewInvite,
     type GardenMember,
 } from './sharing';
-import { inviteSection } from './share-ui';
+import { attempt, inviteSection } from './share-ui';
 import { Modal, Setting } from './ui';
 
 export class ShareGardenModal extends Modal {
@@ -21,7 +21,6 @@ export class ShareGardenModal extends Modal {
         private readonly client: SupabaseClient,
         private readonly gardenId: string,
         private name: string,
-        private readonly onRenamed: (name: string) => void,
     ) {
         super();
     }
@@ -45,14 +44,11 @@ export class ShareGardenModal extends Modal {
                 text.inputEl.addEventListener('change', async () => {
                     const next = text.getValue().trim();
                     if (!next || next === this.name) return;
-                    try {
+                    await attempt(say, 'rename', async () => {
                         await renameGarden(this.client, this.gardenId, next);
                         this.name = next;
-                        this.onRenamed(next);
                         say('Name saved.');
-                    } catch (e) {
-                        say(`Could not rename: ${(e as Error).message}`);
-                    }
+                    });
                 });
             });
 
@@ -86,24 +82,15 @@ export class ShareGardenModal extends Modal {
         for (const member of members) {
             const row = new Setting(people).setName(member.name);
             row.nameEl.prepend(avatarEl(member.avatar, 20));
-            row
-                .addButton((b) => b.setButtonText('Remove').onClick(async () => {
-                    try {
-                        await removeMember(this.client, this.gardenId, member.userId);
-                        await this.render(`Removed ${member.name}.`);
-                    } catch (e) {
-                        say(`Could not remove: ${(e as Error).message}`);
-                    }
-                }));
+            row.addButton((b) => b.setButtonText('Remove').onClick(() => attempt(say, 'remove', async () => {
+                await removeMember(this.client, this.gardenId, member.userId);
+                await this.render(`Removed ${member.name}.`);
+            })));
         }
 
         // Keep the status line last, where the eye lands after a button.
         contentEl.appendChild(status);
         say(message);
-    }
-
-    onClose() {
-        this.contentEl.empty();
     }
 }
 
@@ -122,9 +109,5 @@ export class LeaveGardenModal extends Modal {
                 this.close();
                 this.onLeave();
             }));
-    }
-
-    onClose() {
-        this.contentEl.empty();
     }
 }

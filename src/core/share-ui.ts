@@ -1,9 +1,18 @@
 /**
- * The parts the two share modals have in common: copying a link, and the
- * invite-link row itself, which reads the same whether it points at a garden
- * or at a single plant.
+ * The parts the share modals have in common: a button's work that reports its
+ * own failure, copying a link, and the invite-link row itself, which reads the
+ * same whether it points at a garden or at a single plant.
  */
 import { Setting } from './ui';
+
+/** Run a button's work; a failure is said on the modal's status line. */
+export async function attempt(say: (text: string) => void, what: string, run: () => Promise<unknown>) {
+    try {
+        await run();
+    } catch (e) {
+        say(`Could not ${what}: ${(e as Error).message}`);
+    }
+}
 
 /** Copy to the clipboard, or fall back to selecting the text so ⌘C works. */
 async function copyText(text: string, fallback: HTMLInputElement): Promise<boolean> {
@@ -37,17 +46,9 @@ export interface InviteSection {
  * reports its own failure through `say` and leaves the modal as it was.
  */
 export function inviteSection(parent: HTMLElement, s: InviteSection) {
-    const attempt = (what: string, run: () => Promise<void>) => async () => {
-        try {
-            await run();
-        } catch (e) {
-            s.say(`Could not ${what}: ${(e as Error).message}`);
-        }
-    };
-
     const link = new Setting(parent).setName('Invite link').setDesc(s.token ? s.desc : 'No link yet.');
     if (!s.token) {
-        link.addButton((b) => b.setButtonText('Create link').setCta().onClick(attempt('make a link', async () => {
+        link.addButton((b) => b.setButtonText('Create link').setCta().onClick(() => attempt(s.say, 'make a link', async () => {
             await s.renew();
             await s.again('Link ready.');
         })));
@@ -63,11 +64,11 @@ export function inviteSection(parent: HTMLElement, s: InviteSection) {
     }));
 
     new Setting(parent)
-        .addButton((b) => b.setButtonText('New link').onClick(attempt('make a link', async () => {
+        .addButton((b) => b.setButtonText('New link').onClick(() => attempt(s.say, 'make a link', async () => {
             await s.renew();
             await s.again('New link made. The old one stops working.');
         })))
-        .addButton((b) => b.setButtonText('Turn off link').setWarning().onClick(attempt('turn it off', async () => {
+        .addButton((b) => b.setButtonText('Turn off link').setWarning().onClick(() => attempt(s.say, 'turn it off', async () => {
             await s.clear();
             await s.again('Link turned off. People who have it keep it.');
         })));

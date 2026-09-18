@@ -6,6 +6,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { avatarEl } from './avatar';
 import { ShortcutsModal } from './modals';
 import { currentScene, setScene, type Scene } from './scene';
+import { attempt } from './share-ui';
 import { getProfile, updateProfile } from './sharing';
 import { Modal, Setting } from './ui';
 
@@ -39,24 +40,18 @@ export class SettingsModal extends Modal {
             const { client, userId, onAvatar } = this.account;
             try {
                 const profile = await getProfile(client, userId);
-                let seed = profile.avatar;
 
                 const picture = new Setting(contentEl).setName('Picture').setDesc('Made for you. Roll a new one if you like.');
                 const holder = picture.controlEl.createDiv('settings-avatar');
-                holder.appendChild(avatarEl(seed, 48));
-                picture.addButton((b) => b.setButtonText('New picture').onClick(async () => {
+                holder.appendChild(avatarEl(profile.avatar, 48));
+                picture.addButton((b) => b.setButtonText('New picture').onClick(() => attempt(say, 'save the picture', async () => {
                     const next = randomSeed();
-                    try {
-                        await updateProfile(client, userId, { avatar: next });
-                        seed = next;
-                        holder.empty();
-                        holder.appendChild(avatarEl(seed, 48));
-                        onAvatar(seed);
-                        say('');
-                    } catch (e) {
-                        say(`Could not save the picture: ${(e as Error).message}`);
-                    }
-                }));
+                    await updateProfile(client, userId, { avatar: next });
+                    holder.empty();
+                    holder.appendChild(avatarEl(next, 48));
+                    onAvatar(next);
+                    say('');
+                })));
 
                 let name = profile.name;
                 new Setting(contentEl)
@@ -68,13 +63,11 @@ export class SettingsModal extends Modal {
                         t.inputEl.addEventListener('blur', async () => {
                             const trimmed = name.trim();
                             if (!trimmed || trimmed === profile.name) return;
-                            try {
+                            await attempt(say, 'save the name', async () => {
                                 await updateProfile(client, userId, { name: trimmed });
                                 profile.name = trimmed;
                                 say('Name saved.');
-                            } catch (e) {
-                                say(`Could not save the name: ${(e as Error).message}`);
-                            }
+                            });
                         });
                     });
             } catch (e) {
@@ -98,9 +91,5 @@ export class SettingsModal extends Modal {
             }));
 
         contentEl.appendChild(status);
-    }
-
-    onClose() {
-        this.contentEl.empty();
     }
 }

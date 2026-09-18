@@ -12,6 +12,7 @@ import {
     listPlantOffers,
     type SharedPlantRow,
 } from './sharing';
+import { attempt } from './share-ui';
 import { Modal, Setting } from './ui';
 
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
@@ -46,23 +47,14 @@ export class FriendsModal extends Modal {
                 for (const offer of offers) {
                     const row = new Setting(box).setName(offer.seed).setDesc(`from ${offer.fromName}`);
                     row.nameEl.prepend(avatarEl(offer.fromAvatar, 20));
-                    row.addButton((b) => b.setButtonText('Not now').onClick(async () => {
-                        try {
-                            await declinePlantOffer(this.client, offer.plantId, this.userId);
-                            await this.render('Turned down.');
-                        } catch (e) {
-                            say(`Could not turn it down: ${(e as Error).message}`);
-                        }
-                    }));
-                    row.addButton((b) => b.setButtonText('Plant it').setCta().onClick(async () => {
-                        try {
-                            const row = await acceptPlantOffer(this.client, offer.plantId);
-                            await this.plant(row);
-                            await this.render(`Planted ${offer.seed}.`);
-                        } catch (e) {
-                            say(`Could not plant it: ${(e as Error).message}`);
-                        }
-                    }));
+                    row.addButton((b) => b.setButtonText('Not now').onClick(() => attempt(say, 'turn it down', async () => {
+                        await declinePlantOffer(this.client, offer.plantId, this.userId);
+                        await this.render('Turned down.');
+                    })));
+                    row.addButton((b) => b.setButtonText('Plant it').setCta().onClick(() => attempt(say, 'plant it', async () => {
+                        await this.plant(await acceptPlantOffer(this.client, offer.plantId));
+                        await this.render(`Planted ${offer.seed}.`);
+                    })));
                 }
             }
         } catch {
@@ -86,9 +78,5 @@ export class FriendsModal extends Modal {
         } catch (e) {
             say(`Could not load friends: ${(e as Error).message}`);
         }
-    }
-
-    onClose() {
-        this.contentEl.empty();
     }
 }
