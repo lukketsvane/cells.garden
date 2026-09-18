@@ -21,6 +21,10 @@ interface DomElementInfo {
 }
 
 declare global {
+    /** A detached element, as Obsidian's global helpers make it. */
+    function createEl<K extends keyof HTMLElementTagNameMap>(tag: K, o?: DomElementInfo | string): HTMLElementTagNameMap[K];
+    function createDiv(o?: DomElementInfo | string): HTMLDivElement;
+    function createSpan(o?: DomElementInfo | string): HTMLSpanElement;
     interface Node {
         createEl<K extends keyof HTMLElementTagNameMap>(tag: K, o?: DomElementInfo | string): HTMLElementTagNameMap[K];
         createDiv(o?: DomElementInfo | string): HTMLDivElement;
@@ -68,19 +72,34 @@ function install<T extends object>(proto: T, name: keyof T & string, value: unkn
     Object.defineProperty(proto, name, { value, writable: true, configurable: true, enumerable: false });
 }
 
-install(Node.prototype, 'createEl', function <K extends keyof HTMLElementTagNameMap>(this: Node, tag: K, o?: DomElementInfo | string) {
-    const el = (this.ownerDocument ?? (this as unknown as Document)).createElement(tag);
+/** A detached element in `doc`: the one maker behind every createEl below. */
+function make<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, o?: DomElementInfo | string): HTMLElementTagNameMap[K] {
+    // This is createEl itself, for hosts without Obsidian. The namespaced call
+    // makes the same element as createElement for these lowercase HTML tags.
+    const el = doc.createElementNS('http://www.w3.org/1999/xhtml', tag) as HTMLElementTagNameMap[K];
     applyInfo(el, o);
-    return this.appendChild(el);
+    return el;
+}
+
+function docOf(node: Node): Document {
+    return node.ownerDocument ?? (node as Document);
+}
+
+install(Node.prototype, 'createEl', function <K extends keyof HTMLElementTagNameMap>(this: Node, tag: K, o?: DomElementInfo | string) {
+    return this.appendChild(make(docOf(this), tag, o));
 });
 
 install(Node.prototype, 'createDiv', function (this: Node, o?: DomElementInfo | string) {
-    return this.createEl('div', o);
+    return this.appendChild(make(docOf(this), 'div', o));
 });
 
 install(Node.prototype, 'createSpan', function (this: Node, o?: DomElementInfo | string) {
-    return this.createEl('span', o);
+    return this.appendChild(make(docOf(this), 'span', o));
 });
+
+install(window, 'createEl', <K extends keyof HTMLElementTagNameMap>(tag: K, o?: DomElementInfo | string) => make(document, tag, o));
+install(window, 'createDiv', (o?: DomElementInfo | string) => make(document, 'div', o));
+install(window, 'createSpan', (o?: DomElementInfo | string) => make(document, 'span', o));
 
 install(Node.prototype, 'empty', function (this: Node) {
     while (this.firstChild) this.removeChild(this.firstChild);
