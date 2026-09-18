@@ -47,11 +47,11 @@ export class FriendsModal extends Modal {
                 for (const offer of offers) {
                     const row = new Setting(box).setName(offer.seed).setDesc(`from ${offer.fromName}`);
                     row.nameEl.prepend(avatarEl(offer.fromAvatar, 20));
-                    row.addButton((b) => b.setButtonText('Not now').onClick(() => attempt(say, 'turn it down', async () => {
+                    row.addButton((b) => b.setButtonText('Not now').onClick(() => void attempt(say, 'turn it down', async () => {
                         await declinePlantOffer(this.client, offer.plantId, this.userId);
                         await this.render('Turned down.');
                     })));
-                    row.addButton((b) => b.setButtonText('Plant it').setCta().onClick(() => attempt(say, 'plant it', async () => {
+                    row.addButton((b) => b.setButtonText('Plant it').setCta().onClick(() => void attempt(say, 'plant it', async () => {
                         await this.plant(await acceptPlantOffer(this.client, offer.plantId));
                         await this.render(`Planted ${offer.seed}.`);
                     })));

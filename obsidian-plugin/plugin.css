@@ -3,10 +3,10 @@
  * fits the app into the pane: no padding, and the corner controls sit in the
  * tab instead of the window.
  */
-.cells-garden-host {
+.view-content.cells-garden-host {
     position: relative;
-    padding: 0 !important;
-    overflow: hidden !important;
+    padding: 0;
+    overflow: hidden;
 }
 
 .cells-garden-host .view,

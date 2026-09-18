@@ -27,7 +27,7 @@ function writeIndex(i: number) {
     }
 }
 
-ready.then((app) => {
+void ready.then((app) => {
     const footer = document.body.createDiv('popup-footer');
     const row = footer.createDiv('popup-row');
     const prev = row.createEl('button', { cls: 'popup-arrow', text: '<', attr: { 'aria-label': 'Previous plant' } });
@@ -86,5 +86,5 @@ ready.then((app) => {
     // The view re-renders on every data change (a new plant, a sync). Aim again each time.
     if (app.view) app.view.onRendered = () => show(index);
     // First aim: after the view's own centring, which runs in a double rAF.
-    requestAnimationFrame(() => requestAnimationFrame(() => show(index)));
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => show(index)));
 });

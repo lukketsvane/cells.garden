@@ -44,7 +44,7 @@ export class SettingsModal extends Modal {
                 const picture = new Setting(contentEl).setName('Picture').setDesc('Made for you. Roll a new one if you like.');
                 const holder = picture.controlEl.createDiv('settings-avatar');
                 holder.appendChild(avatarEl(profile.avatar, 48));
-                picture.addButton((b) => b.setButtonText('New picture').onClick(() => attempt(say, 'save the picture', async () => {
+                picture.addButton((b) => b.setButtonText('New picture').onClick(() => void attempt(say, 'save the picture', async () => {
                     const next = randomSeed();
                     await updateProfile(client, userId, { avatar: next });
                     holder.empty();
@@ -60,10 +60,10 @@ export class SettingsModal extends Modal {
                     .addText((t) => {
                         t.setValue(name);
                         t.onChange((v) => { name = v; });
-                        t.inputEl.addEventListener('blur', async () => {
+                        t.inputEl.addEventListener('blur', () => {
                             const trimmed = name.trim();
                             if (!trimmed || trimmed === profile.name) return;
-                            await attempt(say, 'save the name', async () => {
+                            void attempt(say, 'save the name', async () => {
                                 await updateProfile(client, userId, { name: trimmed });
                                 profile.name = trimmed;
                                 say('Name saved.');

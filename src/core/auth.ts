@@ -96,7 +96,7 @@ class SignInModal extends Modal {
                 text.inputEl.autocomplete = 'email';
                 text.onChange((v) => { this.email = v; });
                 onEnter(text.inputEl, submit);
-                setTimeout(() => text.inputEl.focus(), 50);
+                window.setTimeout(() => text.inputEl.focus(), 50);
             });
     }
 
@@ -250,7 +250,7 @@ class SignInModal extends Modal {
                 text.inputEl.autocomplete = 'one-time-code';
                 text.onChange((v) => { code = v; });
                 onEnter(text.inputEl, () => void verify());
-                setTimeout(() => text.inputEl.focus(), 50);
+                window.setTimeout(() => text.inputEl.focus(), 50);
             });
 
         new Setting(contentEl)
@@ -269,7 +269,7 @@ export class AuthPill {
         this.el = host.createEl('button', { cls: 'auth-pill', attr: { type: 'button', title: 'Sign in to sync your garden' } });
         this.el.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.showMenu();
+            void this.showMenu();
         });
         this.render();
     }

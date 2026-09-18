@@ -22,6 +22,6 @@ export const inExtension = typeof chrome !== 'undefined' && !!chrome.runtime?.id
 // The magic link lands on the New Tab page whichever surface asked for it;
 // opened from disk, the pill falls back to its own URL.
 export const ready = bootGarden(host, { redirectTo: inExtension ? chrome.runtime.getURL('newtab.html') : undefined });
-ready.then((app) => {
+void ready.then((app) => {
     window.garden = app;
 });

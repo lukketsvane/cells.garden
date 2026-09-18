@@ -41,10 +41,10 @@ export class ShareGardenModal extends Modal {
             .setName('Name')
             .addText((text) => {
                 text.setValue(this.name);
-                text.inputEl.addEventListener('change', async () => {
+                text.inputEl.addEventListener('change', () => {
                     const next = text.getValue().trim();
                     if (!next || next === this.name) return;
-                    await attempt(say, 'rename', async () => {
+                    void attempt(say, 'rename', async () => {
                         await renameGarden(this.client, this.gardenId, next);
                         this.name = next;
                         say('Name saved.');
@@ -82,7 +82,7 @@ export class ShareGardenModal extends Modal {
         for (const member of members) {
             const row = new Setting(people).setName(member.name);
             row.nameEl.prepend(avatarEl(member.avatar, 20));
-            row.addButton((b) => b.setButtonText('Remove').onClick(() => attempt(say, 'remove', async () => {
+            row.addButton((b) => b.setButtonText('Remove').onClick(() => void attempt(say, 'remove', async () => {
                 await removeMember(this.client, this.gardenId, member.userId);
                 await this.render(`Removed ${member.name}.`);
             })));
@@ -95,7 +95,7 @@ export class ShareGardenModal extends Modal {
 }
 
 export class LeaveGardenModal extends Modal {
-    constructor(private readonly name: string, private readonly onLeave: () => void) {
+    constructor(private readonly name: string, private readonly onLeave: () => unknown) {
         super();
     }
 

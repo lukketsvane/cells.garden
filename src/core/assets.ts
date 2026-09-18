@@ -15,11 +15,11 @@ import { legacyImagePath } from './asset-paths';
 
 const PACK_PREFIX = '../assets/pack/';
 
-const packFiles = import.meta.glob('../assets/pack/**/*.{png,gif,webp,jpg,jpeg,svg}', {
+const packFiles = import.meta.glob<string>('../assets/pack/**/*.{png,gif,webp,jpg,jpeg,svg}', {
     eager: true,
     import: 'default',
     query: '?url',
-}) as Record<string, string>;
+});
 
 /** path relative to pack/ → resolved URL (data URL after build) */
 const PACK: Map<string, string> = new Map(

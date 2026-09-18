@@ -135,6 +135,16 @@
     image-rendering: pixelated;
 }
 
+@keyframes garden-cloud-scroll {
+    from { background-position-x: 0; }
+    to { background-position-x: var(--garden-cloud-width); }
+}
+
+@keyframes garden-firefly-blink {
+    0%, 100% { filter: brightness(0.8); box-shadow: 0 0 4px 1px rgba(126, 179, 87, var(--glow-opacity, 0)); }
+    50% { filter: brightness(1.2); box-shadow: 0 0 6px 2px rgba(126, 179, 87, var(--glow-opacity, 0)); }
+}
+
 .garden-cloud-layer {
     z-index: 2;
     opacity: 0.5;

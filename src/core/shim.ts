@@ -36,6 +36,10 @@ declare global {
         setText(val: string): void;
         getText(): string;
     }
+    interface HTMLElement {
+        setCssStyles(styles: Partial<CSSStyleDeclaration>): void;
+        setCssProps(props: Record<string, string>): void;
+    }
 }
 
 function splitClasses(classes: string[]): string[] {
@@ -96,6 +100,12 @@ install(Element.prototype, 'hasClass', function (this: Element, cls: string) {
 });
 install(Element.prototype, 'setText', function (this: Element, val: string) {
     this.textContent = val;
+});
+install(HTMLElement.prototype, 'setCssStyles', function (this: HTMLElement, styles: Partial<CSSStyleDeclaration>) {
+    Object.assign(this.style, styles);
+});
+install(HTMLElement.prototype, 'setCssProps', function (this: HTMLElement, props: Record<string, string>) {
+    for (const [name, value] of Object.entries(props)) this.style.setProperty(name, value);
 });
 install(Element.prototype, 'getText', function (this: Element) {
     return this.textContent ?? '';

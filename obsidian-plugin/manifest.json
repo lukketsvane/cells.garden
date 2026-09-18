@@ -1,8 +1,8 @@
 {
   "id": "cells-garden",
   "name": "cells.garden",
-  "version": "0.1.0",
-  "minAppVersion": "1.4.0",
+  "version": "0.1.1",
+  "minAppVersion": "1.7.2",
   "description": "Grow your tasks into a pixel-art garden, synced with the web app, your phone and a Chrome extension.",
   "author": "tastefinger",
   "authorUrl": "https://cells.garden",

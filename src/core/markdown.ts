@@ -53,8 +53,8 @@ function yamlString(value: string): string {
         .replace(/\\/g, '\\\\')
         .replace(/"/g, '\\"')
         .replace(/\t/g, '\\t')
-        // The remaining C0 controls have no literal form inside a quoted scalar.
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, (c) => '\\x' + c.charCodeAt(0).toString(16).padStart(2, '0'));
+        // The remaining control characters have no literal form inside a quoted scalar.
+        .replace(/\p{Cc}/gu, (c) => '\\x' + c.charCodeAt(0).toString(16).padStart(2, '0'));
     return '"' + body + '"';
 }
 
