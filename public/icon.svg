@@ -1,11 +1,38 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
-  <rect width="16" height="16" rx="3" fill="#87CEEB"/>
-  <rect y="11" width="16" height="5" fill="#5a4030"/>
-  <rect x="7" y="5" width="2" height="6" fill="#3e8e41"/>
-  <rect x="5" y="7" width="2" height="1" fill="#3e8e41"/>
-  <rect x="9" y="8" width="2" height="1" fill="#3e8e41"/>
-  <rect x="6" y="2" width="4" height="4" fill="#e9569c"/>
-  <rect x="7" y="3" width="2" height="2" fill="#ffd54f"/>
-  <rect x="3" y="13" width="2" height="1" fill="#2b1d14"/>
-  <rect x="11" y="13" width="2" height="1" fill="#2b1d14"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1932 1932" shape-rendering="crispEdges">
+  <rect width="1932" height="1932" fill="#1c2080"/>
+  <!-- leaves and stem -->
+  <g fill="#3b7a82">
+    <rect x="918" y="477" width="96" height="544"/>
+    <rect x="1014" y="606" width="289" height="96"/>
+    <rect x="1207" y="509" width="96" height="97"/>
+    <rect x="1303" y="413" width="193" height="193"/>
+    <rect x="1496" y="509" width="194" height="97"/>
+    <rect x="628" y="799" width="290" height="96"/>
+    <rect x="242" y="702" width="483" height="97"/>
+    <rect x="435" y="606" width="193" height="96"/>
+  </g>
+  <!-- flower -->
+  <g fill="#72f552">
+    <rect x="822" y="91" width="288" height="96"/>
+    <rect x="725" y="187" width="482" height="193"/>
+    <rect x="822" y="380" width="288" height="97"/>
+  </g>
+  <rect x="918" y="187" width="96" height="97" fill="#7aea5e"/>
+  <!-- seed -->
+  <g fill="#221520">
+    <rect x="821" y="1021" width="289" height="192"/>
+    <rect x="918" y="1213" width="95" height="97"/>
+  </g>
+  <!-- roots -->
+  <g fill="#3a7543">
+    <rect x="918" y="1310" width="95" height="531"/>
+    <rect x="918" y="1310" width="772" height="96"/>
+    <rect x="1207" y="1406" width="96" height="97"/>
+    <rect x="1399" y="1406" width="97" height="97"/>
+    <rect x="1593" y="1406" width="97" height="97"/>
+    <rect x="242" y="1600" width="771" height="96"/>
+    <rect x="242" y="1696" width="96" height="97"/>
+    <rect x="435" y="1696" width="96" height="97"/>
+    <rect x="628" y="1696" width="97" height="97"/>
+  </g>
 </svg>

@@ -30,6 +30,7 @@ export function buildManifest(env: ManifestEnv): chrome.runtime.ManifestV3 {
         name: 'cells.garden',
         version: env.version,
         description: env.description,
+        homepage_url: 'https://cells.garden',
         icons: { ...ICONS },
         action: {
             default_title: 'cells.garden',

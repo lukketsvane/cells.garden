@@ -2,7 +2,7 @@
   "name": "cells.garden",
   "version": "0.1.0",
   "private": true,
-  "description": "A kanban-style project garden where tasks grow into plants. Web app, PWA and Chrome extension around one core.",
+  "description": "Your tasks grow into a pixel-art garden: a board on every new tab, in the side panel and the toolbar, synced across devices.",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
