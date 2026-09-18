@@ -1715,6 +1715,8 @@ export class GardenView extends View {
     private _peekProjectId: string | null = null;
     private _peekPinned = false;
     private _peekPinnedId: string | null = null;
+    private _peekHoverTimer: number | null = null;
+    private _peekHoverProjectId: string | null = null;
     private _touchTap: { x: number; y: number; t: number } | null = null;
 
     /**
@@ -1773,13 +1775,14 @@ export class GardenView extends View {
             // menus all work in it, the same as on the board.
             this.createProjectColumn(card, hit.project);
         }
-        // Beside the plant, never over it: clear of its drawn right edge, or its left
-        // edge when the pane would cut it off, with the card's top level with the top
-        // of the plant. It stays put while the plant is hovered and glides to the next.
+        // Keep the card visually attached to the plant instead of merely sharing its
+        // top edge. Its seed row lines up with the soil line, and the card chooses the
+        // side with enough room so it reads as that plant's board rather than a random
+        // floating panel.
         const rect = viewport.getBoundingClientRect();
         const vw = viewport.offsetWidth, vh = viewport.offsetHeight;
         const w = card.offsetWidth || 230, h = card.offsetHeight || 120;
-        let plantLeft = hit.x, plantRight = hit.x, plantTop = hit.top;
+        let plantLeft = hit.x, plantRight = hit.x;
         const wrapper = this.contentEl.querySelector(`.garden-plant-wrapper[data-project-id="${hit.project.id}"]`);
         if (wrapper) {
             let found = false;
@@ -1788,13 +1791,26 @@ export class GardenView extends View {
                 if (r.width === 0 || r.height === 0 || r.top - rect.top > this.currentTranslateY + this._dynamicGroundLineY * this.zoom) continue;
                 plantLeft = found ? Math.min(plantLeft, r.left - rect.left) : r.left - rect.left;
                 plantRight = found ? Math.max(plantRight, r.right - rect.left) : r.right - rect.left;
-                plantTop = found ? Math.min(plantTop, r.top - rect.top) : r.top - rect.top;
                 found = true;
             }
         }
-        const gap = 12;
-        const left = plantRight + gap + w <= vw - 8 ? plantRight + gap : Math.max(8, plantLeft - gap - w);
-        const top = Math.max(8, Math.min(vh - h - 8, plantTop));
+
+        const gap = 14;
+        const right = plantRight + gap;
+        const leftOfPlant = plantLeft - gap - w;
+        const roomRight = vw - plantRight;
+        const roomLeft = plantLeft;
+        const useLeft = right + w > vw - 8 && (leftOfPlant >= 8 || roomLeft > roomRight);
+        const left = useLeft
+            ? Math.max(8, Math.min(vw - w - 8, leftOfPlant))
+            : Math.max(8, Math.min(vw - w - 8, right));
+
+        const seed = card.querySelector<HTMLElement>('.seed-cell');
+        const seedCenter = seed ? seed.offsetTop + seed.offsetHeight / 2 : h / 2;
+        const soilY = this.currentTranslateY + this._dynamicGroundLineY * this.zoom;
+        const top = Math.max(8, Math.min(vh - h - 8, soilY - seedCenter));
+
+        card.dataset.peekSide = useLeft ? 'left' : 'right';
         // Appearing: jump straight to the spot. Already shown: glide there.
         const wasVisible = card.hasClass('is-visible');
         card.toggleClass('is-gliding', wasVisible);
@@ -1803,7 +1819,27 @@ export class GardenView extends View {
         card.addClass('is-visible');
     }
 
+    private cancelPeekHover() {
+        if (this._peekHoverTimer !== null) window.clearTimeout(this._peekHoverTimer);
+        this._peekHoverTimer = null;
+        this._peekHoverProjectId = null;
+    }
+
+    /** Hover intent: a plant must be held for a beat before its board appears. */
+    private schedulePeek(hit: { project: ProjectData; x: number; top: number }) {
+        if (this._peekEl?.hasClass('is-visible') && this._peekProjectId === hit.project.id) return;
+        if (this._peekHoverTimer !== null && this._peekHoverProjectId === hit.project.id) return;
+        this.cancelPeekHover();
+        this._peekHoverProjectId = hit.project.id;
+        this._peekHoverTimer = window.setTimeout(() => {
+            this._peekHoverTimer = null;
+            this._peekHoverProjectId = null;
+            if (this.boardHidden() && !this._peekPinned) this.showPeek(hit);
+        }, 280);
+    }
+
     private hidePeek() {
+        this.cancelPeekHover();
         this._peekPinned = false;
         this._peekEl?.removeClass('is-visible');
     }
@@ -1855,7 +1891,7 @@ export class GardenView extends View {
     private handlePeekMove = (e: MouseEvent) => {
         if (!this.boardHidden() || this.isDragging || this._peekPinned || this.inPeek(e.target)) return;
         const hit = this.plantAt(e.clientX, e.clientY);
-        if (hit) this.showPeek(hit);
+        if (hit) this.schedulePeek(hit);
         else this.hidePeek();
     };
 
@@ -1868,6 +1904,7 @@ export class GardenView extends View {
         if (!this.boardHidden() || this.inPeek(target)) return;
         const hit = this.plantAt(clientX, clientY);
         if (hit) {
+            this.cancelPeekHover();
             this.showPeek(hit);
             this.pinPeek();
         } else {
@@ -1877,6 +1914,7 @@ export class GardenView extends View {
 
     private applyWorldTransform(world: HTMLElement, viewport: HTMLElement) {
         // Standard 2D camera math: origin at top-left makes centering predictable
+        if (!this._peekPinned) this.cancelPeekHover();
         if (this._peekEl && !this._peekPinned) this._peekEl.removeClass('is-visible');
         world.setCssStyles({ transformOrigin: '0 0' });
         world.style.transform = `translate(${this.currentTranslateX}px, ${this.currentTranslateY}px) scale(${this.zoom})`;

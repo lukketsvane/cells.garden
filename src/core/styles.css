@@ -1022,16 +1022,17 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     border-radius: 6px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
     color: var(--text-normal);
     cursor: auto;
     user-select: text;
     pointer-events: none;
     opacity: 0;
-    transform: translateY(2px);
-    /* Fades in after a short beat, so passing over a plant does not flash a card. */
-    transition: opacity 220ms ease-out, transform 260ms ease-out, visibility 0s linear 260ms;
+    transform: translateY(4px) scale(0.985);
+    transform-origin: center center;
     visibility: hidden;
+    will-change: opacity, transform, left, top;
+    transition: opacity 150ms ease-out, transform 180ms ease-out, visibility 0s linear 180ms;
 }
 
 .garden-peek-card.is-visible {
@@ -1039,7 +1040,7 @@
     transform: none;
     visibility: visible;
     pointer-events: auto;
-    transition: opacity 260ms ease-out 80ms, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms, visibility 0s;
+    transition: opacity 190ms ease-out, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s;
 }
 
 .garden-peek-card.is-instant {
@@ -1060,7 +1061,7 @@
 }
 
 .garden-peek-card.is-visible.is-gliding {
-    transition: opacity 260ms ease-out, transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1), left 280ms cubic-bezier(0.2, 0.8, 0.2, 1), top 280ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s;
+    transition: opacity 190ms ease-out, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), left 360ms cubic-bezier(0.2, 0.8, 0.2, 1), top 360ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s;
 }
 
 /* Your garden in the middle, your friends' plants at its borders (app.ts arrange). */
