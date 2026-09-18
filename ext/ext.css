@@ -35,11 +35,16 @@ html[data-context="sidepanel"] .kanban-empty-message {
 }
 
 /* The popup is a fixed small window: the canvas cutout of one plant on top,
-   the controls below. The kanban half of the view is not shown. */
+   then compact navigation and an optional kanban card below. */
 html[data-context="popup"],
 html[data-context="popup"] body {
     width: 320px;
     height: 440px;
+}
+
+html[data-context="popup"].popup-kanban-open,
+html[data-context="popup"].popup-kanban-open body {
+    height: 560px;
 }
 
 html[data-context="popup"] body {
@@ -64,7 +69,7 @@ html[data-context="popup"] .garden-board-toggle {
 }
 
 html[data-context="popup"].popup-aimed .garden-world {
-    transition: transform 220ms ease;
+    transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .popup-footer {
@@ -73,7 +78,8 @@ html[data-context="popup"].popup-aimed .garden-world {
     border-top: 1px solid var(--background-modifier-border);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 7px;
+    background: color-mix(in srgb, var(--background-primary) 94%, transparent);
 }
 
 .popup-row {
@@ -85,20 +91,14 @@ html[data-context="popup"].popup-aimed .garden-world {
 
 .popup-label {
     flex: 1 1 auto;
+    min-width: 0;
     text-align: center;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-normal);
-}
-
-.popup-name {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    min-height: 1.2em;
 }
 
 .popup-arrow,
@@ -109,24 +109,102 @@ html[data-context="popup"].popup-aimed .garden-world {
     color: var(--text-normal);
     background: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
 }
 
 .popup-arrow {
     width: 36px;
     height: 30px;
+    flex: 0 0 36px;
     font-weight: 700;
 }
 
 .popup-arrow:disabled {
-    opacity: 0.4;
+    opacity: 0.35;
     cursor: default;
 }
 
 .popup-arrow:not(:disabled):hover,
-.popup-action:hover {
+.popup-action:hover,
+.popup-kanban-summary:hover {
     background: var(--background-modifier-hover);
+}
+
+.popup-kanban {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--background-secondary);
+}
+
+.popup-kanban-summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 9px;
+    color: var(--text-muted);
+    background: transparent;
+    cursor: pointer;
+    user-select: none;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.popup-kanban-summary::-webkit-details-marker {
+    display: none;
+}
+
+.popup-kanban-chevron {
+    display: inline-block;
+    font-size: 16px;
+    line-height: 1;
+    transform: rotate(0deg);
+    transition: transform 160ms ease;
+}
+
+.popup-kanban[open] .popup-kanban-chevron {
+    transform: rotate(90deg);
+}
+
+.popup-kanban-body {
+    max-height: 154px;
+    overflow: auto;
+    padding: 7px;
+    border-top: 1px solid var(--background-modifier-border);
+    overscroll-behavior: contain;
+}
+
+.popup-kanban-body .project-column {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+}
+
+.popup-kanban-body .column-card {
+    width: 100%;
+    border-radius: 5px;
+}
+
+.popup-kanban-body .seed-cell {
+    position: static;
+}
+
+.popup-kanban-body .garden-zone {
+    min-width: 0;
+}
+
+.popup-kanban-empty {
+    padding: 12px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
 }
 
 .popup-actions {
@@ -136,5 +214,5 @@ html[data-context="popup"].popup-aimed .garden-world {
 
 .popup-action {
     flex: 1 1 0;
-    padding: 6px 0;
+    padding: 7px 0;
 }

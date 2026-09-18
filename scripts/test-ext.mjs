@@ -228,15 +228,16 @@ try {
     await newtab.waitForSelector('.project-column');
     assert((await newtab.$$eval('.garden-item', (els) => els.map((e) => e.textContent))).includes(FLOWER), 'a cell added in the side panel is missing from the new tab page');
 
-    // --- Popup: one plant at a time, no kanban, arrows cycle. ---
+    // --- Popup: one plant at a time, compact controls, optional kanban card. ---
     const popup = await context.newPage();
     await popup.setViewportSize({ width: 320, height: 440 });
     watch(popup, 'popup');
     await popup.goto(`chrome-extension://${extId}/popup.html`);
     await popup.waitForSelector('.garden-canvas-viewport');
     assert(await popup.getAttribute('html', 'data-context') === 'popup', 'popup.html must set data-context="popup"');
-    await popup.waitForFunction(() => document.querySelector('.popup-label')?.textContent === 'Plant 1/1');
-    assert(await popup.textContent('.popup-name') === SEED, 'the popup does not name the plant by its seed');
+    await popup.waitForFunction((seed) => document.querySelector('.popup-label')?.textContent === seed, SEED);
+    assert((await popup.$('.popup-name')) === null, 'the popup must not show a separate Plant x/x/name line');
+    assert(await popup.getAttribute('.popup-row', 'aria-label') === 'Plant 1 of 1', 'the popup should keep the plant position for accessibility');
     // The camera glides between plants; measure once it has settled.
     const settled = () => popup.waitForFunction(() => !document.querySelector('.garden-world')?.getAnimations().length);
     await settled();
@@ -262,22 +263,31 @@ try {
     const anchorX = popupLayout.plant.x - popupLayout.canvas.x;
     assert(anchorX > popupLayout.canvas.width * 0.3 && anchorX < popupLayout.canvas.width * 0.7, `the plant is not centred in the popup: anchor x ${anchorX} of ${popupLayout.canvas.width}`);
     assert(await popup.$eval('.popup-arrow >> nth=0', (b) => b.disabled), 'with one plant the arrows should be disabled');
-    // Arrow keys and buttons wrap around; with one plant the label does not change.
+    // Arrow keys and buttons wrap around; with one plant the seed label does not change.
     await popup.keyboard.press('ArrowRight');
-    assert(await popup.textContent('.popup-label') === 'Plant 1/1', 'cycling past the last plant must wrap');
+    assert(await popup.textContent('.popup-label') === SEED, 'cycling past the last plant must wrap');
     assert(await popup.textContent('.popup-action >> nth=0') === 'Garden' && await popup.textContent('.popup-action >> nth=1') === 'Side panel', 'the popup must offer Garden and Side panel');
+
+    // The current plant's kanban card is available in a collapsible panel.
+    assert(!(await popup.$eval('.popup-kanban', (el) => el.open)), 'the popup kanban should start collapsed');
+    await popup.click('.popup-kanban-summary');
+    await popup.waitForFunction(() => document.querySelector('.popup-kanban')?.open === true);
+    await popup.setViewportSize({ width: 320, height: 560 });
+    assert(await popup.textContent('.popup-kanban-body .seed-content') === SEED, 'the popup kanban must show the selected plant');
+    assert((await popup.$eval('.popup-kanban-body .garden-item', (els) => els.map((e) => e.textContent))).includes(STEM), 'the popup kanban must show the selected plant cells');
     await screenshot(popup, 'popup');
 
-    // A second plant added elsewhere shows up in the popup's count.
+    // A second plant added elsewhere updates the accessible position and the card.
     await newtab.click('.add-column-btn-inner >> nth=1');
     await newtab.waitForSelector('.modal textarea');
     await newtab.fill('.modal textarea', SEED_2);
     await newtab.keyboard.press('Enter');
     await newtab.waitForFunction((t) => (localStorage.getItem('cells.garden/v1') ?? '').includes(t), SEED_2);
-    await popup.waitForFunction(() => document.querySelector('.popup-label')?.textContent === 'Plant 1/2', null, { timeout: 5000 });
+    await popup.waitForFunction(() => document.querySelector('.popup-row')?.getAttribute('aria-label') === 'Plant 1 of 2', null, { timeout: 5000 });
     await popup.click('.popup-arrow >> nth=1');
-    await popup.waitForFunction(() => document.querySelector('.popup-label')?.textContent === 'Plant 2/2');
-    assert(await popup.textContent('.popup-name') === SEED_2, 'the next arrow did not move to the second plant');
+    await popup.waitForFunction((seed) => document.querySelector('.popup-label')?.textContent === seed, SEED_2);
+    assert(await popup.getAttribute('.popup-row', 'aria-label') === 'Plant 2 of 2', 'the next arrow did not move to the second plant');
+    assert(await popup.textContent('.popup-kanban-body .seed-content') === SEED_2, 'the popup kanban did not follow the selected plant');
     await settled();
     const secondAnchor = await popup.evaluate(() => {
         const canvas = document.querySelector('.garden-canvas-viewport').getBoundingClientRect();
