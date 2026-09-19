@@ -4,7 +4,7 @@ import './shim';
  * Original animated cells.garden crow atlas.
  *
  * 256 × 256 PNG, 8 × 8 cells, each source frame 32 × 32 native pixels.
- * Runtime size is exactly 4× = 128 × 128. Ground-only runtime on purpose:
+ * Runtime size is exactly 8× = 256 × 256. Ground-only runtime on purpose:
  * the old idle/walk/peck/call/hop rows are kept; takeoff/fly/land are never used.
  */
 export const CROW_ATLAS_URL =
@@ -24,9 +24,9 @@ const CROW_ANIMS: Record<CrowAnimation, { row: number; frames: number; duration:
     hop: { row: 7, frames: 6, duration: 110 },
 };
 
-const CROW_SIZE = 128;
+const CROW_SIZE = 256;
 const CROW_HALF = CROW_SIZE / 2;
-const CROW_EDGE = 70;
+const CROW_EDGE = 138;
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export function mountCrowNPC(layer: HTMLElement) {
@@ -42,7 +42,7 @@ export function mountCrowNPC(layer: HTMLElement) {
     const world = layer.parentElement ?? layer;
     const worldWidth = () => Math.max(600, layer.clientWidth || world.clientWidth || 600);
     const sky = () => Number.parseFloat(getComputedStyle(world).getPropertyValue('--sky')) || 620;
-    const groundY = () => sky() - 44;
+    const groundY = () => sky() - 88;
 
     let mode: CrowMode = 'grounded';
     let animation: CrowAnimation = 'idle';
