@@ -74,7 +74,6 @@ export interface GardenSettings {
     standbyHidesMinerals: boolean;
     /** Scene pets are opt-in per garden. */
     petSwan: boolean;
-    petGnome: boolean;
     petPumpkin: boolean;
     petCrow: boolean;
     viewState?: ViewState;
@@ -114,7 +113,6 @@ export const DEFAULT_SETTINGS: GardenSettings = {
     silhouetteColor: '',
     standbyHidesMinerals: true,
     petSwan: false,
-    petGnome: false,
     petPumpkin: false,
     petCrow: false,
 };
