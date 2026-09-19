@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#081018">
+<title>cells.garden · fox NPC</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#081018;touch-action:none}
+body{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;-webkit-user-select:none;user-select:none}
+#world{position:fixed;inset:0;overflow:hidden;background:linear-gradient(to bottom,#081018 0 54%,#111a20 54% 100%)}
+#world:after{content:"";position:absolute;left:0;right:0;top:54%;height:1px;background:#25303a}
+#fox{position:absolute;left:50%;top:54%;width:192px;height:160px;object-fit:contain;transform:translate(-50%,-76%);image-rendering:pixelated;image-rendering:crisp-edges;-webkit-touch-callout:none}
+#fox.flip{transform:translate(-50%,-76%) scaleX(-1)}
+#state{position:absolute;top:max(10px,env(safe-area-inset-top));left:12px;color:#7f91a3;font-size:10px;opacity:.72}
+#hint{position:absolute;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));color:#7f91a3;font-size:11px;text-align:center;opacity:.78}
+</style>
+</head>
+<body>
+<div id="world"><img id="fox" alt="interactive pixel fox"><div id="state">loading…</div><div id="hint">tap fox → jump/run · tap ground → move · double-tap → dig · hold fox → sit</div></div>
+<script>
+(async()=>{
+  const stateEl=document.getElementById('state'),fox=document.getElementById('fox'),world=document.getElementById('world');
+  try{
+    const res=await fetch('/fox-npc-data.json',{cache:'no-store'});
+    if(!res.ok) throw new Error('data');
+    const A=await res.json();
+    let state='idle',frame=0,timer=null,x=innerWidth*.5,target=x,dir=1,moving=false,lastAction=Date.now(),pressTimer=null,pressed=false,lastTap=0,holdTriggered=false;
+    function setX(v){x=Math.max(42,Math.min(innerWidth-42,v));fox.style.left=x+'px'}
+    function setDir(d){dir=d;fox.classList.toggle('flip',d<0)}
+    function draw(){const a=A[state];if(!a)return;fox.src=a.frames[frame%a.frames.length];stateEl.textContent=state}
+    function play(s,once=false,done=null,reverse=false){clearInterval(timer);if(!A[s])s='idle';state=s;frame=reverse?A[s].frames.length-1:0;draw();const a=A[s];timer=setInterval(()=>{frame+=reverse?-1:1;const end=reverse?frame<0:frame>=a.frames.length;if(end){if(once){clearInterval(timer);done&&done();return}frame=reverse?a.frames.length-1:0}draw()},a.duration||130)}
+    function moveTo(tx,fast=false){target=tx;setDir(target>=x?1:-1);moving=true;lastAction=Date.now();play(fast?'run':'walk')}
+    function stop(){moving=false;play('idle')}
+    function foxTap(){lastAction=Date.now();if(state==='sleep'){play('sleep',true,()=>play('idle'),true);return}setDir(Math.random()<.5?-1:1);const tx=x+dir*Math.min(innerWidth*.28,130+Math.random()*80);play('jump',true,()=>moveTo(tx,true))}
+    function tick(){if(moving){const speed=(state==='run'?4.2:2.3)*(innerWidth/390),dx=target-x;if(Math.abs(dx)<speed+3){setX(target);stop()}else setX(x+Math.sign(dx)*speed)}else{const idleFor=Date.now()-lastAction;if(idleFor>12000&&state!=='sleep')play('sleep');else if(idleFor>6000&&state==='idle')play('sniff',true,()=>{lastAction=Date.now()-2500;play('idle')})}requestAnimationFrame(tick)}
+    fox.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();pressed=true;holdTriggered=false;pressTimer=setTimeout(()=>{if(pressed){holdTriggered=true;lastAction=Date.now();moving=false;play('sit')}},520)});
+    fox.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();pressed=false;clearTimeout(pressTimer);if(holdTriggered){play('idle');return}foxTap()});
+    fox.addEventListener('pointercancel',()=>{pressed=false;clearTimeout(pressTimer)});
+    world.addEventListener('pointerup',e=>{if(e.target===fox)return;lastAction=Date.now();const now=Date.now();if(now-lastTap<280){lastTap=0;moving=false;play('dig',true,()=>play('idle'));return}lastTap=now;moveTo(e.clientX,Math.abs(e.clientX-x)>innerWidth*.28)});
+    addEventListener('resize',()=>setX(Math.min(x,innerWidth-42)));
+    setX(x);play('idle');requestAnimationFrame(tick);
+  }catch(e){stateEl.textContent='failed to load';}
+})();
+</script>
+</body></html>
