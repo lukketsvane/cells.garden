@@ -2,6 +2,7 @@ import './shim';
 import type { GardenApp } from './app';
 import type { GardenSettings } from './model';
 import { Modal } from './ui';
+import { CROW_PREVIEW_URL, mountCrowNPC } from './crow';
 
 import swanSwimUrl from '../assets/pets/swan_swim.gif';
 import swanFlyUrl from '../assets/pets/swan_fly.gif';
@@ -11,12 +12,13 @@ import pumpkin1Url from '../assets/pack/pumpkin/pumpkin_1_on_1.png';
 import pumpkin2Url from '../assets/pack/pumpkin/pumpkin_1_on_2.png';
 import pumpkin3Url from '../assets/pack/pumpkin/pumpkin_1_on_3.png';
 
-type PetSettingKey = 'petSwan' | 'petGnome' | 'petPumpkin';
+type PetSettingKey = 'petSwan' | 'petGnome' | 'petPumpkin' | 'petCrow';
 
 const PETS: { key: PetSettingKey; label: string; preview: string }[] = [
     { key: 'petSwan', label: 'Swan', preview: swanSwimUrl },
     { key: 'petGnome', label: 'Garden gnome', preview: gnomeUrl },
     { key: 'petPumpkin', label: 'Pumpkin', preview: pumpkin1Url },
+    { key: 'petCrow', label: 'Crow', preview: CROW_PREVIEW_URL },
 ];
 
 /** Main menu -> Pets. Each tile is an immediate on/off switch. */
@@ -49,6 +51,7 @@ export class PetsModal extends Modal {
                     type: 'button',
                     'aria-pressed': String(active),
                     'aria-label': pet.label + (active ? ', on' : ', off'),
+                    'data-pet': pet.key,
                 },
             });
             tile.toggleClass('is-active', active);
@@ -92,7 +95,7 @@ function makePetButton(layer: HTMLElement, cls: string, label: string) {
 
 /** Add enabled NPCs to the world. Re-rendering removes disabled pets immediately. */
 export function renderGardenPets(world: HTMLElement, settings: GardenSettings) {
-    if (!settings.petSwan && !settings.petGnome && !settings.petPumpkin) return;
+    if (!settings.petSwan && !settings.petGnome && !settings.petPumpkin && !settings.petCrow) return;
     const layer = world.createDiv('garden-pets-layer');
 
     if (settings.petSwan) {
@@ -111,6 +114,10 @@ export function renderGardenPets(world: HTMLElement, settings: GardenSettings) {
             }
         });
         stopSceneGesture(swan, fly);
+    }
+
+    if (settings.petCrow) {
+        mountCrowNPC(layer);
     }
 
     if (settings.petGnome) {
