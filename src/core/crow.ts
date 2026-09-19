@@ -38,6 +38,12 @@ export function mountCrowNPC(layer: HTMLElement) {
         },
     });
     crow.style.setProperty('--crow-atlas', 'url("' + CROW_ATLAS_URL + '")');
+    // Keep sprite scale self-contained so stale CSS can never shrink or mis-crop it.
+    crow.style.width = CROW_SIZE + 'px';
+    crow.style.height = CROW_SIZE + 'px';
+    crow.style.backgroundSize = (CROW_SIZE * 8) + 'px ' + (CROW_SIZE * 8) + 'px';
+    crow.style.backgroundRepeat = 'no-repeat';
+    crow.style.imageRendering = 'pixelated';
 
     const world = layer.parentElement ?? layer;
     const worldWidth = () => Math.max(600, layer.clientWidth || world.clientWidth || 600);
