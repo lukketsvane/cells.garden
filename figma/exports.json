@@ -9,7 +9,9 @@
     "format": "PNG",
     "scale": 1,
     "pixelArt": "native-1x",
-    "branch": "main"
+    "branch": "main",
+    "syncSource": "original-image-fill",
+    "rendering": "none"
   },
   "coverage": {
     "assetFiles": 280,
