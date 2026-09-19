@@ -40,7 +40,7 @@ export default defineConfig(({ mode }) => {
                 // A new build waits until the page applies it (src/web/main.ts does
                 // that as soon as no modal or inline edit is open), then the page
                 // reloads once. Registration lives in src/web/main.ts.
-                registerType: 'prompt',
+                registerType: 'autoUpdate',
                 injectRegister: false,
                 // public/ files to precache on top of the manifest icons.
                 includeAssets: ['icon-180.png'],
@@ -82,7 +82,7 @@ export default defineConfig(({ mode }) => {
                     // Spelled out because registration is explicit (injectRegister false).
                     // skipWaiting stays off: the page sends SKIP_WAITING itself when it is
                     // safe to reload (see onNeedRefresh in src/web/main.ts).
-                    skipWaiting: false,
+                    skipWaiting: true,
                     clientsClaim: true,
                     // The sprites are inlined into the single JS chunk (assetsInlineLimit
                     // below), so it grows with the asset pack. Workbox's 2 MiB default
