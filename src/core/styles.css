@@ -1376,12 +1376,12 @@
 /* A deliberately block-built pool: no softened/vector edge. */
 .garden-pet-pond {
     position: absolute;
-    left: calc(100% - 302px);
-    top: calc(var(--sky) - 12px);
-    width: 232px;
-    height: 40px;
+    left: calc(100% - 152px);
+    top: calc(var(--sky) - 4px);
+    width: 116px;
+    height: 20px;
     background: #29434b;
-    box-shadow: inset 0 -8px #1e343c, inset 0 8px #36545c;
+    box-shadow: inset 0 -4px #1e343c, inset 0 4px #36545c;
     pointer-events: none;
 }
 .garden-pet-pond::before,
@@ -1392,38 +1392,32 @@
     box-shadow: inherit;
 }
 .garden-pet-pond::before {
-    left: 16px;
-    top: -8px;
-    width: 200px;
-    height: 8px;
+    left: 8px;
+    top: -4px;
+    width: 100px;
+    height: 4px;
 }
 .garden-pet-pond::after {
-    left: 32px;
-    bottom: -8px;
-    width: 168px;
-    height: 8px;
+    left: 16px;
+    bottom: -4px;
+    width: 84px;
+    height: 4px;
 }
 
 .garden-pet-swan {
-    left: calc(100% - 285px);
-    top: calc(var(--sky) - 78px);
-    width: 128px;
-    height: 74px;
+    left: calc(100% - 143px);
+    top: calc(var(--sky) - 42px);
+    width: 68px;
+    height: 42px;
     background: none;
     animation: garden-swan-paddle-position 7s steps(24, end) infinite;
 }
-
-/* The swan is a flat 2D billboard. The outer element moves; the sprite
-   plane only snaps between left/right. It never interpolates through
-   scaleX(0), so it cannot become thin or short while turning. */
-.garden-pet-swan::before {
-    content: "";
+.garden-pet-swan-sprite {
     position: absolute;
     inset: 0;
-    background-image: var(--swan-swim);
+    width: 68px;
+    height: 42px;
     background-repeat: no-repeat;
-    background-position: center;
-    background-size: auto;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     transform: scaleX(1);
@@ -1435,13 +1429,12 @@
     animation: garden-swan-flight 3.2s steps(32, end) 1;
     z-index: 4;
 }
-.garden-pet-swan.is-flying::before {
-    background-image: var(--swan-fly);
+.garden-pet-swan.is-flying .garden-pet-swan-sprite {
     animation: garden-swan-flight-facing 3.2s step-end 1 both;
 }
 @keyframes garden-swan-paddle-position {
     0%   { transform: translateX(0); }
-    50%  { transform: translateX(112px); }
+    50%  { transform: translateX(56px); }
     100% { transform: translateX(0); }
 }
 @keyframes garden-swan-paddle-facing {
@@ -1450,12 +1443,12 @@
     100%          { transform: scaleX(1); }
 }
 @keyframes garden-swan-flight {
-    0%   { transform: translate(40px, 0); }
-    18%  { transform: translate(-20px, -90px); }
-    52%  { transform: translate(-470px, -280px); }
-    72%  { transform: translate(-620px, -145px); }
-    90%  { transform: translate(-70px, -75px); }
-    100% { transform: translate(40px, 0); }
+    0%   { transform: translate(20px, 0); }
+    18%  { transform: translate(-10px, -70px); }
+    52%  { transform: translate(-470px, -240px); }
+    72%  { transform: translate(-620px, -120px); }
+    90%  { transform: translate(-40px, -55px); }
+    100% { transform: translate(20px, 0); }
 }
 @keyframes garden-swan-flight-facing {
     0%, 71.999% { transform: scaleX(-1); }
@@ -1578,8 +1571,8 @@
     image-rendering: crisp-edges;
 }
 .garden-pet-tile[data-pet='petSwan'] .garden-pet-tile-preview img {
-    width: 110px;
-    height: 74px;
+    width: 68px;
+    height: 42px;
 }
 .garden-pet-tile[data-pet='petGnome'] .garden-pet-tile-preview img {
     width: 36px;
