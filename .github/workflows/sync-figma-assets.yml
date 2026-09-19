@@ -1,0 +1,38 @@
+name: Sync Figma assets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-figma-assets
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pull native 1x assets from Figma
+        env:
+          FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
+        run: npm run sync:figma-assets
+      - name: Commit changed assets
+        run: |
+          git add src/assets figma/exports.json
+          if git diff --cached --quiet; then
+            echo "Figma assets are already current."
+            exit 0
+          fi
+          git config user.name tastefinger
+          git config user.email 41840333+lukketsvane@users.noreply.github.com
+          git commit -m "Sync assets from Figma"
+          git pull --rebase origin main
+          git push origin HEAD:main
