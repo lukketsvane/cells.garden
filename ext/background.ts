@@ -25,13 +25,19 @@ function fromCellsGarden(sender: chrome.runtime.MessageSender): boolean {
     }
 }
 
+function isOAuthTakeRequest(value: unknown): boolean {
+    if (!value || typeof value !== 'object') return false;
+    return (value as Record<string, unknown>).type === OAUTH_RETURN_TAKE;
+}
+
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-    if (!fromCellsGarden(sender) || !isOAuthReturnMessage(message)) {
+    const incoming: unknown = message;
+    if (!fromCellsGarden(sender) || !isOAuthReturnMessage(incoming)) {
         sendResponse({ ok: false });
         return false;
     }
 
-    void chrome.storage.local.set({ [OAUTH_RETURN_KEY]: message }).then(() => {
+    void chrome.storage.local.set({ [OAUTH_RETURN_KEY]: incoming }).then(() => {
         sendResponse({ ok: true });
         // Wake an already-open side panel/new tab. If none is open, the value
         // stays in storage and is claimed the next time a surface starts.
@@ -45,7 +51,8 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
 // Serialise claims so two open extension surfaces cannot both exchange one code.
 let takeQueue: Promise<void> = Promise.resolve();
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (!message || message.type !== OAUTH_RETURN_TAKE) return false;
+    const incoming: unknown = message;
+    if (!isOAuthTakeRequest(incoming)) return false;
 
     takeQueue = takeQueue.then(async () => {
         const stored = await chrome.storage.local.get(OAUTH_RETURN_KEY);
