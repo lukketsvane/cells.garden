@@ -1,0 +1,28 @@
+name: Figma asset contract
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "figma/exports.json"
+      - "src/assets/**"
+      - "scripts/verify-figma-assets.mjs"
+      - "package.json"
+      - ".github/workflows/figma-assets.yml"
+  pull_request:
+    paths:
+      - "figma/exports.json"
+      - "src/assets/**"
+      - "scripts/verify-figma-assets.mjs"
+      - "package.json"
+      - ".github/workflows/figma-assets.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run verify:figma-assets
