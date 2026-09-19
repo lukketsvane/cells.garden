@@ -213,6 +213,12 @@ async function scenario(browser, errors) {
     await page.click('.plant-type-tile:not(.is-selected) >> nth=0');
     await page.waitForFunction((before) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects[1].plantType !== before, typeBefore);
     assert(await page.$('.garden-context-menu') === null, 'plant picker should close after selection');
+    // Changing type redraws the whole garden; wait for the replacement canvas to
+    // be attached and measurable before the next interaction.
+    await page.waitForFunction(() => {
+        const viewport = document.querySelector('.garden-canvas-viewport');
+        return viewport?.isConnected && viewport.getBoundingClientRect().width > 0;
+    });
 
     // Pan + zoom on the canvas
     const viewport = await page.$('.garden-canvas-viewport');
