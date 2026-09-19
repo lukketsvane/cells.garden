@@ -2994,8 +2994,17 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                     tile.toggleClass('is-selected', selected);
                     tile.setAttribute('aria-pressed', selected ? 'true' : 'false');
 
+                    tile.dataset.plantType = pt;
                     const preview = tile.createDiv('plant-type-preview');
-                    const parts = this.app.assetManager.getPlantPreview(pt);
+                    const emptyAboveGround = project.stem.length === 0 && project.flowers.length === 0;
+                    const parts = this.app.assetManager.getPlantPreview(
+                        pt,
+                        emptyAboveGround ? 3 : project.stem.length,
+                        emptyAboveGround ? 1 : project.flowers.length,
+                    );
+                    preview.style.filter = project.standby ? 'none' : `hue-rotate(${project.hue ?? 0}deg)`;
+                    const step = parts.length > 1 ? Math.min(11, 48 / (parts.length - 1)) : 0;
+                    const previewHeight = parts.length > 7 ? Math.max(9, 14 - (parts.length - 7) * 0.7) : 14;
                     for (const [level, part] of parts.entries()) {
                         const img = preview.createEl('img', {
                             attr: {
@@ -3006,6 +3015,12 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                         });
                         img.dataset.kind = part.kind;
                         img.dataset.level = String(level);
+                        img.dataset.path = part.path;
+                        img.style.height = `${previewHeight}px`;
+                        img.style.bottom = `${4 + level * step}px`;
+                        img.style.transform = level % 2
+                            ? 'translateX(-50%) scaleX(-1)'
+                            : 'translateX(-50%)';
                     }
 
                     tile.onclick = (event) => {
@@ -3016,8 +3031,8 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                         const live = this.live(project);
                         live.plantType = pt;
                         for (const layer of ['stem', 'flowers'] as const) {
-                            for (const item of live[layer]) {
-                                item.imagePath = this.app.assetManager.assignRandomImage(layer, pt) || undefined;
+                            for (const [index, item] of live[layer].entries()) {
+                                item.imagePath = this.app.assetManager.getPlantTypeImagePath(layer, pt, index) || undefined;
                             }
                         }
                         void this.save();
