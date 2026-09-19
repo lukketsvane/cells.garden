@@ -4,23 +4,18 @@ import type { GardenSettings } from './model';
 import { Modal } from './ui';
 import { CROW_PREVIEW_URL, mountCrowNPC } from './crow';
 
-import swanPreviewUrl from '../assets/pets/swan_preview.png';
+import gnomeUrl from '../assets/pets/gnome.png';
 import pumpkinOffUrl from '../assets/pack/pumpkin/pumpkin_1_off.png';
 import pumpkin1Url from '../assets/pack/pumpkin/pumpkin_1_on_1.png';
 import pumpkin2Url from '../assets/pack/pumpkin/pumpkin_1_on_2.png';
 import pumpkin3Url from '../assets/pack/pumpkin/pumpkin_1_on_3.png';
 
-type PetSettingKey = 'petSwan' | 'petPumpkin' | 'petCrow';
+type PetSettingKey = 'petGnome' | 'petPumpkin' | 'petCrow';
 
-type PetOption =
-    | { key: PetSettingKey; label: string; preview: string; available: true }
-    | { label: string; available: false };
-
-const PETS: PetOption[] = [
-    { key: 'petSwan', label: 'Swan', preview: swanPreviewUrl, available: true },
-    { label: 'Garden gnome', available: false },
-    { key: 'petPumpkin', label: 'Pumpkin', preview: pumpkin1Url, available: true },
-    { key: 'petCrow', label: 'Crow', preview: CROW_PREVIEW_URL, available: true },
+const PETS: { key: PetSettingKey; label: string; preview: string }[] = [
+    { key: 'petGnome', label: 'Garden gnome', preview: gnomeUrl },
+    { key: 'petPumpkin', label: 'Pumpkin', preview: pumpkin1Url },
+    { key: 'petCrow', label: 'Crow', preview: CROW_PREVIEW_URL },
 ];
 
 export class PetsModal extends Modal {
@@ -45,21 +40,6 @@ export class PetsModal extends Modal {
 
         const grid = contentEl.createDiv('garden-pets-grid');
         for (const pet of PETS) {
-            if (!pet.available) {
-                const tile = grid.createEl('button', {
-                    cls: 'garden-pet-tile is-unavailable',
-                    attr: {
-                        type: 'button',
-                        disabled: 'true',
-                        'aria-label': pet.label + ', unavailable',
-                    },
-                });
-                tile.createDiv('garden-pet-tile-preview');
-                tile.createSpan({ cls: 'garden-pet-tile-name', text: pet.label });
-                tile.createSpan({ cls: 'garden-pet-tile-state', text: 'Unavailable' });
-                continue;
-            }
-
             const active = Boolean(this.app.settings[pet.key]);
             const tile = grid.createEl('button', {
                 cls: 'garden-pet-tile',
@@ -131,46 +111,24 @@ function makePetButton(layer: HTMLElement, cls: string, label: string) {
     });
 }
 
-/**
- * Scene pets deliberately use stable single PNG silhouettes.
- *
- * The earlier swan/crow implementations cycled through malformed generated
- * sprite frames; on iOS that produced thin, partial and flickering animals.
- * Movement and interaction now animate the whole billboard while the raster
- * itself never changes shape.
- */
 export function renderGardenPets(world: HTMLElement, settings: GardenSettings) {
-    if (!settings.petSwan && !settings.petPumpkin && !settings.petCrow) return;
+    if (!settings.petGnome && !settings.petPumpkin && !settings.petCrow) return;
     const layer = world.createDiv('garden-pets-layer');
 
-    if (settings.petSwan) {
-        layer.createDiv('garden-pet-pond');
+    if (settings.petGnome) {
+        const gnome = makePetButton(layer, 'garden-pet-gnome', 'Garden gnome. Tap to make it hop.');
+        gnome.style.setProperty('--gnome-image', 'url("' + gnomeUrl + '")');
 
-        const swan = makePetButton(layer, 'garden-pet-swan', 'Swan. Tap to make it fly.');
-        const sprite = swan.createDiv('garden-pet-swan-sprite');
-        sprite.style.backgroundImage = 'url("' + swanPreviewUrl + '")';
-
-        let turnTimer: number | null = null;
-        const fly = () => {
-            if (swan.classList.contains('is-flying')) return;
-            swan.classList.add('is-flying');
-            sprite.classList.remove('is-flipped');
-
-            if (turnTimer !== null) window.clearTimeout(turnTimer);
-            turnTimer = window.setTimeout(() => {
-                if (swan.classList.contains('is-flying')) sprite.classList.add('is-flipped');
-            }, 1500);
+        const hop = () => {
+            if (gnome.classList.contains('is-startled')) return;
+            gnome.classList.add('is-startled');
         };
-
-        swan.addEventListener('animationend', (e) => {
-            if ((e as AnimationEvent).animationName !== 'garden-swan-flight') return;
-            swan.classList.remove('is-flying');
-            sprite.classList.remove('is-flipped');
-            if (turnTimer !== null) window.clearTimeout(turnTimer);
-            turnTimer = null;
+        gnome.addEventListener('animationend', (e) => {
+            if ((e as AnimationEvent).animationName === 'garden-gnome-hop') {
+                gnome.classList.remove('is-startled');
+            }
         });
-
-        bindTap(swan, fly);
+        bindTap(gnome, hop);
     }
 
     if (settings.petCrow) {

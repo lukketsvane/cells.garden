@@ -2249,8 +2249,8 @@ export class GardenView extends View {
             }
         });
 
-        // Optional pets live in the same world/camera as the plants. The swan
-        // brings its own stepped water pool; all pets are off by default.
+        // Optional pets live in the same world/camera as the plants.
+        // All pets are off by default.
         renderGardenPets(world, this.app.settings);
 
         // Apply the restored pan/zoom transform
