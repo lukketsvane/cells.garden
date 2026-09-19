@@ -104,6 +104,15 @@ for (const page of ['newtab.html', 'sidepanel.html', 'popup.html']) {
 const env = loadEnv('production', ROOT, '');
 const supabaseUrl = (env.VITE_SUPABASE_URL || env.SUPABASE_URL || '').trim();
 const hasSupabase = supabaseUrl !== '';
+const extensionCsp = manifest.content_security_policy?.extension_pages ?? '';
+for (const directive of ["default-src 'self'", "script-src 'self'", "object-src 'none'", "base-uri 'none'", "frame-ancestors 'none'"]) {
+    assert(extensionCsp.includes(directive), `extension CSP missing ${directive}: ${extensionCsp}`);
+}
+if (hasSupabase) {
+    const supabase = new URL(supabaseUrl);
+    assert(extensionCsp.includes(supabase.origin), `extension CSP does not allow Supabase HTTPS: ${extensionCsp}`);
+    assert(extensionCsp.includes(`wss://${supabase.host}`), `extension CSP does not allow Supabase realtime: ${extensionCsp}`);
+}
 console.log(`test-ext: manifest ok (version ${manifest.version}, supabase ${hasSupabase ? 'configured' : 'not configured'})`);
 
 // ---------------------------------------------------------------------------
@@ -169,15 +178,32 @@ try {
     // exposing an extension page as a web-accessible resource.
     const bridge = await context.newPage();
     const bridgeHtml = readFileSync(join(ROOT, 'public/privacy/oauth-return.html'), 'utf8');
+    const bridgeJs = readFileSync(join(ROOT, 'public/privacy/oauth-return.js'), 'utf8');
     await bridge.route('https://cells.garden/privacy/oauth-return.html**', (route) => route.fulfill({
         contentType: 'text/html',
         body: bridgeHtml,
     }));
+    await bridge.route('https://cells.garden/privacy/oauth-return.js', (route) => route.fulfill({
+        contentType: 'text/javascript',
+        body: bridgeJs,
+    }));
+    await bridge.route('https://cells.garden/not-oauth', (route) => route.fulfill({
+        contentType: 'text/html',
+        body: '<!doctype html><body>not oauth</body>',
+    }));
     await bridge.goto(`https://cells.garden/privacy/oauth-return.html?target=extension&extension_id=${extId}&code=test-oauth-code`);
     await bridge.waitForFunction(() => document.body.textContent?.includes('Return to cells.garden'));
+    assert(new URL(bridge.url()).search === '', `OAuth callback left secrets in the URL: ${bridge.url()}`);
     const bridged = await worker.evaluate(async () => (await chrome.storage.local.get('cells.garden/oauth-return'))['cells.garden/oauth-return']);
-    assert(bridged?.code === 'test-oauth-code', `website OAuth return did not reach the extension worker: ${JSON.stringify(bridged)}`);
+    assert(bridged?.value?.code === 'test-oauth-code' && typeof bridged?.receivedAt === 'number',
+        `website OAuth return did not reach the extension worker safely: ${JSON.stringify(bridged)}`);
     await worker.evaluate(async () => chrome.storage.local.remove('cells.garden/oauth-return'));
+
+    await bridge.goto('https://cells.garden/not-oauth');
+    const rejected = await bridge.evaluate((id) => new Promise((resolve) => {
+        chrome.runtime.sendMessage(id, { type: 'cells-garden-oauth-return', code: 'injected' }, resolve);
+    }), extId);
+    assert(rejected?.ok === false, `non-callback cells.garden page reached OAuth bridge: ${JSON.stringify(rejected)}`);
     await bridge.close();
 
     // --- New Tab: plant, add a stem cell, reload, still there. ---
