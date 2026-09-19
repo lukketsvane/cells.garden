@@ -53,3 +53,13 @@ The production Figma file is `Q9lb9XG2ftZZHswUg5zYkS`. Its visible `EXPORTS` sec
 - `stars_pattern.gif` and the two 3200x3200 brand PNGs remain repo-source-of-truth references and are intentionally not round-tripped from Figma.
 
 When the Figma export surface changes, regenerate `figma/exports.json` from the live file before pushing asset changes.
+
+### Pulling assets from Figma
+
+Set `FIGMA_TOKEN` to a Figma personal access token with read access to the production file, then run:
+
+```sh
+npm run sync:figma-assets
+```
+
+The command renders only the 277 nodes listed in `figma/exports.json`, always at PNG 1x, checks every rendered dimension, writes to the exact manifest path under `src/assets/**`, and runs `verify:figma-assets` before returning success. The manual **Sync Figma assets** GitHub Actions workflow runs the same path and commits changes to `main` when the repository secret `FIGMA_TOKEN` is configured. Repo-source-only GIF/logo files are never written by the sync.
