@@ -3,11 +3,30 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 
 const root = process.cwd();
+
+function loadEnvLocal() {
+  const file = path.join(root, ".env.local");
+  if (!fs.existsSync(file)) return;
+  for (const raw of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq < 1) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] == null) process.env[key] = value;
+  }
+}
+
+loadEnvLocal();
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "figma", "exports.json"), "utf8"));
 const token = process.env.FIGMA_TOKEN;
 
 if (!token) {
-  console.error("FIGMA_TOKEN is required. Create a Figma personal access token with file_content:read access to the production file.");
+  console.error("FIGMA_TOKEN is required. Put a Figma personal access token with file_content:read access in .env.local or the process environment.");
   process.exit(2);
 }
 
