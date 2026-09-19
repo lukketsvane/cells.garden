@@ -1357,11 +1357,9 @@
     padding: 0;
     border: 0;
     outline: 0;
-    background-color: transparent;
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
+    background: transparent;
     image-rendering: pixelated;
+    image-rendering: crisp-edges;
     pointer-events: auto;
     touch-action: none;
     cursor: pointer;
@@ -1373,15 +1371,14 @@
     outline-offset: 4px;
 }
 
-/* A deliberately block-built pool: no softened/vector edge. */
 .garden-pet-pond {
     position: absolute;
-    left: calc(100% - 152px);
-    top: calc(var(--sky) - 4px);
-    width: 116px;
-    height: 20px;
+    left: calc(100% - 116px);
+    top: calc(var(--sky) - 2px);
+    width: 78px;
+    height: 10px;
     background: #29434b;
-    box-shadow: inset 0 -4px #1e343c, inset 0 4px #36545c;
+    box-shadow: inset 0 -2px #1e343c, inset 0 2px #36545c;
     pointer-events: none;
 }
 .garden-pet-pond::before,
@@ -1392,25 +1389,24 @@
     box-shadow: inherit;
 }
 .garden-pet-pond::before {
-    left: 8px;
-    top: -4px;
-    width: 100px;
-    height: 4px;
+    left: 6px;
+    top: -2px;
+    width: 66px;
+    height: 2px;
 }
 .garden-pet-pond::after {
-    left: 16px;
-    bottom: -4px;
-    width: 84px;
-    height: 4px;
+    left: 12px;
+    bottom: -2px;
+    width: 54px;
+    height: 2px;
 }
 
 .garden-pet-swan {
-    left: calc(100% - 143px);
+    left: calc(100% - 112px);
     top: calc(var(--sky) - 42px);
     width: 68px;
     height: 42px;
-    background: none;
-    animation: garden-swan-paddle-position 7s steps(24, end) infinite;
+    animation: garden-swan-rest 2.8s steps(4, end) infinite;
 }
 .garden-pet-swan-sprite {
     position: absolute;
@@ -1418,85 +1414,33 @@
     width: 68px;
     height: 42px;
     background-repeat: no-repeat;
+    background-position: 0 0;
+    background-size: 68px 42px;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     transform: scaleX(1);
     transform-origin: 50% 50%;
-    animation: garden-swan-paddle-facing 7s step-end infinite;
+    transition: none;
     pointer-events: none;
+}
+.garden-pet-swan-sprite.is-flipped {
+    transform: scaleX(-1);
 }
 .garden-pet-swan.is-flying {
-    animation: garden-swan-flight 3.2s steps(32, end) 1;
-    z-index: 4;
+    animation: garden-swan-flight 3s steps(30, end) 1;
+    z-index: 10;
 }
-.garden-pet-swan.is-flying .garden-pet-swan-sprite {
-    animation: garden-swan-flight-facing 3.2s step-end 1 both;
-}
-@keyframes garden-swan-paddle-position {
-    0%   { transform: translateX(0); }
-    50%  { transform: translateX(56px); }
-    100% { transform: translateX(0); }
-}
-@keyframes garden-swan-paddle-facing {
-    0%, 49.999%  { transform: scaleX(1); }
-    50%, 99.999% { transform: scaleX(-1); }
-    100%          { transform: scaleX(1); }
+@keyframes garden-swan-rest {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
 }
 @keyframes garden-swan-flight {
-    0%   { transform: translate(20px, 0); }
-    18%  { transform: translate(-10px, -70px); }
-    52%  { transform: translate(-470px, -240px); }
-    72%  { transform: translate(-620px, -120px); }
-    90%  { transform: translate(-40px, -55px); }
-    100% { transform: translate(20px, 0); }
-}
-@keyframes garden-swan-flight-facing {
-    0%, 71.999% { transform: scaleX(-1); }
-    72%, 100%   { transform: scaleX(1); }
-}
-
-.garden-pet-gnome {
-    left: 72px;
-    top: calc(var(--sky) - 48px);
-    width: 36px;
-    height: 48px;
-    background: none;
-    animation: garden-gnome-wander-position 9s steps(12, end) infinite;
-}
-.garden-pet-gnome::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: var(--gnome-image);
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 36px 48px;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    transform: scaleX(1);
-    animation: garden-gnome-wander-facing 9s step-end infinite;
-    pointer-events: none;
-}
-.garden-pet-gnome.is-startled {
-    animation: garden-gnome-hop 720ms steps(6, end) 1;
-}
-.garden-pet-gnome.is-startled::before {
-    animation: none;
-}
-@keyframes garden-gnome-wander-position {
-    0% { transform: translateX(0); }
-    50% { transform: translateX(92px); }
-    100% { transform: translateX(0); }
-}
-@keyframes garden-gnome-wander-facing {
-    0%, 49.999% { transform: scaleX(1); }
-    50%, 99.999% { transform: scaleX(-1); }
-    100% { transform: scaleX(1); }
-}
-@keyframes garden-gnome-hop {
-    0%, 100% { transform: translateY(0); }
-    35% { transform: translateY(-42px) rotate(-5deg); }
-    60% { transform: translateY(-14px) rotate(4deg); }
+    0%   { transform: translate(0, 0); }
+    18%  { transform: translate(-40px, -80px); }
+    52%  { transform: translate(-430px, -240px); }
+    76%  { transform: translate(-560px, -130px); }
+    92%  { transform: translate(-80px, -55px); }
+    100% { transform: translate(0, 0); }
 }
 
 .garden-pet-pumpkin {
@@ -1505,6 +1449,9 @@
     width: 58px;
     height: 54px;
     background-image: var(--pumpkin-off);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
     animation: garden-pumpkin-glow 2.8s steps(1, end) infinite;
 }
 .garden-pet-pumpkin.is-startled {
@@ -1522,6 +1469,33 @@
     65% { transform: translateY(-8px) scale(0.96); }
 }
 
+.garden-pet-crow {
+    left: 0;
+    top: 0;
+    width: 64px;
+    height: 64px;
+    z-index: 9;
+    will-change: transform;
+}
+.garden-pet-crow-sprite {
+    position: absolute;
+    inset: 0;
+    width: 64px;
+    height: 64px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 64px 64px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    transform: scaleX(1);
+    transform-origin: 50% 50%;
+    transition: none;
+    pointer-events: none;
+}
+.garden-pet-crow-sprite.is-flipped {
+    transform: scaleX(-1);
+}
+
 /* Main menu -> Pets */
 .garden-pets-modal .modal-content {
     min-width: min(92vw, 420px);
@@ -1534,7 +1508,7 @@
 }
 .garden-pet-tile {
     min-width: 0;
-    min-height: 118px;
+    min-height: 112px;
     padding: 6px 2px 8px;
     border: 0;
     border-radius: 0;
@@ -1555,7 +1529,7 @@
     box-shadow: none;
 }
 .garden-pet-tile-preview {
-    height: 76px;
+    height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1574,13 +1548,13 @@
     width: 68px;
     height: 42px;
 }
-.garden-pet-tile[data-pet='petGnome'] .garden-pet-tile-preview img {
-    width: 36px;
-    height: 48px;
-}
 .garden-pet-tile[data-pet='petPumpkin'] .garden-pet-tile-preview img {
     width: 58px;
     height: 54px;
+}
+.garden-pet-tile[data-pet='petCrow'] .garden-pet-tile-preview img {
+    width: 64px;
+    height: 64px;
 }
 .garden-pet-tile-name {
     display: block;
@@ -1599,48 +1573,22 @@
 .garden-pet-tile.is-active .garden-pet-tile-state {
     color: var(--interactive-accent);
 }
+.garden-pet-tile.is-unavailable,
+.garden-pet-tile.is-unavailable:hover,
+.garden-pet-tile.is-unavailable:active {
+    opacity: 0.34;
+    cursor: default;
+    color: var(--text-faint);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+.garden-pet-tile.is-unavailable .garden-pet-tile-preview::after {
+    content: "—";
+    font-size: 24px;
+    color: var(--text-faint);
+}
 @media (max-width: 420px) {
     .garden-pets-grid { gap: 0; }
     .garden-pet-tile { padding-inline: 0; }
-}
-
-
-/* Crow NPC: native 32×32 atlas cells at exact 4× runtime scale. */
-.garden-pet-crow {
-    left: 0;
-    top: 0;
-    width: 128px;
-    height: 128px;
-    z-index: 5;
-    background: none;
-    will-change: transform;
-}
-
-.garden-pet-crow-sprite {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background-image: var(--crow-atlas);
-    background-size: 1024px 1024px;
-    background-position: 0 0;
-    background-repeat: no-repeat;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    transform-origin: 50% 50%;
-    will-change: background-position, transform;
-}
-
-.garden-pet-crow.is-flipped .garden-pet-crow-sprite {
-    transform: scaleX(-1);
-}
-
-/* The preview is the exact 32px native frame enlarged by an integer 2×. */
-.garden-pet-tile[data-pet='petCrow'] .garden-pet-tile-preview img {
-    width: 64px;
-    height: 64px;
-    max-width: 64px;
-    max-height: 64px;
-    object-fit: contain;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
 }

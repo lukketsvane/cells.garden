@@ -31,7 +31,6 @@ import flower2Url from '../assets/pack/plant_1/flowers/flower2.png';
 
 import ant1Url from '../assets/ant_walk_1.png';
 import ant2Url from '../assets/ant_walk_2.png';
-import foxAtlasUrl from '../assets/fox_npc_atlas.png';
 
 import stem1Url from '../assets/pack/plant_1/stem/stem1.png';
 import stem2Url from '../assets/pack/plant_1/stem/stem2.png';
@@ -668,160 +667,6 @@ export class GardenView extends View {
     }
 
 
-    // --- Fox NPC ---
-    private foxAnimInterval: number | null = null;
-    private foxMoveRAF: number | null = null;
-    private foxSleepTimeout: number | null = null;
-
-    private stopFox() {
-        this.foxAnimInterval = stop(this.foxAnimInterval);
-        this.foxSleepTimeout = stop(this.foxSleepTimeout);
-        if (this.foxMoveRAF !== null) {
-            (this.containerEl.ownerDocument.defaultView || window).cancelAnimationFrame(this.foxMoveRAF);
-            this.foxMoveRAF = null;
-        }
-    }
-
-    /**
-     * A tiny ambient NPC that lives on the existing garden horizon.
-     * It is deliberately self-contained: it adds one sprite and does not change
-     * the garden model, board, camera, settings, or any existing interaction.
-     */
-    private createFoxNpc(layer: HTMLElement, worldWidth: number, horizonY: number) {
-        this.stopFox();
-
-        const fox = layer.createDiv('garden-fox-npc');
-        // The atlas is native 64×64 cells. Render it at an integer 2× scale so
-        // it stays crisp but remains a tiny detail beside the plants.
-        const foxScale = 2;
-        const cell = 64 * foxScale;
-        const atlasW = 256 * foxScale;
-        const atlasH = 384 * foxScale;
-        const animations = {
-            idle: { row: 0, frames: 4, ms: 180 },
-            run: { row: 1, frames: 4, ms: 85 },
-            jump: { row: 2, frames: 4, ms: 95 },
-            sit: { row: 4, frames: 4, ms: 190 },
-            sleep: { row: 5, frames: 4, ms: 230 },
-        } as const;
-
-        fox.setAttribute('role', 'button');
-        fox.setAttribute('aria-label', 'Fox');
-        fox.setCssStyles({
-            position: 'absolute',
-            width: `${cell}px`,
-            height: `${cell}px`,
-            left: `${Math.max(
-                24,
-                Math.min(
-                    worldWidth - cell - 24,
-                    this.app.gardenData.length
-                        ? plantCentre(Math.floor(this.app.gardenData.length / 2)) + 120
-                        : worldWidth / 2,
-                ),
-            )}px`,
-            top: `${horizonY - cell}px`,
-            backgroundImage: `url("${foxAtlasUrl}")`,
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: `${atlasW}px ${atlasH}px`,
-            imageRendering: 'pixelated',
-            cursor: 'pointer',
-            touchAction: 'none',
-            pointerEvents: 'auto',
-            zIndex: '9',
-        });
-
-        let x = parseFloat(fox.style.left);
-        let frame = 0;
-        let state: keyof typeof animations = 'idle';
-        let direction = 1;
-        let ignoreClickUntil = 0;
-
-        const draw = () => {
-            const a = animations[state];
-            fox.style.backgroundPosition = `${-frame * cell}px ${-a.row * cell}px`;
-            fox.style.transform = direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
-        };
-
-        const play = (next: keyof typeof animations, once = false, done?: () => void) => {
-            this.foxAnimInterval = stop(this.foxAnimInterval);
-            state = next;
-            frame = 0;
-            draw();
-            const a = animations[state];
-            this.foxAnimInterval = window.setInterval(() => {
-                frame++;
-                if (frame >= a.frames) {
-                    if (once) {
-                        this.foxAnimInterval = stop(this.foxAnimInterval);
-                        done?.();
-                        return;
-                    }
-                    frame = 0;
-                }
-                draw();
-            }, a.ms);
-        };
-
-        const scheduleSleep = () => {
-            this.foxSleepTimeout = stop(this.foxSleepTimeout);
-            this.foxSleepTimeout = window.setTimeout(() => play('sleep'), 9000);
-        };
-
-        const run = () => {
-            const win = this.containerEl.ownerDocument.defaultView || window;
-            if (this.foxMoveRAF !== null) win.cancelAnimationFrame(this.foxMoveRAF);
-            direction = Math.random() < 0.5 ? -1 : 1;
-            const distance = 180 + Math.random() * 260;
-            const target = Math.max(24, Math.min(worldWidth - cell - 24, x + direction * distance));
-            direction = target >= x ? 1 : -1;
-            play('run');
-
-            const step = () => {
-                const dx = target - x;
-                const speed = 5;
-                if (Math.abs(dx) <= speed) {
-                    x = target;
-                    fox.style.left = `${x}px`;
-                    this.foxMoveRAF = null;
-                    play('idle');
-                    scheduleSleep();
-                    return;
-                }
-                x += Math.sign(dx) * speed;
-                fox.style.left = `${x}px`;
-                this.foxMoveRAF = win.requestAnimationFrame(step);
-            };
-            this.foxMoveRAF = win.requestAnimationFrame(step);
-        };
-
-        const interact = () => {
-            this.foxSleepTimeout = stop(this.foxSleepTimeout);
-            play('jump', true, run);
-        };
-
-        fox.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        }, { passive: false });
-        fox.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            ignoreClickUntil = performance.now() + 500;
-            interact();
-        }, { passive: false });
-        fox.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (performance.now() < ignoreClickUntil) return;
-            interact();
-        });
-        fox.addEventListener('contextmenu', (e) => e.preventDefault());
-
-        play('idle');
-        scheduleSleep();
-    }
-
     // --- The Worm Logic ---
     private startWorm() {
         this.stopWorm();
@@ -1240,7 +1085,6 @@ export class GardenView extends View {
         try {
             // Stop animations BEFORE destroying the DOM to prevent stale intervals
             this.stopAnt();
-            this.stopFox();
             this.stopWorm();
             this.stopFireflies();
             this.stopShootingStars();
@@ -1552,7 +1396,6 @@ export class GardenView extends View {
         this.stopFireflies();
         this.stopShootingStars();
         this.stopAnt();
-        this.stopFox();
         this.stopWorm();
         this._renderDebounce = stop(this._renderDebounce);
         this._skyUpdateInterval = stop(this._skyUpdateInterval);
@@ -2377,9 +2220,6 @@ export class GardenView extends View {
             antEl.style.width = `${img.naturalWidth * PIXEL_SCALE}px`;
             antEl.style.height = `${img.naturalHeight * PIXEL_SCALE}px`;
         });
-
-        // Small ambient feature: tap the fox and it jumps, then runs along the horizon.
-        this.createFoxNpc(world, calculatedWidth, skyHeight);
 
         this.createWormElements(wormLayer);
 

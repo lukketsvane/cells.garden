@@ -4,25 +4,25 @@ import type { GardenSettings } from './model';
 import { Modal } from './ui';
 import { CROW_PREVIEW_URL, mountCrowNPC } from './crow';
 
-import swanSwimAtlasUrl from '../assets/pets/swan_swim_atlas.png';
-import swanFlyAtlasUrl from '../assets/pets/swan_fly_atlas.png';
 import swanPreviewUrl from '../assets/pets/swan_preview.png';
-import gnomeUrl from '../assets/pets/gnome.png';
 import pumpkinOffUrl from '../assets/pack/pumpkin/pumpkin_1_off.png';
 import pumpkin1Url from '../assets/pack/pumpkin/pumpkin_1_on_1.png';
 import pumpkin2Url from '../assets/pack/pumpkin/pumpkin_1_on_2.png';
 import pumpkin3Url from '../assets/pack/pumpkin/pumpkin_1_on_3.png';
 
-type PetSettingKey = 'petSwan' | 'petGnome' | 'petPumpkin' | 'petCrow';
+type PetSettingKey = 'petSwan' | 'petPumpkin' | 'petCrow';
 
-const PETS: { key: PetSettingKey; label: string; preview: string }[] = [
-    { key: 'petSwan', label: 'Swan', preview: swanPreviewUrl },
-    { key: 'petGnome', label: 'Garden gnome', preview: gnomeUrl },
-    { key: 'petPumpkin', label: 'Pumpkin', preview: pumpkin1Url },
-    { key: 'petCrow', label: 'Crow', preview: CROW_PREVIEW_URL },
+type PetOption =
+    | { key: PetSettingKey; label: string; preview: string; available: true }
+    | { label: string; available: false };
+
+const PETS: PetOption[] = [
+    { key: 'petSwan', label: 'Swan', preview: swanPreviewUrl, available: true },
+    { label: 'Garden gnome', available: false },
+    { key: 'petPumpkin', label: 'Pumpkin', preview: pumpkin1Url, available: true },
+    { key: 'petCrow', label: 'Crow', preview: CROW_PREVIEW_URL, available: true },
 ];
 
-/** Main menu -> Pets. Each tile is an immediate on/off switch. */
 export class PetsModal extends Modal {
     constructor(private readonly app: GardenApp) {
         super();
@@ -45,6 +45,21 @@ export class PetsModal extends Modal {
 
         const grid = contentEl.createDiv('garden-pets-grid');
         for (const pet of PETS) {
+            if (!pet.available) {
+                const tile = grid.createEl('button', {
+                    cls: 'garden-pet-tile is-unavailable',
+                    attr: {
+                        type: 'button',
+                        disabled: 'true',
+                        'aria-label': pet.label + ', unavailable',
+                    },
+                });
+                tile.createDiv('garden-pet-tile-preview');
+                tile.createSpan({ cls: 'garden-pet-tile-name', text: pet.label });
+                tile.createSpan({ cls: 'garden-pet-tile-state', text: 'Unavailable' });
+                continue;
+            }
+
             const active = Boolean(this.app.settings[pet.key]);
             const tile = grid.createEl('button', {
                 cls: 'garden-pet-tile',
@@ -56,6 +71,7 @@ export class PetsModal extends Modal {
                 },
             });
             tile.toggleClass('is-active', active);
+
             const preview = tile.createDiv('garden-pet-tile-preview');
             preview.createEl('img', { attr: { src: pet.preview, alt: '' } });
             tile.createSpan({ cls: 'garden-pet-tile-name', text: pet.label });
@@ -72,18 +88,39 @@ export class PetsModal extends Modal {
     }
 }
 
-function stopSceneGesture(el: HTMLElement, act: () => void) {
-    const stop = (e: Event) => e.stopPropagation();
-    el.addEventListener('touchstart', stop, { passive: true });
-    el.addEventListener('mousedown', stop);
-    el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        act();
-    });
+function bindTap(el: HTMLElement, action: () => void) {
+    let press: { x: number; y: number } | null = null;
+
+    el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+    el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: true });
+    el.addEventListener('touchend', (e) => e.stopPropagation(), { passive: true });
+
     el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        act();
+        press = { x: e.clientX, y: e.clientY };
+        el.setPointerCapture?.(e.pointerId);
+    });
+
+    el.addEventListener('pointerup', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const start = press;
+        press = null;
+        if (!start) return;
+        if (Math.hypot(e.clientX - start.x, e.clientY - start.y) <= 12) action();
+    });
+
+    el.addEventListener('pointercancel', () => { press = null; });
+    el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    });
+
+    el.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        action();
     });
 }
 
@@ -94,84 +131,50 @@ function makePetButton(layer: HTMLElement, cls: string, label: string) {
     });
 }
 
-type SpriteStrip = {
-    key: string;
-    url: string;
-    frames: number;
-    frameMs: number;
-};
-
 /**
- * Safari can render optimized transparent GIF sub-rectangles as if each
- * sub-frame were a new image. A fixed-cell PNG strip avoids that entirely:
- * every frame is the same 68x42 canvas and only background-position changes.
+ * Scene pets deliberately use stable single PNG silhouettes.
+ *
+ * The earlier swan/crow implementations cycled through malformed generated
+ * sprite frames; on iOS that produced thin, partial and flickering animals.
+ * Movement and interaction now animate the whole billboard while the raster
+ * itself never changes shape.
  */
-function runSpriteStrip(el: HTMLElement, getStrip: () => SpriteStrip) {
-    const frameWidth = 68;
-    const frameHeight = 42;
-    let frame = 0;
-    let stripKey = '';
-
-    const tick = () => {
-        if (!el.isConnected) return;
-        const strip = getStrip();
-        if (strip.key !== stripKey) {
-            stripKey = strip.key;
-            frame = 0;
-        }
-        el.style.backgroundImage = 'url("' + strip.url + '")';
-        el.style.backgroundSize = (strip.frames * frameWidth) + 'px ' + frameHeight + 'px';
-        el.style.backgroundPosition = (-frame * frameWidth) + 'px 0';
-        frame = (frame + 1) % strip.frames;
-        window.setTimeout(tick, strip.frameMs);
-    };
-
-    tick();
-}
-
-/** Add enabled NPCs to the world. Re-rendering removes disabled pets immediately. */
 export function renderGardenPets(world: HTMLElement, settings: GardenSettings) {
-    if (!settings.petSwan && !settings.petGnome && !settings.petPumpkin && !settings.petCrow) return;
+    if (!settings.petSwan && !settings.petPumpkin && !settings.petCrow) return;
     const layer = world.createDiv('garden-pets-layer');
 
     if (settings.petSwan) {
         layer.createDiv('garden-pet-pond');
+
         const swan = makePetButton(layer, 'garden-pet-swan', 'Swan. Tap to make it fly.');
         const sprite = swan.createDiv('garden-pet-swan-sprite');
+        sprite.style.backgroundImage = 'url("' + swanPreviewUrl + '")';
 
-        runSpriteStrip(sprite, () => swan.classList.contains('is-flying')
-            ? { key: 'fly', url: swanFlyAtlasUrl, frames: 8, frameMs: 95 }
-            : { key: 'swim', url: swanSwimAtlasUrl, frames: 10, frameMs: 145 });
-
+        let turnTimer: number | null = null;
         const fly = () => {
             if (swan.classList.contains('is-flying')) return;
             swan.classList.add('is-flying');
+            sprite.classList.remove('is-flipped');
+
+            if (turnTimer !== null) window.clearTimeout(turnTimer);
+            turnTimer = window.setTimeout(() => {
+                if (swan.classList.contains('is-flying')) sprite.classList.add('is-flipped');
+            }, 1500);
         };
+
         swan.addEventListener('animationend', (e) => {
-            if ((e as AnimationEvent).animationName === 'garden-swan-flight') {
-                swan.classList.remove('is-flying');
-            }
+            if ((e as AnimationEvent).animationName !== 'garden-swan-flight') return;
+            swan.classList.remove('is-flying');
+            sprite.classList.remove('is-flipped');
+            if (turnTimer !== null) window.clearTimeout(turnTimer);
+            turnTimer = null;
         });
-        stopSceneGesture(swan, fly);
+
+        bindTap(swan, fly);
     }
 
     if (settings.petCrow) {
         mountCrowNPC(layer);
-    }
-
-    if (settings.petGnome) {
-        const gnome = makePetButton(layer, 'garden-pet-gnome', 'Garden gnome. Tap to make it hop.');
-        gnome.style.setProperty('--gnome-image', 'url("' + gnomeUrl + '")');
-        const hop = () => {
-            if (gnome.classList.contains('is-startled')) return;
-            gnome.classList.add('is-startled');
-        };
-        gnome.addEventListener('animationend', (e) => {
-            if ((e as AnimationEvent).animationName === 'garden-gnome-hop') {
-                gnome.classList.remove('is-startled');
-            }
-        });
-        stopSceneGesture(gnome, hop);
     }
 
     if (settings.petPumpkin) {
@@ -180,6 +183,7 @@ export function renderGardenPets(world: HTMLElement, settings: GardenSettings) {
         pumpkin.style.setProperty('--pumpkin-1', 'url("' + pumpkin1Url + '")');
         pumpkin.style.setProperty('--pumpkin-2', 'url("' + pumpkin2Url + '")');
         pumpkin.style.setProperty('--pumpkin-3', 'url("' + pumpkin3Url + '")');
+
         const pop = () => {
             if (pumpkin.classList.contains('is-startled')) return;
             pumpkin.classList.add('is-startled');
@@ -189,6 +193,6 @@ export function renderGardenPets(world: HTMLElement, settings: GardenSettings) {
                 pumpkin.classList.remove('is-startled');
             }
         });
-        stopSceneGesture(pumpkin, pop);
+        bindTap(pumpkin, pop);
     }
 }
