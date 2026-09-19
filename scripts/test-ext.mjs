@@ -358,7 +358,7 @@ try {
         localStorage.setItem('cells.garden/view/sidepanel', JSON.stringify(state));
     });
     await panel.reload();
-    await panel.waitForSelector('.garden-plant-wrapper');
+    await panel.waitForSelector('.garden-plant-wrapper', { state: 'attached' });
     await panel.waitForFunction(() => {
         const viewport = document.querySelector('.garden-canvas-viewport').getBoundingClientRect();
         const plant = document.querySelector('.garden-plant-wrapper').getBoundingClientRect();
