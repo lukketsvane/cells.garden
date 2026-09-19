@@ -31,6 +31,7 @@ import flower2Url from '../assets/pack/plant_1/flowers/flower2.png';
 
 import ant1Url from '../assets/ant_walk_1.png';
 import ant2Url from '../assets/ant_walk_2.png';
+import foxAtlasUrl from '../assets/fox_npc_atlas.png';
 
 import stem1Url from '../assets/pack/plant_1/stem/stem1.png';
 import stem2Url from '../assets/pack/plant_1/stem/stem2.png';
@@ -690,9 +691,12 @@ export class GardenView extends View {
         this.stopFox();
 
         const fox = layer.createDiv('garden-fox-npc');
-        const cell = 64 * PIXEL_SCALE;
-        const atlasW = 256 * PIXEL_SCALE;
-        const atlasH = 384 * PIXEL_SCALE;
+        // The atlas is native 64×64 cells. Render it at an integer 2× scale so
+        // it stays crisp but remains a tiny detail beside the plants.
+        const foxScale = 2;
+        const cell = 64 * foxScale;
+        const atlasW = 256 * foxScale;
+        const atlasH = 384 * foxScale;
         const animations = {
             idle: { row: 0, frames: 4, ms: 180 },
             run: { row: 1, frames: 4, ms: 85 },
@@ -707,15 +711,24 @@ export class GardenView extends View {
             position: 'absolute',
             width: `${cell}px`,
             height: `${cell}px`,
-            left: `${Math.max(36, Math.min(worldWidth - cell - 36, worldWidth * 0.68))}px`,
+            left: `${Math.max(
+                24,
+                Math.min(
+                    worldWidth - cell - 24,
+                    this.app.gardenData.length
+                        ? plantCentre(Math.floor(this.app.gardenData.length / 2)) + 120
+                        : worldWidth / 2,
+                ),
+            )}px`,
             top: `${horizonY - cell}px`,
-            backgroundImage: "url('/fox-npc-atlas.png')",
+            backgroundImage: `url("${foxAtlasUrl}")`,
             backgroundRepeat: 'no-repeat',
             backgroundSize: `${atlasW}px ${atlasH}px`,
             imageRendering: 'pixelated',
             cursor: 'pointer',
             touchAction: 'none',
-            zIndex: '8',
+            pointerEvents: 'auto',
+            zIndex: '9',
         });
 
         let x = parseFloat(fox.style.left);
@@ -2366,7 +2379,7 @@ export class GardenView extends View {
         });
 
         // Small ambient feature: tap the fox and it jumps, then runs along the horizon.
-        this.createFoxNpc(plantsLayer, calculatedWidth, skyHeight);
+        this.createFoxNpc(world, calculatedWidth, skyHeight);
 
         this.createWormElements(wormLayer);
 
