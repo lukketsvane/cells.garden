@@ -32,7 +32,6 @@ assert(/require\(["']obsidian["']\)/.test(mainJs), 'main.js should require obsid
 assert(!/navigator\.clipboard|\.clipboardData\b/.test(mainJs), 'Obsidian build must not access the system clipboard');
 assert(!/loadLocalStorage|saveLocalStorage/.test(mainJs), 'Obsidian build must use Plugin.loadData/saveData instead of legacy local storage APIs');
 assert(/privacy\/oauth-return\.html\?target=obsidian/.test(mainJs), 'Obsidian Google sign-in must return through the website bridge');
-assert(/obsidian:\/\/cells-garden/.test(mainJs), 'Obsidian build must keep the cells-garden protocol callback');
 assert(
     /\.kanban-scroll-container\s+\.project-column\s*\{[^}]*display:\s*flex/s.test(css),
     'Obsidian must ship the compact per-plant kanban layout'
@@ -179,6 +178,8 @@ try {
     const pluginScene = await page.evaluate(() => window.__pluginData?.local?.['cells.garden/scene']);
     assert(pluginScene === 'mountains', `the scene should come from Plugin.loadData: ${pluginScene}`);
     assert(commands.includes('open') && commands.includes('import-vault-garden'), 'expected the open and import commands');
+    const protocolAction = await page.evaluate(() => window.__protocol?.action ?? null);
+    assert(protocolAction === 'cells-garden', `Obsidian protocol handler must register cells-garden, got ${protocolAction}`);
 
     await page.evaluate(async () => { await window.__commands.find((c) => c.id === 'open').callback(); });
     await page.waitForSelector('.cells-garden-host .garden-canvas-viewport', { timeout: 15000 });
