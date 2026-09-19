@@ -21,7 +21,7 @@ import { chromium } from 'playwright';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4173;
-const BASE = `http://localhost:${PORT}/`;
+const BASE = `http://127.0.0.1:${PORT}/`;
 const VITE = join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
 const SHOTS = process.env.SCREENSHOTS || '';
 const ICONS = ['icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
@@ -63,7 +63,7 @@ function ensureBuild() {
 }
 
 async function startPreview() {
-    const child = spawn(process.execPath, [VITE, 'preview', '--port', String(PORT), '--strictPort'], {
+    const child = spawn(process.execPath, [VITE, 'preview', '--host', '127.0.0.1', '--port', String(PORT), '--strictPort'], {
         cwd: ROOT,
         stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -76,15 +76,14 @@ async function startPreview() {
     const deadline = Date.now() + 30_000;
     while (Date.now() < deadline) {
         if (exited) throw new Error(`vite preview exited early (${exited.code ?? exited.signal}):\n${output}`);
-        // Only trust a response once our own server has announced itself; with
-        // --strictPort a stale server on the port would otherwise pass as ours.
-        if (output.includes(`localhost:${PORT}`)) {
-            try {
-                const res = await fetch(BASE);
-                if (res.ok) return child;
-            } catch {
-                // Not listening yet.
-            }
+        // Vite colors its startup banner, so matching raw stdout is brittle.
+        // --strictPort guarantees another process cannot silently steal the port;
+        // poll the actual loopback endpoint instead.
+        try {
+            const res = await fetch(BASE);
+            if (res.ok) return child;
+        } catch {
+            // Not listening yet.
         }
         await new Promise((resolve) => setTimeout(resolve, 200));
     }
