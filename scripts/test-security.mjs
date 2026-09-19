@@ -12,7 +12,7 @@ const privacy = read('public/privacy.html');
 const webstore = read('ext/WEBSTORE.md');
 assert(privacy.includes('<code>sidePanel</code>') && privacy.includes('<code>storage</code>'), 'privacy policy must disclose Chrome permissions');
 assert(/does not read the pages you visit, your browsing history/i.test(privacy), 'privacy policy must state browsing-data boundary');
-assert(webstore.includes(`Current replacement release: \\`${pkg.version}\\``), 'Chrome Web Store notes must match package version');
+assert(webstore.includes('Current replacement release: `' + pkg.version + '`'), 'Chrome Web Store notes must match package version');
 
 const vercel = JSON.parse(read('vercel.json'));
 assert(vercel.installCommand === 'npm ci --ignore-scripts');
