@@ -21,6 +21,18 @@ function pngSize(buffer) {
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
 }
 
+function pngIdat(buffer) {
+  const chunks = [];
+  let offset = 8;
+  while (offset + 12 <= buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString("ascii", offset + 4, offset + 8);
+    if (type === "IDAT") chunks.push(buffer.subarray(offset + 8, offset + 8 + length));
+    offset += 12 + length;
+  }
+  return Buffer.concat(chunks);
+}
+
 function chunks(items, size) {
   const out = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
@@ -90,9 +102,29 @@ for (const item of manifest.items) {
   const destination = path.join(root, item.path);
   fs.mkdirSync(path.dirname(destination), { recursive: true });
 
-  if (fs.existsSync(destination) && fs.readFileSync(destination).equals(buffer)) {
-    unchanged += 1;
-    continue;
+  if (fs.existsSync(destination)) {
+    const existing = fs.readFileSync(destination);
+    if (existing.equals(buffer)) {
+      unchanged += 1;
+      continue;
+    }
+
+    // Figma may strip ancillary Photoshop/XMP/ICC chunks from an imported PNG
+    // while preserving the exact compressed pixel stream. Keep the repo file in
+    // that case so a no-op Figma sync never creates metadata-only binary churn.
+    try {
+      const existingSize = pngSize(existing);
+      if (
+        existingSize.width === size.width &&
+        existingSize.height === size.height &&
+        pngIdat(existing).equals(pngIdat(buffer))
+      ) {
+        unchanged += 1;
+        continue;
+      }
+    } catch {
+      // The verifier below will report malformed existing assets if necessary.
+    }
   }
 
   fs.writeFileSync(destination, buffer);
