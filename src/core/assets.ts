@@ -46,6 +46,12 @@ export const PLANT_TYPES: string[] = Array.from(
     )
 ).sort();
 
+export interface PlantPreviewPart {
+    kind: 'stem' | 'flower';
+    path: string;
+    url: string;
+}
+
 export class AssetManager {
     /** The plant's own folder first, else the shared one (roots, minerals, seeds). No folder is ever empty. */
     assignRandomImage(category: string, plantType?: string): string | null {
@@ -75,5 +81,23 @@ export class AssetManager {
         if (url) return url;
         const legacy = legacyImagePath(path);
         return (legacy && PACK.get(legacy)) ?? null;
+    }
+
+    /**
+     * Deterministic real sprites for the plant-type picker: three stems and one
+     * flower from the exact same bundled pack used by the rendered garden.
+     */
+    getPlantPreview(plantType: string): PlantPreviewPart[] {
+        const numeric = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
+        const stems = [...(FOLDERS.get(`${plantType}/stem`) ?? [])].sort(numeric).slice(0, 3);
+        const flowers = [...(FOLDERS.get(`${plantType}/flowers`) ?? [])].sort(numeric).slice(0, 1);
+        const parts: Array<{ kind: 'stem' | 'flower'; path: string }> = [
+            ...stems.map(path => ({ kind: 'stem' as const, path })),
+            ...flowers.map(path => ({ kind: 'flower' as const, path })),
+        ];
+        return parts.flatMap(part => {
+            const url = PACK.get(part.path);
+            return url ? [{ ...part, url }] : [];
+        });
     }
 }

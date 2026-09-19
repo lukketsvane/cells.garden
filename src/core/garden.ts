@@ -2856,17 +2856,6 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
 
     private showSeedContextMenu(e: MouseEvent, project: ProjectData) {
         const rename = (type: string) => type.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
-        const changePlantType = (plantType: string) => {
-            if (plantType === project.plantType) return;
-            const live = this.live(project);
-            live.plantType = plantType;
-            for (const layer of ['stem', 'flowers'] as const) {
-                for (const item of live[layer]) {
-                    item.imagePath = this.app.assetManager.assignRandomImage(layer, plantType) || undefined;
-                }
-            }
-            void this.save();
-        };
         const items: MenuItem[] = [
             {
                 label: project.standby ? 'Wake up' : 'Standby',
@@ -2878,18 +2867,63 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
             },
             { label: 'Recycle plant', danger: true, onClick: () => this.confirmRecycle(project) },
         ];
-        if (PLANT_TYPES.length > 0) {
-            items.push({
-                label: 'Change plant type',
-                grid: PLANT_TYPES.map(plantType => ({
-                    label: rename(plantType),
-                    images: this.app.assetManager.getPlantPreviewUrls(plantType),
-                    active: plantType === project.plantType,
-                    onClick: () => changePlantType(plantType),
-                })),
-            });
-        }
-        openMenu(items, { x: e.clientX, y: e.clientY }, this.containerEl.ownerDocument);
+        if (PLANT_TYPES.length > 1) items.push({ label: 'Change plant type', heading: true });
+
+        openMenu(
+            items,
+            { x: e.clientX, y: e.clientY },
+            this.containerEl.ownerDocument,
+            (menu) => {
+                if (PLANT_TYPES.length <= 1) return;
+                const grid = menu.createDiv('plant-type-grid');
+                grid.setAttribute('role', 'group');
+                grid.setAttribute('aria-label', 'Plant type');
+
+                for (const pt of PLANT_TYPES) {
+                    const label = rename(pt);
+                    const tile = grid.createEl('button', {
+                        cls: 'plant-type-tile',
+                        attr: {
+                            type: 'button',
+                            'aria-label': label,
+                            title: label,
+                        },
+                    });
+                    const selected = pt === project.plantType;
+                    tile.toggleClass('is-selected', selected);
+                    tile.setAttribute('aria-pressed', selected ? 'true' : 'false');
+
+                    const preview = tile.createDiv('plant-type-preview');
+                    const parts = this.app.assetManager.getPlantPreview(pt);
+                    for (const [level, part] of parts.entries()) {
+                        const img = preview.createEl('img', {
+                            attr: {
+                                src: part.url,
+                                alt: '',
+                                draggable: 'false',
+                            },
+                        });
+                        img.dataset.kind = part.kind;
+                        img.dataset.level = String(level);
+                    }
+
+                    tile.onclick = (event) => {
+                        event.stopPropagation();
+                        menu.remove();
+                        if (pt === project.plantType) return;
+
+                        const live = this.live(project);
+                        live.plantType = pt;
+                        for (const layer of ['stem', 'flowers'] as const) {
+                            for (const item of live[layer]) {
+                                item.imagePath = this.app.assetManager.assignRandomImage(layer, pt) || undefined;
+                            }
+                        }
+                        void this.save();
+                    };
+                }
+            },
+        );
     }
 
     /** The menu on a cell, acting on the whole selection when there is one. */

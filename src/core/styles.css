@@ -1356,3 +1356,81 @@
     white-space: nowrap;
     user-select: none;
 }
+
+/* --- Visual plant-type picker: actual pack sprites, three columns --- */
+.plant-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+    width: min(252px, calc(100vw - 24px));
+    max-height: min(270px, 58vh);
+    overflow-y: auto;
+    padding: 4px 8px 8px;
+}
+
+.plant-type-tile {
+    position: relative;
+    display: block;
+    min-width: 0;
+    height: 72px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 5px;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    cursor: pointer;
+}
+
+.plant-type-tile:hover {
+    background: var(--background-modifier-hover);
+    border-color: var(--background-modifier-border-hover, var(--text-faint));
+}
+
+.plant-type-tile:focus-visible {
+    outline: 2px solid var(--interactive-accent, #7c5cff);
+    outline-offset: 1px;
+}
+
+.plant-type-tile.is-selected {
+    border-color: var(--interactive-accent, #7c5cff);
+    box-shadow: inset 0 0 0 1px var(--interactive-accent, #7c5cff);
+    background: var(--background-modifier-active-hover, var(--background-modifier-hover));
+}
+
+.plant-type-tile.is-selected::after {
+    content: '✓';
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    z-index: 2;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--interactive-accent, #7c5cff);
+}
+
+.plant-type-preview {
+    position: absolute;
+    inset: 4px;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.plant-type-preview img {
+    position: absolute;
+    left: 50%;
+    width: auto;
+    height: 14px;
+    max-width: none;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    transform: translateX(-50%);
+    transform-origin: 50% 100%;
+    pointer-events: none;
+    user-select: none;
+}
+
+.plant-type-preview img[data-level='0'] { bottom: 5px; }
+.plant-type-preview img[data-level='1'] { bottom: 16px; transform: translateX(-50%) scaleX(-1); }
+.plant-type-preview img[data-level='2'] { bottom: 27px; }
+.plant-type-preview img[data-level='3'] { bottom: 39px; }

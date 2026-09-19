@@ -356,6 +356,24 @@ try {
     assert(size.scrollWidth <= size.clientWidth, `the side panel overflows horizontally: scrollWidth ${size.scrollWidth} > clientWidth ${size.clientWidth}`);
     assert(size.canvas <= 360, `the canvas is wider than the panel: ${size.canvas}`);
 
+    // The shared plant-type picker must stay visual and three columns wide in the extension side panel.
+    await panel.click('.seed-content', { button: 'right' });
+    await panel.waitForSelector('.plant-type-grid');
+    const sidePicker = await panel.evaluate(() => {
+        const grid = document.querySelector('.plant-type-grid');
+        const tiles = [...grid.querySelectorAll('.plant-type-tile')];
+        return {
+            columns: getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
+            tiles: tiles.length,
+            withPixelArt: tiles.filter((tile) => tile.querySelector('.plant-type-preview img')).length,
+            right: grid.getBoundingClientRect().right,
+        };
+    });
+    assert(sidePicker.columns === 3 && sidePicker.tiles >= 3 && sidePicker.withPixelArt === sidePicker.tiles,
+        `side-panel plant picker is not a 3-column pixel-art grid: ${JSON.stringify(sidePicker)}`);
+    assert(sidePicker.right <= 360 + 1, `side-panel plant picker overflows: ${JSON.stringify(sidePicker)}`);
+    await panel.evaluate(() => document.querySelector('.garden-context-menu')?.remove());
+
     // Writes from the panel reach the shared storage too.
     await panel.click('.flowers-zone .zone-add-btn');
     await panel.waitForSelector('.garden-item.is-draft');
