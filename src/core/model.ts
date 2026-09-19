@@ -35,6 +35,11 @@ export interface ViewState {
     translateY: number;
     kanbanScrollLeft: number;
     kanbanScrollTop: number;
+    /** Viewport used when the camera was saved; old saves omit these. */
+    viewportWidth?: number;
+    viewportHeight?: number;
+    /** Horizon position inside the canvas. Keeps the plants vertically stable across resizes. */
+    groundRatio?: number;
 }
 
 /** A point in the sky's day: its colour ('#rrggbb') at an hour (0 to 24, minutes as a fraction). */

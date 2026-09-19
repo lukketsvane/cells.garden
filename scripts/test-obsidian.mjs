@@ -191,12 +191,21 @@ try {
             pillText: pill?.textContent?.trim() ?? null,
             canvas: host.querySelector('.garden-canvas-viewport').getBoundingClientRect().height,
             parts: host.querySelectorAll('.garden-stem-container').length,
+            groundRatio: (() => {
+                const viewport = host.querySelector('.garden-canvas-viewport')?.getBoundingClientRect();
+                const plant = host.querySelector('.garden-plant-wrapper')?.getBoundingClientRect();
+                return viewport && plant ? (plant.top - viewport.top) / viewport.height : null;
+            })(),
         };
     });
     console.log('test-obsidian: garden in a tab', shell);
     assert(shell.pill === 'absolute', `the sign-in pill should sit in the tab, got position ${shell.pill}`);
     assert(shell.pillText === 'Sign in', `the pill should offer sign-in: ${shell.pillText}`);
     assert(shell.canvas > 100, 'the canvas has no height');
+    if (shell.groundRatio !== null) {
+        assert(shell.groundRatio > 0.42 && shell.groundRatio < 0.86,
+            `the Obsidian garden horizon is misplaced: ${shell.groundRatio}`);
+    }
 
     await page.evaluate(async () => { await window.__commands.find((c) => c.id === 'import-vault-garden').callback(); });
     await page.waitForFunction(() => [...document.querySelectorAll('.seed-content')].some((el) => el.textContent === 'From the vault'), null, { timeout: 5000 });

@@ -122,6 +122,15 @@ async function scenario(browser, errors) {
     await page.waitForSelector('.project-column');
     console.log('seed:', await page.textContent('.seed-content'));
 
+    const groundRatio = async (p) => p.evaluate(() => {
+        const viewport = document.querySelector('.garden-canvas-viewport').getBoundingClientRect();
+        const plant = document.querySelector('.garden-plant-wrapper').getBoundingClientRect();
+        return (plant.top - viewport.top) / viewport.height;
+    });
+    const desktopGround = await groundRatio(page);
+    assert(desktopGround > 0.45 && desktopGround < 0.84,
+        `desktop garden opened with the horizon misplaced: ${desktopGround}`);
+
     // Add items to each zone
     const zones = [
         ['flowers-zone', 'Runs in browser'],
@@ -413,6 +422,15 @@ async function scenario(browser, errors) {
     await mpage.fill('.modal textarea', 'Phone plant');
     await mpage.keyboard.press('Enter');
     await mpage.waitForSelector('.project-column');
+    await mpage.waitForFunction(() => document.querySelector('.garden-plant-wrapper')?.getBoundingClientRect().height >= 0);
+    const mobileGround = await mpage.evaluate(() => {
+        const viewport = document.querySelector('.garden-canvas-viewport').getBoundingClientRect();
+        const plant = document.querySelector('.garden-plant-wrapper').getBoundingClientRect();
+        return (plant.top - viewport.top) / viewport.height;
+    });
+    assert(mobileGround > 0.45 && mobileGround < 0.84,
+        `mobile garden opened with the horizon misplaced: ${mobileGround}`);
+
     for (const text of ['First stem', 'Second stem']) {
         await tapAt('.stem-zone .zone-add-btn');
         await mpage.waitForSelector('.garden-item.is-draft');

@@ -53,6 +53,11 @@ const BASE_SKY = 620;
 const BASE_GROUND = 480;
 /** Comfortable opening scale: enough scene around the plants to breathe. */
 const DEFAULT_GARDEN_ZOOM = 0.34;
+/** The horizon should open about two thirds down the canvas, across every surface. */
+const DEFAULT_GROUND_SCREEN_RATIO = 0.65;
+/** Legacy/stale cameras outside this band are visibly broken on cold open. */
+const OPEN_GROUND_RATIO_MIN = 0.48;
+const OPEN_GROUND_RATIO_MAX = 0.82;
 // Squares in the worm.
 const WORM_LENGTH = 7;
 // The most fireflies a garden setting can ask for.
@@ -255,12 +260,17 @@ export class GardenView extends View {
 
     private saveViewState() {
         const scrollContainer = this.contentEl.querySelector<HTMLElement>('.kanban-scroll-container');
+        const viewport = this.viewport;
+        const ratio = viewport ? this.groundScreenRatio(viewport) : null;
         const state: ViewState = {
             zoom: this.zoom,
             translateX: this.currentTranslateX,
             translateY: this.currentTranslateY,
             kanbanScrollLeft: scrollContainer ? scrollContainer.scrollLeft : 0,
-            kanbanScrollTop: scrollContainer ? scrollContainer.scrollTop : 0
+            kanbanScrollTop: scrollContainer ? scrollContainer.scrollTop : 0,
+            viewportWidth: viewport?.offsetWidth || undefined,
+            viewportHeight: viewport?.offsetHeight || undefined,
+            groundRatio: ratio !== null ? ratio : undefined,
         };
         // Private mode or blocked storage: the camera just starts centred next time.
         local.set(this._viewStateKey, JSON.stringify(state));
@@ -289,6 +299,9 @@ export class GardenView extends View {
                 translateY: s.translateY,
                 kanbanScrollLeft: s.kanbanScrollLeft ?? 0,
                 kanbanScrollTop: s.kanbanScrollTop ?? 0,
+                viewportWidth: typeof s.viewportWidth === 'number' ? s.viewportWidth : undefined,
+                viewportHeight: typeof s.viewportHeight === 'number' ? s.viewportHeight : undefined,
+                groundRatio: typeof s.groundRatio === 'number' ? s.groundRatio : undefined,
             };
         } catch {
             return null;
@@ -1108,9 +1121,11 @@ export class GardenView extends View {
             // If no persistedState, we do nothing! this.zoom and this.currentTranslateX naturally persist!
 
 
-            // Save canvas content before DOM is destroyed
+            // Save canvas/camera anchors before DOM is destroyed.
             let savedCanvasImage: string | null = null;
             const oldGroundLineY = this._dynamicGroundLineY;
+            const oldViewport = this.viewport;
+            const oldGroundRatio = oldViewport ? this.groundScreenRatio(oldViewport) : null;
             if (this.wormTrailCanvas) {
                 try { savedCanvasImage = this.wormTrailCanvas.toDataURL(); } catch { /* unreadable canvas: the trail starts over */ }
             }
@@ -1160,30 +1175,33 @@ export class GardenView extends View {
 
             // --- VIEW RESTORATION ---
             if (!this._hasLoadedInitialState) {
-                this._hasLoadedInitialState = true; // Mark as done so this only runs once ever!
-                
-                if (!persistedState || !this.cameraInView()) {
-                    // No usable saved state (none, or saved by a surface of another size): centre the view.
-                    const win = this.containerEl.ownerDocument.defaultView || window;
-                    win.requestAnimationFrame(() => {
-                        win.requestAnimationFrame(() => {
-                            const viewport = this.viewport;
-                            const world = this.world;
-                            if (viewport && world) {
-                                this.zoom = DEFAULT_GARDEN_ZOOM;
-                                const vpWidth = viewport.offsetWidth || 800;
-                                const vpHeight = viewport.offsetHeight || 600;
-                                const plantCount = this.app.gardenData.length;
-                                const middlePlantIndex = Math.floor(plantCount / 2);
-                                const middlePlantWorldX = plantCentre(middlePlantIndex);
-                                
-                                this.currentTranslateX = (vpWidth / 2) - (middlePlantWorldX * this.zoom);
-                                this.currentTranslateY = (vpHeight * 0.65) - (this._dynamicGroundLineY * this.zoom);
-                                this.applyWorldTransform(world, viewport);
-                                this.settleCamera(false);
-                            }
+                this._hasLoadedInitialState = true;
+                if (persistedState) this.restoreScrollPositions(scrollStates);
 
-                            const scrollContainer = this.contentEl.querySelector('.kanban-scroll-container') as HTMLElement;
+                const win = this.containerEl.ownerDocument.defaultView || window;
+                win.requestAnimationFrame(() => {
+                    win.requestAnimationFrame(() => {
+                        const viewport = this.viewport;
+                        const world = this.world;
+                        if (!viewport || !world) return;
+
+                        const savedCameraVisible = !!persistedState && this.cameraInView();
+                        if (!savedCameraVisible) {
+                            this.zoom = DEFAULT_GARDEN_ZOOM;
+                            const middlePlantIndex = Math.floor(this.app.gardenData.length / 2);
+                            const middlePlantWorldX = plantCentre(middlePlantIndex);
+                            this.currentTranslateX = viewport.offsetWidth / 2 - middlePlantWorldX * this.zoom;
+                        }
+
+                        // New saves carry groundRatio. Legacy saves only carry pixel
+                        // translateY, so reject visibly stale top/bottom placements.
+                        const currentRatio = this.groundScreenRatio(viewport);
+                        const wantedRatio = persistedState?.groundRatio ?? currentRatio;
+                        this.anchorGroundToRatio(viewport, world, this.openingGroundRatio(wantedRatio));
+                        this._lastViewportSize = { width: viewport.offsetWidth, height: viewport.offsetHeight };
+
+                        if (!persistedState) {
+                            const scrollContainer = this.contentEl.querySelector('.kanban-scroll-container') as HTMLElement | null;
                             if (scrollContainer) {
                                 const middle = (scrollContainer.scrollWidth - scrollContainer.clientWidth) / 2;
                                 const cols = scrollContainer.querySelectorAll('.project-column');
@@ -1196,16 +1214,15 @@ export class GardenView extends View {
                                     ? Math.round(middle / columnStep) * columnStep
                                     : middle;
                             }
-                            this.saveViewState();
-                        });
+                        }
+                        this.saveViewState();
                     });
-                } else {
-                    // We had a saved state, restore the Kanban scroll
-                    this.restoreScrollPositions(scrollStates);
-                }
+                });
             } else {
-                // Normal re-render (e.g. adding a plant). Camera stayed still, just restore Kanban scroll.
+                // Normal re-render: keep the old horizon on the same screen line even
+                // when a taller plant changes the world's sky height.
                 this.restoreScrollPositions(scrollStates);
+                this.scheduleStableGroundAnchor(oldGroundRatio);
             }
             
 
@@ -1383,11 +1400,91 @@ export class GardenView extends View {
     }
 
     private _viewportObserver: ResizeObserver | null = null;
+    private _lastViewportSize: { width: number; height: number } | null = null;
+    private _viewportAnchorFrame = 0;
+
+    private isPopupSurface(): boolean {
+        return document.documentElement.dataset.context === 'popup';
+    }
+
+    /** Where the plant horizon currently sits inside the visible canvas. */
+    private groundScreenRatio(viewport: HTMLElement, height = viewport.offsetHeight): number | null {
+        if (!height || !Number.isFinite(height)) return null;
+        const screenY = this.currentTranslateY + this._dynamicGroundLineY * this.zoom;
+        const ratio = screenY / height;
+        return Number.isFinite(ratio) ? ratio : null;
+    }
+
+    /** A cold-open camera must never strand the plants against the top/bottom edge. */
+    private openingGroundRatio(candidate: number | null | undefined): number {
+        return candidate !== null
+            && candidate !== undefined
+            && Number.isFinite(candidate)
+            && candidate >= OPEN_GROUND_RATIO_MIN
+            && candidate <= OPEN_GROUND_RATIO_MAX
+            ? candidate
+            : DEFAULT_GROUND_SCREEN_RATIO;
+    }
+
+    /** Keep the horizon at a stable screen ratio without disturbing horizontal pan/zoom. */
+    private anchorGroundToRatio(viewport: HTMLElement, world: HTMLElement, ratio: number) {
+        if (this.isPopupSurface() || !viewport.offsetHeight) return;
+        // A taller pane may require a larger minimum zoom. Resolve that first.
+        this.settleCamera(false);
+        const safe = Math.max(0.12, Math.min(0.92, ratio));
+        const bounds = this.cameraBounds(world, viewport);
+        const desired = viewport.offsetHeight * safe - this._dynamicGroundLineY * this.zoom;
+        this.currentTranslateY = Math.min(bounds.y.max, Math.max(bounds.y.min, desired));
+        this.applyWorldTransform(world, viewport);
+    }
+
+    /**
+     * ResizeObserver can fire through several intermediate side-panel/window sizes.
+     * Carry the old horizon ratio into each new height instead of merely clamping a
+     * stale pixel translateY (which is what used to put plants against the top).
+     */
+    private resizeCameraToViewport(viewport: HTMLElement, world: HTMLElement) {
+        const next = { width: viewport.offsetWidth, height: viewport.offsetHeight };
+        if (!next.width || !next.height) return;
+
+        const previous = this._lastViewportSize;
+        if (previous && Math.abs(next.height - previous.height) > 1 && !this.isDragging && !this.isTouchPanning && !this.isPinching) {
+            const oldRatio = this.groundScreenRatio(viewport, previous.height);
+            const ratio = oldRatio !== null && oldRatio > 0.08 && oldRatio < 0.94
+                ? oldRatio
+                : DEFAULT_GROUND_SCREEN_RATIO;
+            this.anchorGroundToRatio(viewport, world, ratio);
+            this.scheduleViewStateSave();
+        } else {
+            this.settleCamera(false);
+        }
+        this._lastViewportSize = next;
+    }
+
+    /** Run after real layout has settled, not against the hidden render stage's first measurement. */
+    private scheduleStableGroundAnchor(ratio: number | null | undefined) {
+        if (this.isPopupSurface()) return;
+        if (this._viewportAnchorFrame) cancelAnimationFrame(this._viewportAnchorFrame);
+        const win = this.containerEl.ownerDocument.defaultView || window;
+        this._viewportAnchorFrame = win.requestAnimationFrame(() => {
+            this._viewportAnchorFrame = win.requestAnimationFrame(() => {
+                this._viewportAnchorFrame = 0;
+                const viewport = this.viewport;
+                const world = this.world;
+                if (!viewport || !world || !viewport.offsetWidth || !viewport.offsetHeight) return;
+                this.anchorGroundToRatio(viewport, world, this.openingGroundRatio(ratio));
+                this._lastViewportSize = { width: viewport.offsetWidth, height: viewport.offsetHeight };
+                this.scheduleViewStateSave();
+            });
+        });
+    }
 
     async onClose() {
         this.removeShortcuts();
         this._viewportObserver?.disconnect();
         this._viewportObserver = null;
+        if (this._viewportAnchorFrame) cancelAnimationFrame(this._viewportAnchorFrame);
+        this._viewportAnchorFrame = 0;
         this.cancelSettle();
         this.saveViewStateNow();
 
@@ -2247,12 +2344,16 @@ export class GardenView extends View {
             }
         });
 
-        // Apply the restored pan/zoom transform
+        // Apply the restored pan/zoom transform.
         this.applyWorldTransform(world, viewport);
         this.settleCamera(false);
-        // A pane that changes size (the divider, a rotated phone) keeps the garden filling it.
+        if (!this._lastViewportSize && viewport.offsetWidth && viewport.offsetHeight) {
+            this._lastViewportSize = { width: viewport.offsetWidth, height: viewport.offsetHeight };
+        }
+        // A divider drag, side-panel open/close, phone rotation or window resize
+        // keeps the same horizon ratio instead of reusing stale pixel translateY.
         this._viewportObserver = new ResizeObserver(() => {
-            if (viewport.isConnected && !this.isDragging) this.settleCamera(false);
+            if (viewport.isConnected) this.resizeCameraToViewport(viewport, world);
         });
         this._viewportObserver.observe(viewport);
 
