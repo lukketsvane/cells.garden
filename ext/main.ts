@@ -26,6 +26,21 @@ const appHost: HTMLElement = host;
 /** False when a built page is opened from disk while debugging: no chrome.* APIs. */
 export const inExtension = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
 
+interface OAuthTakeResponse {
+    ok: boolean;
+    value?: unknown;
+}
+
+function isOAuthTakeResponse(value: unknown): value is OAuthTakeResponse {
+    if (!value || typeof value !== 'object') return false;
+    return typeof (value as Record<string, unknown>).ok === 'boolean';
+}
+
+function hasMessageType(value: unknown, type: string): boolean {
+    if (!value || typeof value !== 'object') return false;
+    return (value as Record<string, unknown>).type === type;
+}
+
 function oauthBridgeUrl(): string {
     const url = new URL('https://cells.garden/privacy/oauth-return.html');
     url.searchParams.set('target', 'extension');
@@ -42,11 +57,17 @@ function notice(text: string) {
 function takeOAuthReturn(): Promise<OAuthReturnMessage | null> {
     return new Promise((resolve) => {
         chrome.runtime.sendMessage({ type: OAUTH_RETURN_TAKE }, (response) => {
-            if (chrome.runtime.lastError || !response?.ok || !isOAuthReturnMessage(response.value)) {
+            const result: unknown = response;
+            if (
+                chrome.runtime.lastError
+                || !isOAuthTakeResponse(result)
+                || !result.ok
+                || !isOAuthReturnMessage(result.value)
+            ) {
                 resolve(null);
                 return;
             }
-            resolve(response.value);
+            resolve(result.value);
         });
     });
 }
@@ -81,7 +102,8 @@ export const ready = bootGarden(appHost, inExtension ? {
 
 if (inExtension) {
     chrome.runtime.onMessage.addListener((message) => {
-        if (message?.type === OAUTH_RETURN_READY) void completePendingOAuth();
+        const incoming: unknown = message;
+        if (hasMessageType(incoming, OAUTH_RETURN_READY)) void completePendingOAuth();
     });
 }
 
