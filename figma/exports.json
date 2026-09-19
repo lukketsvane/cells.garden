@@ -15,9 +15,9 @@
     "preserveRepoMetadataWhenPixelStreamMatches": true
   },
   "coverage": {
-    "assetFiles": 283,
+    "assetFiles": 284,
     "figmaExports": 277,
-    "repoSourceReferences": 6
+    "repoSourceReferences": 7
   },
   "references": [
     {
@@ -42,6 +42,10 @@
     },
     {
       "path": "src/assets/pets/swan_swim.gif",
+      "policy": "repo-source-of-truth"
+    },
+    {
+      "path": "src/assets/fox_npc_atlas.png",
       "policy": "repo-source-of-truth"
     }
   ],
