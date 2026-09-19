@@ -18,13 +18,13 @@ export interface StoredOAuthReturn {
     value: OAuthReturnMessage;
 }
 
-const CONTROL = /[\u0000-\u001f\u007f]/;
-
 function bounded(value: unknown, max: number): value is string {
-    return typeof value === 'string'
-        && value.length > 0
-        && value.length <= max
-        && !CONTROL.test(value);
+    if (typeof value !== 'string' || value.length === 0 || value.length > max) return false;
+    for (let i = 0; i < value.length; i++) {
+        const code = value.charCodeAt(i);
+        if (code < 0x20 || code === 0x7f) return false;
+    }
+    return true;
 }
 
 export function isOAuthReturnMessage(value: unknown): value is OAuthReturnMessage {

@@ -23,9 +23,14 @@ import { mergeGarden, vaultFilesToGarden, type VaultFile } from '../src/core/vau
 const VIEW_TYPE = 'cells-garden';
 /** Supabase is always allowed to return to the website; that page deep-links the code back here. */
 const RETURN_URL = 'https://cells.garden/privacy/oauth-return.html?target=obsidian';
-const OAUTH_CONTROL = /[\u0000-\u001f\u007f]/;
-const protocolValue = (value: string | undefined, max: number) =>
-    value && value.length <= max && !OAUTH_CONTROL.test(value) ? value : null;
+function protocolValue(value: string | undefined, max: number): string | null {
+    if (!value || value.length > max) return null;
+    for (let i = 0; i < value.length; i++) {
+        const code = value.charCodeAt(i);
+        if (code < 0x20 || code === 0x7f) return null;
+    }
+    return value;
+}
 /** The open garden's sign-in client, which holds the code verifier Google's answer is checked against. */
 let client: SupabaseClient | null = null;
 
