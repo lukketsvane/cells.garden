@@ -77,6 +77,70 @@ async function figmaJson(url) {
   return response.json();
 }
 
+function collectNodes(node, out = new Map()) {
+  if (!node || typeof node !== "object") return out;
+  if (node.id) out.set(node.id, node);
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) collectNodes(child, out);
+  }
+  return out;
+}
+
+function figmaNodeSize(node) {
+  const box = node?.absoluteBoundingBox;
+  return box && Number.isFinite(box.width) && Number.isFinite(box.height)
+    ? { width: box.width, height: box.height }
+    : null;
+}
+
+function sameSize(actual, item) {
+  return actual
+    && Math.abs(actual.width - item.width) < 0.001
+    && Math.abs(actual.height - item.height) < 0.001;
+}
+
+const exportSectionId = manifest.figma?.exportSectionId;
+if (!exportSectionId) throw new Error("figma.exportSectionId is missing from figma/exports.json");
+
+const sectionUrl = new URL(`https://api.figma.com/v1/files/${fileKey}/nodes`);
+sectionUrl.searchParams.set("ids", exportSectionId);
+const sectionPayload = await figmaJson(sectionUrl);
+const exportSection = sectionPayload.nodes?.[exportSectionId]?.document;
+if (!exportSection || exportSection.type !== "SECTION") {
+  throw new Error(`Figma EXPORTS section ${exportSectionId} is missing or is not a SECTION`);
+}
+
+const exportNodes = collectNodes(exportSection);
+const expectedFolders = [...new Set(
+  manifest.items.map((item) => path.posix.dirname(item.path))
+)].sort();
+const actualFolders = (exportSection.children ?? []).map((node) => node.name).sort();
+
+if (
+  expectedFolders.length !== actualFolders.length
+  || expectedFolders.some((name, i) => name !== actualFolders[i])
+) {
+  throw new Error(
+    `Figma EXPORTS folders drifted. Expected ${JSON.stringify(expectedFolders)}, got ${JSON.stringify(actualFolders)}`
+  );
+}
+
+for (const item of manifest.items) {
+  const node = exportNodes.get(item.exportNodeId);
+  if (!node) throw new Error(`${item.path}: exportNodeId ${item.exportNodeId} is not inside EXPORTS`);
+  if (node.type !== "FRAME") throw new Error(`${item.path}: export node ${item.exportNodeId} must remain a FRAME`);
+  const size = figmaNodeSize(node);
+  if (!sameSize(size, item)) {
+    throw new Error(
+      `${item.path}: Figma export wrapper is ${size?.width ?? "?"}x${size?.height ?? "?"}, contract is ${item.width}x${item.height}`
+    );
+  }
+}
+
+console.log(
+  `Figma live structure OK: ${manifest.items.length} contracted export wrappers across ${actualFolders.length} repo folders.`,
+);
+
 const sourceRefs = new Map();
 
 for (const batch of chunks(manifest.items, 50)) {
@@ -90,6 +154,15 @@ for (const batch of chunks(manifest.items, 50)) {
   for (const item of batch) {
     const document = payload.nodes?.[item.sourceComponentId]?.document;
     if (!document) throw new Error(`Figma returned no source component for ${item.path} (${item.sourceComponentId})`);
+    if (document.type !== "COMPONENT") {
+      throw new Error(`${item.path}: sourceComponentId ${item.sourceComponentId} is no longer a COMPONENT`);
+    }
+    const sourceSize = figmaNodeSize(document);
+    if (!sameSize(sourceSize, item)) {
+      throw new Error(
+        `${item.path}: Figma source component is ${sourceSize?.width ?? "?"}x${sourceSize?.height ?? "?"}, contract is ${item.width}x${item.height}`
+      );
+    }
     const refs = [...imageRefs(document)];
     if (refs.length !== 1) {
       throw new Error(`${item.path}: expected exactly one image fill in source component, found ${refs.length}`);
