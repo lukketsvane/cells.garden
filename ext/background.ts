@@ -11,6 +11,10 @@ import {
 } from './auth-bridge';
 
 function popupOwnsActionClick(): Promise<void> {
+    // Chromium's headless extension runtime can omit the sidePanel namespace.
+    // Real supported Chrome versions expose it, but treating absence as a no-op
+    // keeps the service worker alive in constrained runtimes and tests.
+    if (!chrome.sidePanel?.setPanelBehavior) return Promise.resolve();
     return chrome.sidePanel
         .setPanelBehavior({ openPanelOnActionClick: false })
         .catch((e: unknown) => console.error('cells.garden: could not set the side panel behavior', e));
