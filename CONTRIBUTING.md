@@ -62,4 +62,4 @@ Set `FIGMA_TOKEN` to a Figma personal access token with read access to the produ
 npm run sync:figma-assets
 ```
 
-The command renders only the 277 nodes listed in `figma/exports.json`, always at PNG 1x, checks every rendered dimension, writes to the exact manifest path under `src/assets/**`, and runs `verify:figma-assets` before returning success. The manual **Sync Figma assets** GitHub Actions workflow runs the same path and commits changes to `main` when the repository secret `FIGMA_TOKEN` is configured. Repo-source-only GIF/logo files are never written by the sync.
+The command reads the original image fill from each of the 277 atomic source components listed in `figma/exports.json`, checks its native PNG dimensions, writes only changed bytes to the exact manifest path under `src/assets/**`, and runs `verify:figma-assets` before returning success. It never renders, scales or resamples the pixel art. The manual **Sync Figma assets** GitHub Actions workflow runs the same path and commits changes to `main` when the repository secret `FIGMA_TOKEN` is configured. Repo-source-only GIF/logo files are never written by the sync.
