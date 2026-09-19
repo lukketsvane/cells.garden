@@ -506,7 +506,7 @@ async function scenario(browser, errors) {
     // Hold the seed: same three-column pixel-art picker on iPhone.
     await holdAt('.seed-content');
     await mpage.waitForSelector('.plant-type-grid', { timeout: 3000 });
-    const seedMenu = await mpage.$eval('.garden-context-menu button', (els) => els.map((e) => e.textContent));
+    const seedMenu = await mpage.$$eval('.garden-context-menu button', (els) => els.map((e) => e.textContent));
     assert(seedMenu.some((t) => /standby|wake/i.test(t)), `holding the seed should open the seed menu: ${JSON.stringify(seedMenu)}`);
     const mobilePicker = await mpage.evaluate(() => {
         const grid = document.querySelector('.plant-type-grid');
