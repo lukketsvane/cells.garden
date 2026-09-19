@@ -281,7 +281,7 @@ try {
     await popup.waitForFunction(() => document.querySelector('.popup-kanban')?.open === true);
     await popup.setViewportSize({ width: 320, height: 560 });
     assert(await popup.textContent('.popup-kanban-body .seed-content') === SEED, 'the popup kanban must show the selected plant');
-    assert((await popup.$eval('.popup-kanban-body .garden-item', (els) => els.map((e) => e.textContent))).includes(STEM), 'the popup kanban must show the selected plant cells');
+    assert((await popup.$$eval('.popup-kanban-body .garden-item', (els) => els.map((e) => e.textContent))).includes(STEM), 'the popup kanban must show the selected plant cells');
     await screenshot(popup, 'popup');
 
     // A second plant added elsewhere updates the accessible position and the card.
