@@ -148,7 +148,7 @@ async function scenario(browser, errors) {
     await page.fill('.modal textarea', 'Second plant');
     await page.click('.modal button.mod-cta');
     await page.waitForFunction(() => document.querySelectorAll('.project-column').length === 2);
-    console.log('columns:', await page.$eval('.seed-content', (els) => els.map((e) => e.textContent)));
+    console.log('columns:', await page.$$eval('.seed-content', (els) => els.map((e) => e.textContent)));
 
     // A kanban column is an abstract plant: the seed is one shared horizon,
     // blocks above it stay packed upward, blocks below stay packed downward.
