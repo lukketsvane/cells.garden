@@ -32,6 +32,24 @@ export interface AuthOptions {
     note?: string;
 }
 
+/** The typed address trimmed, or null after saying on `status` that it is not one. */
+function validEmail(value: string, status: HTMLElement): string | null {
+    const email = value.trim();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return email;
+    status.setText('That does not look like an email address.');
+    return null;
+}
+
+/** Enter in a field does what the step's main button does. */
+function onEnter(input: HTMLInputElement, run: () => void) {
+    input.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            run();
+        }
+    });
+}
+
 class SignInModal extends Modal {
     /** Shared by every step, so switching between them never retypes it. */
     private email = '';
