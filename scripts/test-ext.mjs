@@ -334,6 +334,54 @@ try {
     assert(size.scrollWidth <= size.clientWidth, `the side panel overflows horizontally: scrollWidth ${size.scrollWidth} > clientWidth ${size.clientWidth}`);
     assert(size.canvas <= 360, `the canvas is wider than the panel: ${size.canvas}`);
 
+    const panelGroundRatio = async () => panel.evaluate(() => {
+        const viewport = document.querySelector('.garden-canvas-viewport').getBoundingClientRect();
+        const plant = document.querySelector('.garden-plant-wrapper').getBoundingClientRect();
+        return (plant.top - viewport.top) / viewport.height;
+    });
+    let sideGround = await panelGroundRatio();
+    assert(sideGround > 0.45 && sideGround < 0.84,
+        `side panel opened with the horizon misplaced: ${sideGround}`);
+
+    // Regression for the screenshot bug: a legacy camera can be fully "in view"
+    // while its plant horizon sits near the top. Cold open must repair it.
+    await panel.evaluate(() => {
+        const viewport = document.querySelector('.garden-canvas-viewport');
+        const plant = document.querySelector('.garden-plant-wrapper');
+        const state = JSON.parse(localStorage.getItem('cells.garden/view/sidepanel') || '{}');
+        const viewportRect = viewport.getBoundingClientRect();
+        const plantTopWorld = parseFloat(plant.style.top);
+        const zoom = typeof state.zoom === 'number' ? state.zoom : 0.34;
+        state.translateY = viewportRect.height * 0.20 - plantTopWorld * zoom;
+        delete state.groundRatio;
+        delete state.viewportHeight;
+        localStorage.setItem('cells.garden/view/sidepanel', JSON.stringify(state));
+    });
+    await panel.reload();
+    await panel.waitForSelector('.garden-plant-wrapper');
+    await panel.waitForFunction(() => {
+        const viewport = document.querySelector('.garden-canvas-viewport').getBoundingClientRect();
+        const plant = document.querySelector('.garden-plant-wrapper').getBoundingClientRect();
+        const ratio = (plant.top - viewport.top) / viewport.height;
+        return ratio > 0.45 && ratio < 0.84;
+    });
+    sideGround = await panelGroundRatio();
+    assert(sideGround > 0.45 && sideGround < 0.84,
+        `side panel did not repair a stale high camera: ${sideGround}`);
+
+    // Opening/resizing a narrow sidebar must keep the same vertical composition.
+    await panel.setViewportSize({ width: 360, height: 620 });
+    await panel.waitForFunction(() => {
+        const viewport = document.querySelector('.garden-canvas-viewport').getBoundingClientRect();
+        const plant = document.querySelector('.garden-plant-wrapper').getBoundingClientRect();
+        const ratio = (plant.top - viewport.top) / viewport.height;
+        return ratio > 0.42 && ratio < 0.86;
+    });
+    const resizedGround = await panelGroundRatio();
+    assert(resizedGround > 0.42 && resizedGround < 0.86,
+        `side panel resize moved the plants vertically: ${resizedGround}`);
+    await panel.setViewportSize({ width: 360, height: 900 });
+
     // The shared plant-type picker must stay visual and three columns wide in the extension side panel.
     await panel.click('.seed-content', { button: 'right' });
     await panel.waitForSelector('.plant-type-grid');
