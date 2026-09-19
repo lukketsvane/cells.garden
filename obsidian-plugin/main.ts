@@ -137,14 +137,14 @@ export default class CellsGardenPlugin extends Plugin {
     /** The browser is back from Google with a code (or an error): trade it for a session. */
     private async finishSignIn(params: Record<string, string>) {
         const code = protocolValue(params.code, 4096);
-        const error = protocolValue(params.error, 256);
+        const protocolError = protocolValue(params.error, 256);
         const errorDescription = protocolValue(params.error_description, 1024);
-        if ((code && error) || (params.code && !code) || (params.error && !error)) {
+        if ((code && protocolError) || (params.code && !code) || (params.error && !protocolError)) {
             new Notice('Could not finish sign-in. The return data was invalid.');
             return;
         }
-        if (error) {
-            new Notice(`Google sign-in did not finish: ${errorDescription ?? error}`);
+        if (protocolError) {
+            new Notice(`Google sign-in did not finish: ${errorDescription ?? protocolError}`);
             return;
         }
         if (!code) return;
