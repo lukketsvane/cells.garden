@@ -42,3 +42,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Web/PWA smoke
         run: npm run test:web
+      - name: Chrome extension smoke
+        run: npm run test:ext
+      - name: Obsidian plugin smoke
+        run: npm run test:obsidian
