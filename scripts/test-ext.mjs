@@ -398,7 +398,28 @@ try {
     assert(sidePicker.columns === 3 && sidePicker.tiles >= 3 && sidePicker.withPixelArt === sidePicker.tiles,
         `side-panel plant picker is not a 3-column pixel-art grid: ${JSON.stringify(sidePicker)}`);
     assert(sidePicker.right <= 360 + 1, `side-panel plant picker overflows: ${JSON.stringify(sidePicker)}`);
-    await panel.evaluate(() => document.querySelector('.garden-context-menu')?.remove());
+
+    const typeChoice = await panel.evaluate(() => {
+        const tile = [...document.querySelectorAll('.plant-type-tile')]
+            .find((el) => !el.classList.contains('is-selected'));
+        const stem = tile?.querySelector('.plant-type-preview img[data-kind="stem"]');
+        return tile && stem
+            ? { type: tile.dataset.plantType, path: stem.dataset.path }
+            : null;
+    });
+    assert(typeChoice?.type && typeChoice?.path, `could not find a selectable plant preview: ${JSON.stringify(typeChoice)}`);
+    await panel.click(`.plant-type-tile[data-plant-type="${typeChoice.type}"]`);
+    await panel.waitForFunction(({ type, path }) => {
+        const garden = JSON.parse(localStorage.getItem('cells.garden/v1') || '{}');
+        const project = garden.projects?.[0];
+        return project?.plantType === type && project?.stem?.[0]?.imagePath === path;
+    }, typeChoice);
+    const selectedArt = await panel.evaluate(() => {
+        const project = JSON.parse(localStorage.getItem('cells.garden/v1') || '{}').projects?.[0];
+        return { type: project?.plantType, stem: project?.stem?.[0]?.imagePath };
+    });
+    assert(selectedArt.type === typeChoice.type && selectedArt.stem === typeChoice.path,
+        `plant picker art and selected plant diverged: preview=${JSON.stringify(typeChoice)} selected=${JSON.stringify(selectedArt)}`);
 
     // Writes from the panel reach the shared storage too.
     await panel.click('.flowers-zone .zone-add-btn');
