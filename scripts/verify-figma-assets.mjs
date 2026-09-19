@@ -29,6 +29,7 @@ function repoPath(file) {
 
 const errors = [];
 const seen = new Set();
+const exportNodes = new Set();
 const contract = new Set();
 
 if (manifest.schemaVersion !== 1) errors.push("Unsupported figma/exports.json schemaVersion");
@@ -43,6 +44,10 @@ for (const item of manifest.items) {
   if (seen.has(item.path)) errors.push(`Duplicate export path: ${item.path}`);
   seen.add(item.path);
   contract.add(item.path);
+  if (!item.exportNodeId) errors.push(`Missing exportNodeId: ${item.path}`);
+  else if (exportNodes.has(item.exportNodeId)) errors.push(`Duplicate exportNodeId ${item.exportNodeId}: ${item.path}`);
+  else exportNodes.add(item.exportNodeId);
+  if (!item.sourceComponentId) errors.push(`Missing sourceComponentId: ${item.path}`);
 
   const file = path.join(root, item.path);
   if (!fs.existsSync(file)) {
