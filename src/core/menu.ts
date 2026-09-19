@@ -57,7 +57,12 @@ function closeOnChoice(menu: HTMLElement, run?: () => unknown) {
  * Open a menu, replacing any other. It closes on the next click outside it, on
  * a row/tile, or on Escape.
  */
-export function openMenu(items: MenuItem[], anchor: MenuAnchor, doc: Document = document): HTMLElement {
+export function openMenu(
+    items: MenuItem[],
+    anchor: MenuAnchor,
+    doc: Document = document,
+    build?: (menu: HTMLElement) => void,
+): HTMLElement {
     const win = doc.defaultView ?? window;
     doc.querySelector('.garden-context-menu')?.remove();
 
@@ -113,6 +118,7 @@ export function openMenu(items: MenuItem[], anchor: MenuAnchor, doc: Document = 
         };
     }
 
+    build?.(menu);
     place(menu, anchor, win);
 
     const close = (e: Event) => {

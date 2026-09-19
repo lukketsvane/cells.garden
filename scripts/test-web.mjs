@@ -191,12 +191,28 @@ async function scenario(browser, errors) {
     await page.click('.garden-context-menu button:has-text("Highlight")');
     await page.waitForTimeout(300);
 
-    // Seed context menu
+    // Seed context menu: plant type is a real pixel-art picker, three columns wide.
     await page.click('.seed-content >> nth=1', { button: 'right' });
-    await page.waitForSelector('.garden-context-menu');
-    console.log('seed menu:', await page.$$eval('.garden-context-menu button, .garden-context-menu div', (els) => els.map((e) => e.textContent)));
-    await page.keyboard.press('Escape');
-    await page.mouse.click(5, 5);
+    await page.waitForSelector('.plant-type-grid');
+    const picker = await page.evaluate(() => {
+        const grid = document.querySelector('.plant-type-grid');
+        const tiles = [...grid.querySelectorAll('.plant-type-tile')];
+        const columns = getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length;
+        return {
+            columns,
+            tiles: tiles.length,
+            selected: tiles.filter((tile) => tile.classList.contains('is-selected')).length,
+            withPixelArt: tiles.filter((tile) => tile.querySelectorAll('.plant-type-preview img').length > 0).length,
+        };
+    });
+    console.log('plant type picker:', picker);
+    assert(picker.columns === 3, `plant picker must be exactly 3 columns: ${JSON.stringify(picker)}`);
+    assert(picker.tiles >= 3 && picker.withPixelArt === picker.tiles, `every plant type must show actual pixel art: ${JSON.stringify(picker)}`);
+    assert(picker.selected === 1, `plant picker must show exactly one selected type: ${JSON.stringify(picker)}`);
+    const typeBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')).projects[1].plantType);
+    await page.click('.plant-type-tile:not(.is-selected) >> nth=0');
+    await page.waitForFunction((before) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects[1].plantType !== before, typeBefore);
+    assert(await page.$('.garden-context-menu') === null, 'plant picker should close after selection');
 
     // Pan + zoom on the canvas
     const viewport = await page.$('.garden-canvas-viewport');
@@ -481,11 +497,26 @@ async function scenario(browser, errors) {
     assert(menu.some((t) => /highlight/i.test(t)), 'holding a cell should open its menu');
     await mpage.evaluate(() => document.querySelector('.garden-context-menu')?.remove());
 
-    // Hold the seed: the seed menu.
+    // Hold the seed: same three-column pixel-art picker on iPhone.
     await holdAt('.seed-content');
-    await mpage.waitForSelector('.garden-context-menu', { timeout: 3000 });
-    const seedMenu = await mpage.$$eval('.garden-context-menu button', (els) => els.map((e) => e.textContent));
+    await mpage.waitForSelector('.plant-type-grid', { timeout: 3000 });
+    const seedMenu = await mpage.$eval('.garden-context-menu button', (els) => els.map((e) => e.textContent));
     assert(seedMenu.some((t) => /standby|wake/i.test(t)), `holding the seed should open the seed menu: ${JSON.stringify(seedMenu)}`);
+    const mobilePicker = await mpage.evaluate(() => {
+        const grid = document.querySelector('.plant-type-grid');
+        const tiles = [...grid.querySelectorAll('.plant-type-tile')];
+        return {
+            columns: getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
+            tiles: tiles.length,
+            images: grid.querySelectorAll('.plant-type-preview img').length,
+            right: grid.getBoundingClientRect().right,
+            viewport: innerWidth,
+        };
+    });
+    assert(mobilePicker.columns === 3 && mobilePicker.images >= mobilePicker.tiles,
+        `mobile plant picker is not a 3-column sprite grid: ${JSON.stringify(mobilePicker)}`);
+    assert(mobilePicker.right <= mobilePicker.viewport + 1,
+        `mobile plant picker overflows the viewport: ${JSON.stringify(mobilePicker)}`);
     await mpage.evaluate(() => document.querySelector('.garden-context-menu')?.remove());
 
     // Drag the divider with a finger.
