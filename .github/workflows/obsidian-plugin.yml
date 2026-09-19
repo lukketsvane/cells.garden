@@ -50,6 +50,13 @@ jobs:
         run: npm run typecheck:ext
       - name: Build Chrome extension
         run: npm run build:ext
+      - name: Upload Chrome Web Store package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: chrome-extension-package
+          path: dist-ext/
+          if-no-files-found: error
+          retention-days: 7
       - run: npm run build:obsidian
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
