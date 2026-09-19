@@ -49,7 +49,7 @@ The production Figma file is `Q9lb9XG2ftZZHswUg5zYkS`. Its visible `EXPORTS` sec
 - Pixel sprites stay at their native 1x dimensions in Figma. Runtime enlargement belongs to `PIXEL_SCALE` in code.
 - Export through the exact-name frames in the Figma `EXPORTS` section, not through assembled `Garden/*` components or variant component names.
 - `figma/exports.json` records each export destination and expected PNG width/height.
-- `npm run verify:figma-assets` fails when a mapped file is missing, duplicated, non-PNG, or has dimensions that drift from the Figma contract.
+- `npm run verify:figma-assets` fails when a mapped file is missing, duplicated, non-PNG, has dimensions that drift from the Figma contract, or when any file under `src/assets/**` is not covered by the manifest.
 - `stars_pattern.gif` and the two 3200x3200 brand PNGs remain repo-source-of-truth references and are intentionally not round-tripped from Figma.
 
 When the Figma export surface changes, regenerate `figma/exports.json` from the live file before pushing asset changes.
