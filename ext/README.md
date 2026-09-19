@@ -70,5 +70,3 @@ The normal garden does not need `chrome.storage`; it uses local app storage. `ch
 
 There are **no host permissions**, no browsing-history permission, and no content script. The extension does not inspect pages the user visits. Supabase is reached from extension pages with normal HTTPS/WSS requests allowed by the extension CSP.
 
-
-`sidePanel` only. No host permissions: the garden talks to Supabase with ordinary `fetch` from the extension pages, which needs none.
