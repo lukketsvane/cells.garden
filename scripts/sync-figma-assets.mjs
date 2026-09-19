@@ -7,7 +7,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, "figma", "exports.js
 const token = process.env.FIGMA_TOKEN;
 
 if (!token) {
-  console.error("FIGMA_TOKEN is required. Create a Figma personal access token with read access to the production file.");
+  console.error("FIGMA_TOKEN is required. Create a Figma personal access token with file_content:read access to the production file.");
   process.exit(2);
 }
 
@@ -16,7 +16,7 @@ if (!fileKey) throw new Error("figma.fileKey is missing from figma/exports.json"
 
 function pngSize(buffer) {
   if (buffer.length < 24 || buffer[0] !== 0x89 || buffer.toString("ascii", 1, 4) !== "PNG") {
-    throw new Error("Figma returned non-PNG data");
+    throw new Error("Figma returned non-PNG image-fill data");
   }
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
 }
@@ -27,42 +27,77 @@ function chunks(items, size) {
   return out;
 }
 
-async function renderBatch(batch) {
-  const ids = batch.map((item) => item.exportNodeId);
-  if (ids.some((id) => !id)) throw new Error("Every manifest item must have exportNodeId");
-  const url = new URL(`https://api.figma.com/v1/images/${fileKey}`);
-  url.searchParams.set("ids", ids.join(","));
-  url.searchParams.set("format", "png");
-  url.searchParams.set("scale", "1");
-  url.searchParams.set("use_absolute_bounds", "false");
-
-  const response = await fetch(url, { headers: { "X-Figma-Token": token } });
-  if (!response.ok) throw new Error(`Figma render request failed: ${response.status} ${await response.text()}`);
-  const payload = await response.json();
-  if (payload.err) throw new Error(`Figma render error: ${payload.err}`);
-  return payload.images ?? {};
+function imageRefs(node, out = new Set()) {
+  if (!node || typeof node !== "object") return out;
+  if (Array.isArray(node.fills)) {
+    for (const fill of node.fills) {
+      if (fill?.type === "IMAGE" && fill.imageRef) out.add(fill.imageRef);
+    }
+  }
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) imageRefs(child, out);
+  }
+  return out;
 }
 
-let written = 0;
-for (const batch of chunks(manifest.items, 50)) {
-  const images = await renderBatch(batch);
-  for (const item of batch) {
-    const imageUrl = images[item.exportNodeId];
-    if (!imageUrl) throw new Error(`Figma returned no image for ${item.path} (${item.exportNodeId})`);
-    const response = await fetch(imageUrl);
-    if (!response.ok) throw new Error(`Failed to download rendered PNG for ${item.path}: ${response.status}`);
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const size = pngSize(buffer);
-    if (size.width !== item.width || size.height !== item.height) {
-      throw new Error(`${item.path}: Figma rendered ${size.width}x${size.height}, manifest requires ${item.width}x${item.height}`);
-    }
+async function figmaJson(url) {
+  const response = await fetch(url, { headers: { "X-Figma-Token": token } });
+  if (!response.ok) throw new Error(`Figma API failed: ${response.status} ${await response.text()}`);
+  return response.json();
+}
 
-    const destination = path.join(root, item.path);
-    fs.mkdirSync(path.dirname(destination), { recursive: true });
-    fs.writeFileSync(destination, buffer);
-    written += 1;
+const sourceRefs = new Map();
+
+for (const batch of chunks(manifest.items, 50)) {
+  const ids = batch.map((item) => item.sourceComponentId);
+  if (ids.some((id) => !id)) throw new Error("Every manifest item must have sourceComponentId");
+
+  const url = new URL(`https://api.figma.com/v1/files/${fileKey}/nodes`);
+  url.searchParams.set("ids", ids.join(","));
+  const payload = await figmaJson(url);
+
+  for (const item of batch) {
+    const document = payload.nodes?.[item.sourceComponentId]?.document;
+    if (!document) throw new Error(`Figma returned no source component for ${item.path} (${item.sourceComponentId})`);
+    const refs = [...imageRefs(document)];
+    if (refs.length !== 1) {
+      throw new Error(`${item.path}: expected exactly one image fill in source component, found ${refs.length}`);
+    }
+    sourceRefs.set(item.path, refs[0]);
   }
 }
 
+const fillsPayload = await figmaJson(`https://api.figma.com/v1/files/${fileKey}/images`);
+const fillUrls = fillsPayload.images ?? fillsPayload.meta?.images ?? {};
+
+let changed = 0;
+let unchanged = 0;
+
+for (const item of manifest.items) {
+  const imageRef = sourceRefs.get(item.path);
+  const imageUrl = fillUrls[imageRef];
+  if (!imageUrl) throw new Error(`Figma returned no image-fill URL for ${item.path} (${imageRef})`);
+
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error(`Failed to download original Figma image fill for ${item.path}: ${response.status}`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const size = pngSize(buffer);
+
+  if (size.width !== item.width || size.height !== item.height) {
+    throw new Error(`${item.path}: Figma image fill is ${size.width}x${size.height}, manifest requires ${item.width}x${item.height}`);
+  }
+
+  const destination = path.join(root, item.path);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+
+  if (fs.existsSync(destination) && fs.readFileSync(destination).equals(buffer)) {
+    unchanged += 1;
+    continue;
+  }
+
+  fs.writeFileSync(destination, buffer);
+  changed += 1;
+}
+
 execFileSync(process.execPath, [path.join(root, "scripts", "verify-figma-assets.mjs")], { stdio: "inherit" });
-console.log(`Synced ${written} native 1x PNGs from Figma into src/assets/**.`);
+console.log(`Figma sync complete: ${changed} changed, ${unchanged} already byte-identical, ${manifest.items.length} native 1x PNGs checked.`);
