@@ -29,6 +29,18 @@ assert(/name="referrer"\s+content="no-referrer"/i.test(callbackHtml));
 const callbackJs = read('public/privacy/oauth-return.js');
 assert(/history\.replaceState/.test(callbackJs));
 
+const rootIndex = read('src/web/index.html');
+assert(rootIndex.includes('/privacy/oauth-extension-return.js'), 'root extension OAuth interceptor missing');
+assert(rootIndex.indexOf('/privacy/oauth-extension-return.js') < rootIndex.indexOf('./main.ts'), 'extension OAuth interceptor must run before web main');
+const extensionStart = read('public/privacy/oauth-extension-start.js');
+assert(/sessionStorage\.setItem/.test(extensionStart) && /redirect_to/.test(extensionStart), 'extension OAuth start intent missing');
+const extensionReturn = read('public/privacy/oauth-extension-return.js');
+assert(/__CELLS_EXTENSION_OAUTH_HANDOFF__/.test(extensionReturn), 'root callback does not stop web auth boot');
+assert(/history\.replaceState/.test(extensionReturn), 'root callback leaves OAuth code in browser history');
+assert(/runtime\.sendMessage/.test(extensionReturn), 'root callback does not message the extension');
+const extensionWorker = read('ext/background.ts');
+assert(/OAUTH_INTENT_KEY/.test(extensionWorker) && /acceptRootIntent/.test(extensionWorker), 'root OAuth callback is not nonce-gated');
+
 const auth = read('src/core/auth.ts');
 assert(!/\.auth\.signUp\s*\(/.test(auth), 'unverified password signup must stay disabled');
 assert(/\.auth\.signInWithOtp\s*\(/.test(auth));
