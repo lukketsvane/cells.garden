@@ -1,29 +1,29 @@
 /**
- * MV3 module service worker. Besides the toolbar/side-panel behavior, it is the
- * durable hand-off point for Google sign-in: the website callback posts the
- * PKCE result here and the next open extension surface claims it.
+ * MV3 service worker and the short-lived website -> extension OAuth hand-off.
  */
 import {
     OAUTH_RETURN_KEY,
     OAUTH_RETURN_READY,
     OAUTH_RETURN_TAKE,
+    OAUTH_RETURN_TTL_MS,
     isOAuthReturnMessage,
+    isStoredOAuthReturn,
+    type StoredOAuthReturn,
 } from './auth-bridge';
 
 function popupOwnsActionClick(): Promise<void> {
-    // Chromium's headless extension runtime can omit the sidePanel namespace.
-    // Real supported Chrome versions expose it, but treating absence as a no-op
-    // keeps the service worker alive in constrained runtimes and tests.
     if (!chrome.sidePanel?.setPanelBehavior) return Promise.resolve();
     return chrome.sidePanel
         .setPanelBehavior({ openPanelOnActionClick: false })
         .catch((e: unknown) => console.error('cells.garden: could not set the side panel behavior', e));
 }
 
-function fromCellsGarden(sender: chrome.runtime.MessageSender): boolean {
+function fromOAuthBridge(sender: chrome.runtime.MessageSender): boolean {
     if (!sender.url) return false;
     try {
-        return new URL(sender.url).origin === 'https://cells.garden';
+        const url = new URL(sender.url);
+        return url.origin === 'https://cells.garden'
+            && url.pathname === '/privacy/oauth-return.html';
     } catch {
         return false;
     }
@@ -36,15 +36,14 @@ function isOAuthTakeRequest(value: unknown): boolean {
 
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
     const incoming: unknown = message;
-    if (!fromCellsGarden(sender) || !isOAuthReturnMessage(incoming)) {
+    if (!fromOAuthBridge(sender) || !isOAuthReturnMessage(incoming)) {
         sendResponse({ ok: false });
         return false;
     }
 
-    void chrome.storage.local.set({ [OAUTH_RETURN_KEY]: incoming }).then(() => {
+    const stored: StoredOAuthReturn = { receivedAt: Date.now(), value: incoming };
+    void chrome.storage.local.set({ [OAUTH_RETURN_KEY]: stored }).then(() => {
         sendResponse({ ok: true });
-        // Wake an already-open side panel/new tab. If none is open, the value
-        // stays in storage and is claimed the next time a surface starts.
         void chrome.runtime.sendMessage({ type: OAUTH_RETURN_READY }).catch(() => {});
     }).catch((error: unknown) => {
         sendResponse({ ok: false, error: String(error) });
@@ -52,7 +51,6 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
     return true;
 });
 
-// Serialise claims so two open extension surfaces cannot both exchange one code.
 let takeQueue: Promise<void> = Promise.resolve();
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const incoming: unknown = message;
@@ -60,8 +58,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     takeQueue = takeQueue.then(async () => {
         const stored = await chrome.storage.local.get(OAUTH_RETURN_KEY);
-        const value = stored[OAUTH_RETURN_KEY];
-        if (value !== undefined) await chrome.storage.local.remove(OAUTH_RETURN_KEY);
+        const raw: unknown = stored[OAUTH_RETURN_KEY];
+        if (raw !== undefined) await chrome.storage.local.remove(OAUTH_RETURN_KEY);
+
+        let value;
+        if (isStoredOAuthReturn(raw)) {
+            const age = Date.now() - raw.receivedAt;
+            if (age >= 0 && age <= OAUTH_RETURN_TTL_MS) value = raw.value;
+        }
         sendResponse({ ok: true, value });
     }).catch((error: unknown) => {
         sendResponse({ ok: false, error: String(error) });

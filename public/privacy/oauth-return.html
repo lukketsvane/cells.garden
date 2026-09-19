@@ -13,6 +13,7 @@
         p { color: #b3b3b3; }
         button { font: inherit; color: white; background: #6d55d8; border: 0; border-radius: 6px; padding: 9px 14px; cursor: pointer; }
     </style>
+    <script src="/privacy/oauth-return.js" defer></script>
 </head>
 <body>
 <main>
@@ -20,69 +21,5 @@
     <p id="status">Finishing sign-in.</p>
     <button id="open" type="button" hidden>Open cells.garden</button>
 </main>
-<script>
-(() => {
-    const params = new URLSearchParams(location.search);
-    const target = params.get('target');
-    const code = params.get('code');
-    const error = params.get('error');
-    const errorDescription = params.get('error_description');
-    const status = document.getElementById('status');
-    const open = document.getElementById('open');
-
-    const result = { type: 'cells-garden-oauth-return' };
-    if (code) result.code = code;
-    if (error) result.error = error;
-    if (errorDescription) result.errorDescription = errorDescription;
-
-    if (!code && !error) {
-        status.textContent = 'This sign-in return is missing its result. Start sign-in again.';
-        return;
-    }
-
-    if (target === 'obsidian') {
-        const back = new URL('obsidian://cells-garden');
-        if (code) back.searchParams.set('code', code);
-        if (error) back.searchParams.set('error', error);
-        if (errorDescription) back.searchParams.set('error_description', errorDescription);
-        const go = () => { location.href = back.toString(); };
-        status.textContent = 'Opening cells.garden in Obsidian…';
-        open.hidden = false;
-        open.textContent = 'Open Obsidian';
-        open.addEventListener('click', go);
-        window.setTimeout(go, 250);
-        return;
-    }
-
-    if (target === 'extension') {
-        const extensionId = params.get('extension_id') || '';
-        if (!/^[a-p]{32}$/.test(extensionId)) {
-            status.textContent = 'The extension return address is invalid. Start sign-in again from the extension.';
-            return;
-        }
-        const runtime = window.chrome && window.chrome.runtime;
-        if (!runtime || !runtime.sendMessage) {
-            status.textContent = 'Chrome could not reach the cells.garden extension. Make sure the extension is enabled, then try again.';
-            return;
-        }
-        runtime.sendMessage(extensionId, result, (response) => {
-            const failed = runtime.lastError || !response || !response.ok;
-            if (failed) {
-                status.textContent = 'Chrome could not hand sign-in back to the extension. Reopen the side panel and try again.';
-                return;
-            }
-            status.textContent = 'Signed in to the extension. Return to cells.garden.';
-            open.hidden = false;
-            open.textContent = 'Close this tab';
-            open.addEventListener('click', () => window.close());
-        });
-        return;
-    }
-
-    status.textContent = 'Unknown sign-in destination. Start sign-in again.';
-})();
-</script>
 </body>
 </html>
-
-<!-- deployment-trigger: oauth-bridge -->

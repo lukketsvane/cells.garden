@@ -2,14 +2,11 @@
  * Sign-in UI (M1): a small pill in the corner and a sign-in modal.
  * Only mounted when the build has Supabase config.
  *
- * Email and password is the way in, because it costs no email at all. The
- * free Supabase tier sends very few messages before it starts refusing, so a
- * flow that needs a message per sign-in runs out; a password does not.
- * It needs "Confirm email" turned OFF in Supabase → Authentication → Email,
- * otherwise a sign-up still waits for a message. See supabase/README.md.
+ * Existing password accounts can sign in with email + password. New accounts
+ * are created only through Google or the emailed link/OTP, so the person must
+ * prove control of the identity before the account can hold garden data.
  *
- * The emailed link is kept as the second way in, for anyone who would rather
- * not have a password, and as the way back when one is forgotten. It finishes
+ * The emailed link is also the passwordless way back in. It finishes
  * either by:
  *  1. Clicking the link. It lands on `redirectTo` (the web app by default,
  *     the extension's own page inside Chrome) and the session is picked up
@@ -33,49 +30,6 @@ export interface AuthOptions {
     onClient?: (client: SupabaseClient) => void;
     /** One extra line under the heading, e.g. why sign-in is being asked for. */
     note?: string;
-}
-
-/** Checked when a password is chosen, never when one is typed to sign in. */
-const MIN_PASSWORD_LENGTH = 8;
-
-/** The typed address trimmed, or null after saying on `status` that it is not one. */
-function validEmail(value: string, status: HTMLElement): string | null {
-    const email = value.trim();
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return email;
-    status.setText('That does not look like an email address.');
-    return null;
-}
-
-/** Enter in a field does what the step's main button does. */
-function onEnter(input: HTMLInputElement, run: () => void) {
-    input.addEventListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            run();
-        }
-    });
-}
-
-/** What the owner has to fix, said once where the owner will see it. */
-const CONFIRMATION_IS_ON =
-    'Garden Cells: this sign-up tried to send a confirmation email. The app sends none of its own, ' +
-    'so "Confirm email" is still on in Supabase (Authentication, Email). Turn it off, or set up custom SMTP.';
-
-/** What a visitor sees when that happens. They cannot act on the cause. */
-const SIGN_UP_UNAVAILABLE = 'Sign-up is not working just now. Try the emailed link instead.';
-
-/**
- * Sign-up failures worth explaining. A rate limit here always means the project
- * is still trying to send a confirmation email: the app itself sends none, and
- * the built-in mail service allows only a handful an hour.
- */
-function signUpProblem(message: string): string {
-    if (/already registered|already exists/i.test(message)) return 'That address already has an account. Sign in instead.';
-    if (/rate limit|too many requests/i.test(message)) {
-        console.error(CONFIRMATION_IS_ON);
-        return SIGN_UP_UNAVAILABLE;
-    }
-    return `Could not create the account: ${message}`;
 }
 
 class SignInModal extends Modal {
@@ -119,68 +73,33 @@ class SignInModal extends Modal {
         setIcon(google.createSpan('auth-google-mark'), ICONS.google);
         google.createSpan({ text: 'Continue with Google' });
         google.addEventListener('click', () => void this.continueWithGoogle(status));
-        contentEl.createDiv({ cls: 'auth-or', text: 'or with email. New here? Pick a password and press Create account.' });
+        contentEl.createDiv({
+            cls: 'auth-or',
+            text: 'or sign in with an existing email + password. New account? Use Google or the emailed link so your address is verified.',
+        });
         contentEl.appendChild(status);
 
         let password = '';
 
-        const submit = async (mode: 'in' | 'up') => {
+        const submit = async () => {
             const email = validEmail(this.email, status);
             if (!email) return;
             if (!password) {
                 status.setText('Type a password too.');
                 return;
             }
-            if (mode === 'up' && password.length < MIN_PASSWORD_LENGTH) {
-                status.setText(`A new password needs at least ${MIN_PASSWORD_LENGTH} characters.`);
-                return;
-            }
-
-            if (mode === 'in') {
-                status.setText('Signing in…');
-                const { error } = await this.client.auth.signInWithPassword({ email, password });
-                if (!error) {
-                    this.close();
-                    return;
-                }
-                // Supabase deliberately gives one answer for a wrong password and
-                // for an address it has never seen, so the message covers both.
-                status.setText(/invalid login credentials/i.test(error.message)
-                    ? 'Wrong password, or no account yet. Create account makes one.'
-                    : `Could not sign in: ${error.message}`);
-                return;
-            }
-
-            status.setText('Creating your account…');
-            const { data, error } = await this.client.auth.signUp({ email, password });
-            if (error) {
-                status.setText(signUpProblem(error.message));
-                return;
-            }
-            if (data.session) {
+            status.setText('Signing in…');
+            const { error } = await this.client.auth.signInWithPassword({ email, password });
+            if (!error) {
                 this.close();
                 return;
             }
-            // Supabase hides an address that already has an account by handing
-            // back a user with no identities.
-            if (data.user?.identities?.length === 0) {
-                status.setText('That address already has an account. Sign in instead.');
-                return;
-            }
-            // No session and a real user means the project still has email
-            // confirmation switched on. The account exists either way, so try
-            // the password straight away; it works whenever confirmation was
-            // the only thing standing in the way.
-            const retry = await this.client.auth.signInWithPassword({ email, password });
-            if (!retry.error) {
-                this.close();
-                return;
-            }
-            console.error(CONFIRMATION_IS_ON);
-            status.setText(SIGN_UP_UNAVAILABLE);
+            status.setText(/invalid login credentials/i.test(error.message)
+                ? 'Wrong password, or this account has no password. Use Google or the emailed link.'
+                : `Could not sign in: ${error.message}`);
         };
 
-        this.emailField(() => void submit('in'));
+        this.emailField(() => void submit());
         new Setting(contentEl)
             .setName('Password')
             .addText((text) => {
@@ -188,12 +107,11 @@ class SignInModal extends Modal {
                 text.inputEl.type = 'password';
                 text.inputEl.autocomplete = 'current-password';
                 text.onChange((v) => { password = v; });
-                onEnter(text.inputEl, () => void submit('in'));
+                onEnter(text.inputEl, () => void submit());
             });
 
         new Setting(contentEl)
-            .addButton((btn) => btn.setButtonText('Create account').onClick(() => void submit('up')))
-            .addButton((btn) => btn.setButtonText('Sign in').setCta().onClick(() => void submit('in')));
+            .addButton((btn) => btn.setButtonText('Sign in').setCta().onClick(() => void submit()));
 
         const alt = contentEl.createDiv('auth-alt');
         alt.createEl('button', { type: 'button', cls: 'auth-link', text: 'Email me a link instead' })
@@ -230,7 +148,7 @@ class SignInModal extends Modal {
             const redirectTo = this.options.redirectTo ?? (window.location.origin + window.location.pathname);
             const { error } = await this.client.auth.signInWithOtp({
                 email: value,
-                options: { emailRedirectTo: redirectTo },
+                options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
             });
             if (error) {
                 status.setText(`Could not send the link: ${error.message}`);

@@ -23,6 +23,9 @@ import { mergeGarden, vaultFilesToGarden, type VaultFile } from '../src/core/vau
 const VIEW_TYPE = 'cells-garden';
 /** Supabase is always allowed to return to the website; that page deep-links the code back here. */
 const RETURN_URL = 'https://cells.garden/privacy/oauth-return.html?target=obsidian';
+const OAUTH_CONTROL = /[\u0000-\u001f\u007f]/;
+const protocolValue = (value: string | undefined, max: number) =>
+    value && value.length <= max && !OAUTH_CONTROL.test(value) ? value : null;
 /** The open garden's sign-in client, which holds the code verifier Google's answer is checked against. */
 let client: SupabaseClient | null = null;
 
@@ -48,7 +51,7 @@ class GardenTabView extends ItemView {
         this.garden = await bootGarden(host, {
             redirectTo: RETURN_URL,
             // Google's page opens in the system browser; it comes back through the protocol handler.
-            openOAuth: (url) => window.open(url),
+            openOAuth: (url) => { window.open(url, '_blank', 'noopener,noreferrer'); },
             onClient: (c) => { client = c; },
         });
     }
@@ -133,11 +136,18 @@ export default class CellsGardenPlugin extends Plugin {
 
     /** The browser is back from Google with a code (or an error): trade it for a session. */
     private async finishSignIn(params: Record<string, string>) {
-        if (params.error) {
-            new Notice(`Google sign-in did not finish: ${params.error_description ?? params.error}`);
+        const code = protocolValue(params.code, 4096);
+        const error = protocolValue(params.error, 256);
+        const errorDescription = protocolValue(params.error_description, 1024);
+        if ((code && error) || (params.code && !code) || (params.error && !error)) {
+            new Notice('Could not finish sign-in. The return data was invalid.');
             return;
         }
-        if (!params.code) return;
+        if (error) {
+            new Notice(`Google sign-in did not finish: ${errorDescription ?? error}`);
+            return;
+        }
+        if (!code) return;
 
         // The callback can arrive after the garden tab was closed. Reopen it so
         // the same Supabase client (and its stored PKCE verifier) is available.
@@ -147,7 +157,7 @@ export default class CellsGardenPlugin extends Plugin {
             new Notice('Could not finish sign-in. Open cells.garden and try again.');
             return;
         }
-        const { error } = await auth.auth.exchangeCodeForSession(params.code);
+        const { error } = await auth.auth.exchangeCodeForSession(code);
         new Notice(error ? `Could not sign in: ${error.message}` : 'Signed in.');
     }
 
