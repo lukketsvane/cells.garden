@@ -300,28 +300,6 @@ try {
     await newtab.waitForSelector('.project-column');
     assert(await newtab.textContent('.seed-content') === SEED, 'the seed text did not land in the column');
 
-    // Plant type is a visual sprite palette: real pixel art, three tiles across.
-    await newtab.click('.seed-content', { button: 'right' });
-    await newtab.waitForSelector('.garden-menu-grid');
-    const plantPicker = await newtab.evaluate(() => {
-        const grid = document.querySelector('.garden-menu-grid');
-        if (!grid) return null;
-        const tiles = [...grid.querySelectorAll('.garden-menu-grid-item')];
-        return {
-            columns: getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
-            tiles: tiles.length,
-            images: grid.querySelectorAll('.garden-menu-grid-sprite').length,
-            active: grid.querySelectorAll('.garden-menu-grid-item.is-active').length,
-            labels: tiles.map((tile) => tile.getAttribute('aria-label')),
-        };
-    });
-    assert(plantPicker?.columns === 3, `plant picker must be three columns wide: ${JSON.stringify(plantPicker)}`);
-    assert(plantPicker.tiles >= 3, `plant picker has too few plant types: ${JSON.stringify(plantPicker)}`);
-    assert(plantPicker.images >= plantPicker.tiles, `plant picker must show real sprite art in every tile: ${JSON.stringify(plantPicker)}`);
-    assert(plantPicker.active === 1, `plant picker must mark exactly one selected plant: ${JSON.stringify(plantPicker)}`);
-    assert(plantPicker.labels.every(Boolean), `plant picker tiles need accessible labels: ${JSON.stringify(plantPicker)}`);
-    await newtab.keyboard.press('Escape');
-
     await newtab.click('.stem-zone .zone-add-btn');
     await newtab.waitForSelector('.garden-item.is-draft');
     await newtab.fill('.garden-item.is-draft', STEM);

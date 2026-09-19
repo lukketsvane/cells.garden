@@ -59,23 +59,6 @@ export class AssetManager {
         return paths.length ? paths[Math.floor(Math.random() * paths.length)] : null;
     }
 
-    /**
-     * A deterministic little specimen of one plant family for visual pickers.
-     * These are the real bundled pixel sprites, never rendered/resampled copies.
-     */
-    getPlantPreviewUrls(plantType: string): string[] {
-        const order = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
-        const stems = [...(FOLDERS.get(`${plantType}/stem`) ?? [])].sort(order);
-        const flowers = [...(FOLDERS.get(`${plantType}/flowers`) ?? [])].sort(order);
-        const paths: string[] = [];
-        if (stems.length) paths.push(stems[0]);
-        if (stems.length > 1) paths.push(stems[Math.floor((stems.length - 1) / 2)]);
-        if (flowers.length) paths.push(flowers[0]);
-        return [...new Set(paths)]
-            .map(path => PACK.get(path))
-            .filter((url): url is string => Boolean(url));
-    }
-
     getImageUrlSync(path: string): string | null {
         const url = PACK.get(path);
         if (url) return url;
