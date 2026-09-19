@@ -2856,7 +2856,17 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
 
     private showSeedContextMenu(e: MouseEvent, project: ProjectData) {
         const rename = (type: string) => type.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
-        const others = PLANT_TYPES.filter(pt => pt !== project.plantType);
+        const changePlantType = (plantType: string) => {
+            if (plantType === project.plantType) return;
+            const live = this.live(project);
+            live.plantType = plantType;
+            for (const layer of ['stem', 'flowers'] as const) {
+                for (const item of live[layer]) {
+                    item.imagePath = this.app.assetManager.assignRandomImage(layer, plantType) || undefined;
+                }
+            }
+            void this.save();
+        };
         const items: MenuItem[] = [
             {
                 label: project.standby ? 'Wake up' : 'Standby',
@@ -2868,19 +2878,15 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
             },
             { label: 'Recycle plant', danger: true, onClick: () => this.confirmRecycle(project) },
         ];
-        if (others.length > 0) items.push({ label: 'Change plant type', heading: true });
-        for (const pt of others) {
+        if (PLANT_TYPES.length > 0) {
             items.push({
-                label: rename(pt),
-                onClick: () => {
-                    // A new type means new art for everything the pack keeps per plant.
-                    const live = this.live(project);
-                    live.plantType = pt;
-                    for (const layer of ['stem', 'flowers'] as const) {
-                        for (const item of live[layer]) item.imagePath = this.app.assetManager.assignRandomImage(layer, pt) || undefined;
-                    }
-                    void this.save();
-                },
+                label: 'Change plant type',
+                grid: PLANT_TYPES.map(plantType => ({
+                    label: rename(plantType),
+                    images: this.app.assetManager.getPlantPreviewUrls(plantType),
+                    active: plantType === project.plantType,
+                    onClick: () => changePlantType(plantType),
+                })),
             });
         }
         openMenu(items, { x: e.clientX, y: e.clientY }, this.containerEl.ownerDocument);
