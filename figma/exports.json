@@ -11,7 +11,8 @@
     "pixelArt": "native-1x",
     "branch": "main",
     "syncSource": "original-image-fill",
-    "rendering": "none"
+    "rendering": "none",
+    "preserveRepoMetadataWhenPixelStreamMatches": true
   },
   "coverage": {
     "assetFiles": 280,
