@@ -1,0 +1,1531 @@
+{
+  "schemaVersion": 1,
+  "figma": {
+    "fileKey": "Q9lb9XG2ftZZHswUg5zYkS",
+    "pageId": "27:1966",
+    "exportSectionId": "90:2098"
+  },
+  "policy": {
+    "format": "PNG",
+    "scale": 1,
+    "pixelArt": "native-1x",
+    "branch": "main"
+  },
+  "references": [
+    {
+      "path": "src/assets/stars_pattern.gif",
+      "policy": "repo-source-of-truth"
+    },
+    {
+      "path": "src/assets/CG_logo_v1.png",
+      "policy": "repo-source-of-truth"
+    },
+    {
+      "path": "src/assets/CG_logo_v1_transp.png",
+      "policy": "repo-source-of-truth"
+    }
+  ],
+  "count": 250,
+  "items": [
+    {
+      "path": "src/assets/ant_walk_1.png",
+      "width": 7,
+      "height": 7,
+      "sourceComponentId": "29:4516"
+    },
+    {
+      "path": "src/assets/ant_walk_2.png",
+      "width": 7,
+      "height": 7,
+      "sourceComponentId": "29:4517"
+    },
+    {
+      "path": "src/assets/bg_image.png",
+      "width": 540,
+      "height": 108,
+      "sourceComponentId": "29:3203"
+    },
+    {
+      "path": "src/assets/cloud.png",
+      "width": 540,
+      "height": 119,
+      "sourceComponentId": "29:3204"
+    },
+    {
+      "path": "src/assets/ground_tile.png",
+      "width": 12,
+      "height": 12,
+      "sourceComponentId": "29:3206"
+    },
+    {
+      "path": "src/assets/mountains.png",
+      "width": 739,
+      "height": 159,
+      "sourceComponentId": "29:3205"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral1.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4340"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral10.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4359"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral100.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4366"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral11.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4376"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral12.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4384"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral13.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4397"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral14.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4409"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral15.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4416"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral16.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4426"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral17.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4433"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral18.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4341"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral19.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4357"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral2.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4360"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral20.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4370"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral21.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4383"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral22.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4396"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral23.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4400"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral24.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4415"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral25.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4425"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral26.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4434"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral27.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4347"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral28.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4355"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral29.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4361"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral3.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4378"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral30.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4380"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral31.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4393"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral32.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4404"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral33.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4410"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral34.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4421"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral35.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4435"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral36.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4342"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral37.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4354"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral38.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4369"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral39.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4371"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral4.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4382"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral40.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4391"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral41.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4403"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral42.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4418"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral43.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4429"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral44.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4437"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral45.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4349"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral46.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4352"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral47.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4365"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral48.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4377"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral49.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4386"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral5.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4395"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral50.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4407"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral51.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4414"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral52.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4427"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral53.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4430"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral54.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4348"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral55.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4350"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral56.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4363"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral57.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4379"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral58.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4387"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral59.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4390"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral6.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4408"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral60.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4411"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral61.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4420"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral62.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4438"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral63.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4346"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral64.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4353"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral65.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4368"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral66.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4373"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral67.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4389"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral68.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4399"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral69.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4406"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral7.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4412"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral70.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4422"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral71.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4436"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral72.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4345"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral73.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4356"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral74.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4367"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral75.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4375"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral76.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4385"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral77.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4394"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral78.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4405"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral79.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4413"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral8.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4424"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral80.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4432"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral81.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4344"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral82.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4351"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral83.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4362"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral84.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4372"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral85.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4388"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral86.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4392"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral87.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4402"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral88.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4419"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral89.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4428"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral9.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4431"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral90.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4343"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral91.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4358"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral92.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4364"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral93.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4374"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral94.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4381"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral95.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4398"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral96.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4401"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral97.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4417"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral98.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4423"
+    },
+    {
+      "path": "src/assets/pack/minerals/mineral99.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4439"
+    },
+    {
+      "path": "src/assets/pack/plant_1/flowers/flower1.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4258"
+    },
+    {
+      "path": "src/assets/pack/plant_1/flowers/flower2.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4261"
+    },
+    {
+      "path": "src/assets/pack/plant_1/flowers/flower3.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4264"
+    },
+    {
+      "path": "src/assets/pack/plant_1/flowers/flower4.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4259"
+    },
+    {
+      "path": "src/assets/pack/plant_1/flowers/flower5.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4262"
+    },
+    {
+      "path": "src/assets/pack/plant_1/flowers/flower6.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4265"
+    },
+    {
+      "path": "src/assets/pack/plant_1/flowers/flower7.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4260"
+    },
+    {
+      "path": "src/assets/pack/plant_1/flowers/flower8.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4263"
+    },
+    {
+      "path": "src/assets/pack/plant_1/flowers/flower9.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4266"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem1.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4267"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem10.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4284"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem11.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4269"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem12.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4273"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem13.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4277"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem14.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4281"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem15.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4285"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem16.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4270"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem17.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4274"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem18.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4278"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem19.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4282"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem2.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4271"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem3.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4275"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem4.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4279"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem5.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4283"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem6.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4268"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem7.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4272"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem8.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4276"
+    },
+    {
+      "path": "src/assets/pack/plant_1/stem/stem9.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4280"
+    },
+    {
+      "path": "src/assets/pack/plant_2/flowers/flower1.png",
+      "width": 41,
+      "height": 8,
+      "sourceComponentId": "29:4254"
+    },
+    {
+      "path": "src/assets/pack/plant_2/flowers/flower2.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4256"
+    },
+    {
+      "path": "src/assets/pack/plant_2/flowers/flower3.png",
+      "width": 41,
+      "height": 8,
+      "sourceComponentId": "29:4255"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem1.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4243"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem10.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4246"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem11.png",
+      "width": 41,
+      "height": 8,
+      "sourceComponentId": "29:4249"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem2.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4252"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem3.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4244"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem4.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4247"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem5.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4250"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem6.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4253"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem7.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4245"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem8.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4248"
+    },
+    {
+      "path": "src/assets/pack/plant_2/stem/stem9.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4251"
+    },
+    {
+      "path": "src/assets/pack/plant_3/flowers/flower1.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4520"
+    },
+    {
+      "path": "src/assets/pack/plant_3/flowers/flower2.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4521"
+    },
+    {
+      "path": "src/assets/pack/plant_3/stem/stem1.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4519"
+    },
+    {
+      "path": "src/assets/pack/plant_3/stem/stem2.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4524"
+    },
+    {
+      "path": "src/assets/pack/plant_3/stem/stem3.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4526"
+    },
+    {
+      "path": "src/assets/pack/plant_3/stem/stem4.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4522"
+    },
+    {
+      "path": "src/assets/pack/plant_3/stem/stem5.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4525"
+    },
+    {
+      "path": "src/assets/pack/plant_3/stem/stem6.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4527"
+    },
+    {
+      "path": "src/assets/pack/plant_3/stem/stem7.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4523"
+    },
+    {
+      "path": "src/assets/pack/plant_4/flowers/flower1.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4295"
+    },
+    {
+      "path": "src/assets/pack/plant_4/flowers/flower2.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4296"
+    },
+    {
+      "path": "src/assets/pack/plant_4/stem/stem1.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4287"
+    },
+    {
+      "path": "src/assets/pack/plant_4/stem/stem2.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4290"
+    },
+    {
+      "path": "src/assets/pack/plant_4/stem/stem3.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4293"
+    },
+    {
+      "path": "src/assets/pack/plant_4/stem/stem4.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4288"
+    },
+    {
+      "path": "src/assets/pack/plant_4/stem/stem5.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4291"
+    },
+    {
+      "path": "src/assets/pack/plant_4/stem/stem6.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4294"
+    },
+    {
+      "path": "src/assets/pack/plant_4/stem/stem7.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4289"
+    },
+    {
+      "path": "src/assets/pack/plant_4/stem/stem8.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4292"
+    },
+    {
+      "path": "src/assets/pack/plant_5/flowers/flower1.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4303"
+    },
+    {
+      "path": "src/assets/pack/plant_5/flowers/flower2.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4305"
+    },
+    {
+      "path": "src/assets/pack/plant_5/flowers/flower3.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4304"
+    },
+    {
+      "path": "src/assets/pack/plant_5/stem/stem1.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4298"
+    },
+    {
+      "path": "src/assets/pack/plant_5/stem/stem2.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4300"
+    },
+    {
+      "path": "src/assets/pack/plant_5/stem/stem3.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4302"
+    },
+    {
+      "path": "src/assets/pack/plant_5/stem/stem4.png",
+      "width": 39,
+      "height": 13,
+      "sourceComponentId": "29:4299"
+    },
+    {
+      "path": "src/assets/pack/plant_5/stem/stem5.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4301"
+    },
+    {
+      "path": "src/assets/pack/plant_6/flowers/flower1.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4307"
+    },
+    {
+      "path": "src/assets/pack/plant_6/flowers/flower2.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4308"
+    },
+    {
+      "path": "src/assets/pack/plant_6/stem/stem1.png",
+      "width": 41,
+      "height": 11,
+      "sourceComponentId": "29:4309"
+    },
+    {
+      "path": "src/assets/pack/plant_6/stem/stem10.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4312"
+    },
+    {
+      "path": "src/assets/pack/plant_6/stem/stem2.png",
+      "width": 41,
+      "height": 11,
+      "sourceComponentId": "29:4315"
+    },
+    {
+      "path": "src/assets/pack/plant_6/stem/stem3.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4317"
+    },
+    {
+      "path": "src/assets/pack/plant_6/stem/stem4.png",
+      "width": 41,
+      "height": 11,
+      "sourceComponentId": "29:4310"
+    },
+    {
+      "path": "src/assets/pack/plant_6/stem/stem5.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4313"
+    },
+    {
+      "path": "src/assets/pack/plant_6/stem/stem6.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4316"
+    },
+    {
+      "path": "src/assets/pack/plant_6/stem/stem7.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4318"
+    },
+    {
+      "path": "src/assets/pack/plant_6/stem/stem8.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4311"
+    },
+    {
+      "path": "src/assets/pack/plant_6/stem/stem9.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4314"
+    },
+    {
+      "path": "src/assets/pack/plant_7/flowers/flower1.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4327"
+    },
+    {
+      "path": "src/assets/pack/plant_7/flowers/flower2.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4329"
+    },
+    {
+      "path": "src/assets/pack/plant_7/flowers/flower3.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4331"
+    },
+    {
+      "path": "src/assets/pack/plant_7/flowers/flower4.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4328"
+    },
+    {
+      "path": "src/assets/pack/plant_7/flowers/flower5.png",
+      "width": 40,
+      "height": 10,
+      "sourceComponentId": "29:4330"
+    },
+    {
+      "path": "src/assets/pack/plant_7/stem/stem1.png",
+      "width": 19,
+      "height": 9,
+      "sourceComponentId": "29:4332"
+    },
+    {
+      "path": "src/assets/pack/plant_7/stem/stem2.png",
+      "width": 23,
+      "height": 9,
+      "sourceComponentId": "29:4335"
+    },
+    {
+      "path": "src/assets/pack/plant_7/stem/stem3.png",
+      "width": 21,
+      "height": 10,
+      "sourceComponentId": "29:4337"
+    },
+    {
+      "path": "src/assets/pack/plant_7/stem/stem4.png",
+      "width": 19,
+      "height": 9,
+      "sourceComponentId": "29:4333"
+    },
+    {
+      "path": "src/assets/pack/plant_7/stem/stem5.png",
+      "width": 21,
+      "height": 7,
+      "sourceComponentId": "29:4336"
+    },
+    {
+      "path": "src/assets/pack/plant_7/stem/stem6.png",
+      "width": 15,
+      "height": 8,
+      "sourceComponentId": "29:4338"
+    },
+    {
+      "path": "src/assets/pack/plant_7/stem/stem7.png",
+      "width": 23,
+      "height": 7,
+      "sourceComponentId": "29:4334"
+    },
+    {
+      "path": "src/assets/pack/plant_8/flowers/flower1.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4323"
+    },
+    {
+      "path": "src/assets/pack/plant_8/flowers/flower2.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4325"
+    },
+    {
+      "path": "src/assets/pack/plant_8/flowers/stem3.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4324"
+    },
+    {
+      "path": "src/assets/pack/plant_8/stem/stem1.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4320"
+    },
+    {
+      "path": "src/assets/pack/plant_8/stem/stem2.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4322"
+    },
+    {
+      "path": "src/assets/pack/plant_8/stem/stem3.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4321"
+    },
+    {
+      "path": "src/assets/pack/pumpkin/pumpkin_1_off.png",
+      "width": 29,
+      "height": 27,
+      "sourceComponentId": "29:4511"
+    },
+    {
+      "path": "src/assets/pack/pumpkin/pumpkin_1_on_1.png",
+      "width": 29,
+      "height": 27,
+      "sourceComponentId": "29:4513"
+    },
+    {
+      "path": "src/assets/pack/pumpkin/pumpkin_1_on_2.png",
+      "width": 29,
+      "height": 27,
+      "sourceComponentId": "29:4512"
+    },
+    {
+      "path": "src/assets/pack/pumpkin/pumpkin_1_on_3.png",
+      "width": 29,
+      "height": 27,
+      "sourceComponentId": "29:4514"
+    },
+    {
+      "path": "src/assets/pack/roots/root1.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4441"
+    },
+    {
+      "path": "src/assets/pack/roots/root10.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4445"
+    },
+    {
+      "path": "src/assets/pack/roots/root11.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4449"
+    },
+    {
+      "path": "src/assets/pack/roots/root12.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4452"
+    },
+    {
+      "path": "src/assets/pack/roots/root13.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4442"
+    },
+    {
+      "path": "src/assets/pack/roots/root14.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4446"
+    },
+    {
+      "path": "src/assets/pack/roots/root2.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4450"
+    },
+    {
+      "path": "src/assets/pack/roots/root3.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4453"
+    },
+    {
+      "path": "src/assets/pack/roots/root4.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4443"
+    },
+    {
+      "path": "src/assets/pack/roots/root5.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4447"
+    },
+    {
+      "path": "src/assets/pack/roots/root6.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4451"
+    },
+    {
+      "path": "src/assets/pack/roots/root7.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4454"
+    },
+    {
+      "path": "src/assets/pack/roots/root8.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4444"
+    },
+    {
+      "path": "src/assets/pack/roots/root9.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4448"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed1.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4486"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed10.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4491"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed11.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4495"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed12.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4499"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed13.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4503"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed14.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4506"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed15.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4483"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed16.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4489"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed17.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4493"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed18.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4498"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed19.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4502"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed2.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4507"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed20.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4487"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed21.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4488"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed22.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4494"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed23.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4500"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed24.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4504"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed25.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4508"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed26.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4485"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed27.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4490"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed3.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4496"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed4.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4501"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed5.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4505"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed6.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4509"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed7.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4484"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed8.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4492"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed9.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4497"
+    }
+  ]
+}
