@@ -22,7 +22,7 @@ export const CROW_ATLAS_URL =
 export const CROW_PREVIEW_URL =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABbUlEQVR4nO2VzU6DQBSFTxsTiRKUv9CfGJI2aXwB48P4Wr6N8QV06aZpggkxUMlQUIKmbhxXg0xL22EguuFbwTDcc++5cwHo6Ojo+Gd6bQRRVIPaoyk03QYAZCnBy+JRKHa/qfjF7IqW7+9uh0VSIu8fyQorqkHXecJVmaUE1zeE21N+vrlfKgEW1B5NQUIUAiT0uH1VYlUIbWI93kTTbWQp4dZEe8+o7YCm27CcMbeWpWTLAVFqH8KlP69MqsqhVhIo2/+RrQAAcRTg6eEecRRwScggNQWWMy7aEEcBlv4cp5oplcDBA8NO/Yl6DgAYupfcc9YSlgAJPeEJAARawILtq1C2ekDAAWMwoZ/5G4BfF3YlwCahNQeMwYSzf1+lMuLADgeYMKt8nSe98mfVMS18H58BAPpf74hWsZQ4UDEFimrQ5PV5KxAX3LQoCT1u9mXEpXHdGa26lqHx77gptWw7VK3vL/6uDR0dbfED34mHkrnn5lQAAAAASUVORK5CYII=';
 
-type CrowAnimation = 'idle' | 'walk' | 'takeoff' | 'fly' | 'land' | 'peck' | 'call';
+type CrowAnimation = 'idle' | 'walk' | 'takeoff' | 'fly' | 'land' | 'peck' | 'call' | 'hop';
 
 const CROW_ANIMS: Record<CrowAnimation, { row: number; frames: number; duration: number }> = {
     idle: { row: 0, frames: 4, duration: 220 },
@@ -32,21 +32,42 @@ const CROW_ANIMS: Record<CrowAnimation, { row: number; frames: number; duration:
     land: { row: 4, frames: 6, duration: 115 },
     peck: { row: 5, frames: 6, duration: 145 },
     call: { row: 6, frames: 4, duration: 170 },
+    hop: { row: 7, frames: 6, duration: 110 },
 };
 
-type CrowMode = 'grounded' | 'walking' | 'takingoff' | 'flying' | 'landing' | 'calling' | 'pecking';
+type CrowMode =
+    | 'grounded'
+    | 'walking'
+    | 'hopping'
+    | 'takingoff'
+    | 'flying'
+    | 'landing'
+    | 'calling'
+    | 'pecking';
 
+const CROW_HALF = 64;
+const CROW_EDGE = 70;
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 /**
- * Mount one lifecycle-safe crow in the garden world.
+ * A real scene NPC, driven by the native 32×32 atlas above.
  *
- * Tap: take off, cross the world, land.
- * Tap while airborne: reverse direction.
- * Hold: call.
- * Idle: occasional peck.
+ * Interaction:
+ * - tap crow: take off, fly across the garden, then land
+ * - tap while flying: reverse direction and keep flying
+ * - hold crow: call
  *
- * All source frames remain 32×32 and are shown at exactly 4× with steps only.
+ * Life:
+ * - idle breathing
+ * - occasional peck
+ * - short walks and hops around the ground
+ *
+ * Pixel contract:
+ * - source frame is always 32×32
+ * - runtime is exactly 4× = 128×128
+ * - atlas offsets are integer multiples of 128
+ * - world placement is rounded to integer pixels
+ * - facing is a hard scaleX flip on the inner sprite only
  */
 export function mountCrowNPC(layer: HTMLElement) {
     const crow = layer.createEl('button', {
@@ -62,33 +83,38 @@ export function mountCrowNPC(layer: HTMLElement) {
     const world = layer.parentElement ?? layer;
     const worldWidth = () => Math.max(600, layer.clientWidth || world.clientWidth || 600);
     const sky = () => Number.parseFloat(getComputedStyle(world).getPropertyValue('--sky')) || 620;
-    const groundCenterY = () => sky() - 44;
-    const airCenterY = () => Math.max(96, sky() * 0.54);
+    const groundY = () => sky() - 44;
 
     let mode: CrowMode = 'grounded';
     let animation: CrowAnimation = 'idle';
     let frame = 0;
     let direction = 1;
-    let x = clamp(worldWidth() * 0.72, 70, worldWidth() - 70);
-    let y = groundCenterY();
-    let targetX = x;
-    let flightY = airCenterY();
+    let x = clamp(worldWidth() * 0.68, CROW_EDGE, worldWidth() - CROW_EDGE);
+    let y = groundY();
+
     let animationTimer: number | null = null;
     let animationToken = 0;
     let movementRAF: number | null = null;
-    let lastFrame = performance.now();
-    let lastAction = performance.now();
+    let movementToken = 0;
     let idleTimer: number | null = null;
     let holdTimer: number | null = null;
+
     let press: { x: number; y: number; at: number } | null = null;
     let held = false;
+
+    let flightTargetX = x;
+    let flightCruiseY = Math.max(120, sky() * 0.48);
+    let flightStartX = x;
+    let flightDistance = 1;
+    let lastMoveFrame = performance.now();
 
     const connected = () => crow.isConnected;
 
     const place = (nextX: number, nextY: number) => {
-        x = nextX;
-        y = nextY;
-        crow.style.transform = 'translate3d(' + Math.round(x - 64) + 'px,' + Math.round(y - 64) + 'px,0)';
+        x = Math.round(nextX);
+        y = Math.round(nextY);
+        crow.style.transform =
+            'translate3d(' + (x - CROW_HALF) + 'px,' + (y - CROW_HALF) + 'px,0)';
     };
 
     const face = (nextDirection: number) => {
@@ -98,8 +124,10 @@ export function mountCrowNPC(layer: HTMLElement) {
 
     const draw = () => {
         const spec = CROW_ANIMS[animation];
-        sprite.style.backgroundPosition = (-frame * 128) + 'px ' + (-spec.row * 128) + 'px';
+        sprite.style.backgroundPosition =
+            (-frame * 128) + 'px ' + (-spec.row * 128) + 'px';
         crow.dataset.state = mode;
+        crow.dataset.animation = animation;
     };
 
     const stopAnimation = () => {
@@ -113,142 +141,312 @@ export function mountCrowNPC(layer: HTMLElement) {
         animation = name;
         frame = 0;
         draw();
+
         const token = animationToken;
         const spec = CROW_ANIMS[name];
         const step = () => {
             if (!connected() || token !== animationToken) return;
             frame++;
+
             if (frame >= spec.frames) {
                 if (once) {
                     frame = spec.frames - 1;
                     draw();
+                    animationTimer = null;
                     done?.();
                     return;
                 }
                 frame = 0;
             }
+
             draw();
             animationTimer = window.setTimeout(step, spec.duration);
         };
+
         animationTimer = window.setTimeout(step, spec.duration);
     };
 
     const stopMovement = () => {
+        movementToken++;
         if (movementRAF !== null) cancelAnimationFrame(movementRAF);
         movementRAF = null;
     };
 
-    const scheduleIdlePeck = () => {
+    const clearGroundTimer = () => {
         if (idleTimer !== null) window.clearTimeout(idleTimer);
+        idleTimer = null;
+    };
+
+    const scheduleGroundLife = () => {
+        clearGroundTimer();
         idleTimer = window.setTimeout(() => {
             if (!connected() || mode !== 'grounded') return;
-            mode = 'pecking';
-            play('peck', true, () => {
-                if (!connected()) return;
-                mode = 'grounded';
-                play('idle');
-                scheduleIdlePeck();
-            });
-        }, 4200 + Math.random() * 3800);
+
+            const roll = Math.random();
+            if (roll < 0.45) peck();
+            else if (roll < 0.76) walk();
+            else if (roll < 0.90) hop();
+            else call();
+        }, 2800 + Math.random() * 4200);
     };
 
     const becomeIdle = () => {
         stopMovement();
         mode = 'grounded';
-        place(clamp(x, 70, worldWidth() - 70), groundCenterY());
+        place(clamp(x, CROW_EDGE, worldWidth() - CROW_EDGE), groundY());
         play('idle');
-        scheduleIdlePeck();
+        scheduleGroundLife();
     };
 
-    const land = () => {
-        if (mode !== 'flying') return;
-        mode = 'landing';
-        const startX = x;
-        const startY = y;
-        const endX = clamp(x, 70, worldWidth() - 70);
-        const endY = groundCenterY();
-        const start = performance.now();
-        play('land', true, becomeIdle);
-
-        const descend = (now: number) => {
-            if (!connected() || mode !== 'landing') return;
-            const t = clamp((now - start) / 690, 0, 1);
-            const eased = 1 - Math.pow(1 - t, 2);
-            place(startX + (endX - startX) * eased, startY + (endY - startY) * eased);
-            if (t < 1) movementRAF = requestAnimationFrame(descend);
-        };
-        stopMovement();
-        movementRAF = requestAnimationFrame(descend);
-    };
-
-    const flyLoop = (now: number) => {
-        if (!connected() || mode !== 'flying') return;
-        const dt = Math.min(40, now - lastFrame);
-        lastFrame = now;
-        const dx = targetX - x;
-        const speed = 0.34 * dt;
-        place(
-            x + Math.sign(dx || direction) * Math.min(Math.abs(dx), speed),
-            flightY + Math.sin(now / 235) * 8,
-        );
-        if (Math.abs(dx) < 8) {
-            movementRAF = null;
-            land();
-            return;
-        }
-        movementRAF = requestAnimationFrame(flyLoop);
-    };
-
-    const startFlying = () => {
-        lastAction = performance.now();
-        if (idleTimer !== null) window.clearTimeout(idleTimer);
-
-        if (mode === 'flying') {
-            face(-direction);
-            targetX = direction > 0 ? worldWidth() - 70 : 70;
-            return;
-        }
-        if (mode === 'takingoff' || mode === 'landing') return;
-
-        mode = 'takingoff';
-        face(x < worldWidth() / 2 ? 1 : -1);
-        targetX = direction > 0 ? worldWidth() - 70 : 70;
-        const startX = x;
-        const startY = groundCenterY();
-        const endY = airCenterY();
-        flightY = endY;
-        const start = performance.now();
-
-        play('takeoff', true, () => {
-            if (!connected() || mode !== 'takingoff') return;
-            mode = 'flying';
-            lastFrame = performance.now();
-            play('fly');
-            stopMovement();
-            movementRAF = requestAnimationFrame(flyLoop);
-        });
-
-        const lift = (now: number) => {
-            if (!connected() || mode !== 'takingoff') return;
-            const t = clamp((now - start) / 630, 0, 1);
-            place(startX + direction * 58 * t, startY + (endY - startY) * t);
-            if (t < 1) movementRAF = requestAnimationFrame(lift);
-        };
-        stopMovement();
-        movementRAF = requestAnimationFrame(lift);
+    const peck = () => {
+        if (mode !== 'grounded') return;
+        clearGroundTimer();
+        mode = 'pecking';
+        play('peck', true, becomeIdle);
     };
 
     const call = () => {
         if (mode !== 'grounded') return;
-        lastAction = performance.now();
-        if (idleTimer !== null) window.clearTimeout(idleTimer);
+        clearGroundTimer();
         mode = 'calling';
         play('call', true, becomeIdle);
     };
 
-    // Keep the garden camera/touch adapter from claiming the crow's gesture.
-    crow.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
-    crow.addEventListener('mousedown', (e) => e.stopPropagation());
+    const walk = () => {
+        if (mode !== 'grounded') return;
+        clearGroundTimer();
+        mode = 'walking';
+
+        const width = worldWidth();
+        const stride = 72 + Math.random() * 150;
+        let target = x + (Math.random() < 0.5 ? -stride : stride);
+        target = clamp(target, CROW_EDGE, width - CROW_EDGE);
+
+        if (Math.abs(target - x) < 36) {
+            target = clamp(
+                x < width / 2 ? x + 92 : x - 92,
+                CROW_EDGE,
+                width - CROW_EDGE,
+            );
+        }
+
+        face(target >= x ? 1 : -1);
+        play('walk');
+
+        const token = ++movementToken;
+        let previous = performance.now();
+        const step = (now: number) => {
+            if (!connected() || mode !== 'walking' || token !== movementToken) return;
+            const dt = Math.min(40, now - previous);
+            previous = now;
+            const dx = target - x;
+            const move = Math.min(Math.abs(dx), 0.085 * dt);
+
+            place(x + Math.sign(dx || direction) * move, groundY());
+
+            if (Math.abs(target - x) <= 2) {
+                movementRAF = null;
+                becomeIdle();
+                return;
+            }
+            movementRAF = requestAnimationFrame(step);
+        };
+
+        movementRAF = requestAnimationFrame(step);
+    };
+
+    const hop = () => {
+        if (mode !== 'grounded') return;
+        clearGroundTimer();
+        mode = 'hopping';
+
+        const width = worldWidth();
+        const distance = 38 + Math.random() * 48;
+        const target = clamp(
+            x + (Math.random() < 0.5 ? -distance : distance),
+            CROW_EDGE,
+            width - CROW_EDGE,
+        );
+        face(target >= x ? 1 : -1);
+
+        const startX = x;
+        const startY = groundY();
+        const start = performance.now();
+        const duration = CROW_ANIMS.hop.frames * CROW_ANIMS.hop.duration;
+        const token = ++movementToken;
+        play('hop', true);
+
+        const step = (now: number) => {
+            if (!connected() || mode !== 'hopping' || token !== movementToken) return;
+            const t = clamp((now - start) / duration, 0, 1);
+            const arc = Math.sin(Math.PI * t) * 30;
+            place(
+                startX + (target - startX) * t,
+                startY - arc,
+            );
+
+            if (t >= 1) {
+                movementRAF = null;
+                becomeIdle();
+                return;
+            }
+            movementRAF = requestAnimationFrame(step);
+        };
+
+        movementRAF = requestAnimationFrame(step);
+    };
+
+    const land = () => {
+        if (mode !== 'flying') return;
+        stopMovement();
+        mode = 'landing';
+
+        const startX = x;
+        const startY = y;
+        const endX = clamp(x, CROW_EDGE, worldWidth() - CROW_EDGE);
+        const endY = groundY();
+        const start = performance.now();
+        const duration = CROW_ANIMS.land.frames * CROW_ANIMS.land.duration;
+        const token = ++movementToken;
+
+        play('land', true);
+
+        const step = (now: number) => {
+            if (!connected() || mode !== 'landing' || token !== movementToken) return;
+            const t = clamp((now - start) / duration, 0, 1);
+            const eased = 1 - Math.pow(1 - t, 2);
+            place(
+                startX + (endX - startX) * eased,
+                startY + (endY - startY) * eased,
+            );
+
+            if (t >= 1) {
+                movementRAF = null;
+                becomeIdle();
+                return;
+            }
+            movementRAF = requestAnimationFrame(step);
+        };
+
+        movementRAF = requestAnimationFrame(step);
+    };
+
+    const chooseFlightTarget = (reverse = false) => {
+        const width = worldWidth();
+
+        if (reverse) {
+            face(-direction);
+        } else {
+            face(x < width / 2 ? 1 : -1);
+        }
+
+        const inset = 94 + Math.random() * Math.min(140, width * 0.12);
+        flightTargetX = direction > 0 ? width - inset : inset;
+
+        // Always make a tap produce a clearly visible crossing, not a tiny local hop.
+        if (Math.abs(flightTargetX - x) < width * 0.42) {
+            flightTargetX = direction > 0
+                ? clamp(x + width * 0.52, CROW_EDGE, width - CROW_EDGE)
+                : clamp(x - width * 0.52, CROW_EDGE, width - CROW_EDGE);
+        }
+
+        flightStartX = x;
+        flightDistance = Math.max(1, Math.abs(flightTargetX - flightStartX));
+        flightCruiseY = clamp(
+            sky() * (0.38 + Math.random() * 0.14),
+            105,
+            Math.max(120, groundY() - 170),
+        );
+    };
+
+    const flyLoop = (now: number) => {
+        if (!connected() || mode !== 'flying') return;
+
+        const dt = Math.min(40, now - lastMoveFrame);
+        lastMoveFrame = now;
+
+        const dx = flightTargetX - x;
+        const step = Math.min(Math.abs(dx), 0.34 * dt);
+        const travelled = Math.abs(x - flightStartX);
+        const progress = clamp(travelled / flightDistance, 0, 1);
+
+        // Broad arc + tiny wingbeat bob. Position is rounded in place(), so the
+        // raster never sits between world pixels.
+        const arc = Math.sin(Math.PI * progress) * 34;
+        const bob = Math.sin(now / 150) * 5;
+        const nextY = flightCruiseY - arc + bob;
+
+        place(
+            x + Math.sign(dx || direction) * step,
+            nextY,
+        );
+
+        if (Math.abs(flightTargetX - x) <= 6) {
+            movementRAF = null;
+            land();
+            return;
+        }
+
+        movementRAF = requestAnimationFrame(flyLoop);
+    };
+
+    const startFlightLoop = () => {
+        mode = 'flying';
+        lastMoveFrame = performance.now();
+        play('fly');
+        stopMovement();
+        movementRAF = requestAnimationFrame(flyLoop);
+    };
+
+    const takeOff = () => {
+        clearGroundTimer();
+
+        if (mode === 'flying') {
+            chooseFlightTarget(true);
+            return;
+        }
+        if (mode === 'takingoff' || mode === 'landing') return;
+
+        stopMovement();
+        mode = 'takingoff';
+        chooseFlightTarget(false);
+
+        const startX = x;
+        const startY = groundY();
+        const endY = flightCruiseY;
+        const start = performance.now();
+        const duration = CROW_ANIMS.takeoff.frames * CROW_ANIMS.takeoff.duration;
+        const token = ++movementToken;
+
+        play('takeoff', true);
+
+        const step = (now: number) => {
+            if (!connected() || mode !== 'takingoff' || token !== movementToken) return;
+            const t = clamp((now - start) / duration, 0, 1);
+            const eased = 1 - Math.pow(1 - t, 3);
+
+            place(
+                startX + direction * 62 * eased,
+                startY + (endY - startY) * eased,
+            );
+
+            if (t >= 1) {
+                movementRAF = null;
+                startFlightLoop();
+                return;
+            }
+            movementRAF = requestAnimationFrame(step);
+        };
+
+        movementRAF = requestAnimationFrame(step);
+    };
+
+    // The garden camera must never steal a crow gesture.
+    const stopSceneGesture = (e: Event) => e.stopPropagation();
+    crow.addEventListener('touchstart', stopSceneGesture, { passive: true });
+    crow.addEventListener('touchmove', stopSceneGesture, { passive: true });
+    crow.addEventListener('touchend', stopSceneGesture, { passive: true });
+    crow.addEventListener('mousedown', stopSceneGesture);
     crow.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -258,8 +456,10 @@ export function mountCrowNPC(layer: HTMLElement) {
         e.preventDefault();
         e.stopPropagation();
         crow.setPointerCapture?.(e.pointerId);
+
         press = { x: e.clientX, y: e.clientY, at: performance.now() };
         held = false;
+
         if (holdTimer !== null) window.clearTimeout(holdTimer);
         holdTimer = window.setTimeout(() => {
             if (!press || !connected()) return;
@@ -268,19 +468,30 @@ export function mountCrowNPC(layer: HTMLElement) {
         }, 520);
     });
 
+    crow.addEventListener('pointermove', (e) => {
+        if (!press || holdTimer === null) return;
+        if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) {
+            window.clearTimeout(holdTimer);
+            holdTimer = null;
+        }
+    });
+
     crow.addEventListener('pointerup', (e) => {
         e.preventDefault();
         e.stopPropagation();
+
         if (holdTimer !== null) window.clearTimeout(holdTimer);
         holdTimer = null;
+
         const started = press;
         press = null;
         if (!started || held) return;
+
         if (
             Math.hypot(e.clientX - started.x, e.clientY - started.y) < 10 &&
             performance.now() - started.at < 520
         ) {
-            startFlying();
+            takeOff();
         }
     });
 
@@ -293,28 +504,21 @@ export function mountCrowNPC(layer: HTMLElement) {
     crow.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault();
-        startFlying();
+        takeOff();
     });
 
     place(x, y);
     play('idle');
-    scheduleIdlePeck();
-
-    // Re-anchor after a resize/render-width change without introducing subpixels.
-    const onResize = () => {
-        if (!connected()) {
-            window.removeEventListener('resize', onResize);
-            return;
-        }
-        if (mode === 'grounded') place(clamp(x, 70, worldWidth() - 70), groundCenterY());
-    };
-    window.addEventListener('resize', onResize);
+    scheduleGroundLife();
 
     return {
-        fly: startFlying,
+        fly: takeOff,
         call,
+        peck,
+        hop,
+        walk,
         get state() {
-            return { mode, animation, x, y, lastAction };
+            return { mode, animation, frame, direction, x, y };
         },
     };
 }
