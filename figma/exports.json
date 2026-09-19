@@ -36,1663 +36,1940 @@
       "path": "src/assets/ant_walk_1.png",
       "width": 7,
       "height": 7,
-      "sourceComponentId": "29:4516"
+      "sourceComponentId": "29:4516",
+      "exportNodeId": "90:2104"
     },
     {
       "path": "src/assets/ant_walk_2.png",
       "width": 7,
       "height": 7,
-      "sourceComponentId": "29:4517"
+      "sourceComponentId": "29:4517",
+      "exportNodeId": "90:2106"
     },
     {
       "path": "src/assets/bg_image.png",
       "width": 540,
       "height": 108,
-      "sourceComponentId": "29:3203"
+      "sourceComponentId": "29:3203",
+      "exportNodeId": "90:2108"
     },
     {
       "path": "src/assets/cloud.png",
       "width": 540,
       "height": 119,
-      "sourceComponentId": "29:3204"
+      "sourceComponentId": "29:3204",
+      "exportNodeId": "90:2110"
     },
     {
       "path": "src/assets/ground_tile.png",
       "width": 12,
       "height": 12,
-      "sourceComponentId": "29:3206"
+      "sourceComponentId": "29:3206",
+      "exportNodeId": "90:2112"
     },
     {
       "path": "src/assets/mountains.png",
       "width": 739,
       "height": 159,
-      "sourceComponentId": "29:3205"
+      "sourceComponentId": "29:3205",
+      "exportNodeId": "90:2114"
     },
     {
       "path": "src/assets/pack/minerals/mineral1.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4340"
+      "sourceComponentId": "29:4340",
+      "exportNodeId": "90:2119"
     },
     {
       "path": "src/assets/pack/minerals/mineral10.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4359"
+      "sourceComponentId": "29:4359",
+      "exportNodeId": "90:2121"
     },
     {
       "path": "src/assets/pack/minerals/mineral100.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4366"
+      "sourceComponentId": "29:4366",
+      "exportNodeId": "90:2123"
     },
     {
       "path": "src/assets/pack/minerals/mineral11.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4376"
+      "sourceComponentId": "29:4376",
+      "exportNodeId": "90:2125"
     },
     {
       "path": "src/assets/pack/minerals/mineral12.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4384"
+      "sourceComponentId": "29:4384",
+      "exportNodeId": "90:2127"
     },
     {
       "path": "src/assets/pack/minerals/mineral13.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4397"
+      "sourceComponentId": "29:4397",
+      "exportNodeId": "90:2129"
     },
     {
       "path": "src/assets/pack/minerals/mineral14.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4409"
+      "sourceComponentId": "29:4409",
+      "exportNodeId": "90:2131"
     },
     {
       "path": "src/assets/pack/minerals/mineral15.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4416"
+      "sourceComponentId": "29:4416",
+      "exportNodeId": "90:2133"
     },
     {
       "path": "src/assets/pack/minerals/mineral16.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4426"
+      "sourceComponentId": "29:4426",
+      "exportNodeId": "90:2135"
     },
     {
       "path": "src/assets/pack/minerals/mineral17.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4433"
+      "sourceComponentId": "29:4433",
+      "exportNodeId": "90:2137"
     },
     {
       "path": "src/assets/pack/minerals/mineral18.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4341"
+      "sourceComponentId": "29:4341",
+      "exportNodeId": "90:2139"
     },
     {
       "path": "src/assets/pack/minerals/mineral19.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4357"
+      "sourceComponentId": "29:4357",
+      "exportNodeId": "90:2141"
     },
     {
       "path": "src/assets/pack/minerals/mineral2.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4360"
+      "sourceComponentId": "29:4360",
+      "exportNodeId": "90:2143"
     },
     {
       "path": "src/assets/pack/minerals/mineral20.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4370"
+      "sourceComponentId": "29:4370",
+      "exportNodeId": "90:2145"
     },
     {
       "path": "src/assets/pack/minerals/mineral21.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4383"
+      "sourceComponentId": "29:4383",
+      "exportNodeId": "90:2147"
     },
     {
       "path": "src/assets/pack/minerals/mineral22.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4396"
+      "sourceComponentId": "29:4396",
+      "exportNodeId": "90:2149"
     },
     {
       "path": "src/assets/pack/minerals/mineral23.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4400"
+      "sourceComponentId": "29:4400",
+      "exportNodeId": "90:2151"
     },
     {
       "path": "src/assets/pack/minerals/mineral24.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4415"
+      "sourceComponentId": "29:4415",
+      "exportNodeId": "90:2153"
     },
     {
       "path": "src/assets/pack/minerals/mineral25.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4425"
+      "sourceComponentId": "29:4425",
+      "exportNodeId": "90:2155"
     },
     {
       "path": "src/assets/pack/minerals/mineral26.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4434"
+      "sourceComponentId": "29:4434",
+      "exportNodeId": "90:2157"
     },
     {
       "path": "src/assets/pack/minerals/mineral27.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4347"
+      "sourceComponentId": "29:4347",
+      "exportNodeId": "90:2159"
     },
     {
       "path": "src/assets/pack/minerals/mineral28.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4355"
+      "sourceComponentId": "29:4355",
+      "exportNodeId": "90:2161"
     },
     {
       "path": "src/assets/pack/minerals/mineral29.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4361"
+      "sourceComponentId": "29:4361",
+      "exportNodeId": "90:2163"
     },
     {
       "path": "src/assets/pack/minerals/mineral3.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4378"
+      "sourceComponentId": "29:4378",
+      "exportNodeId": "90:2165"
     },
     {
       "path": "src/assets/pack/minerals/mineral30.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4380"
+      "sourceComponentId": "29:4380",
+      "exportNodeId": "90:2167"
     },
     {
       "path": "src/assets/pack/minerals/mineral31.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4393"
+      "sourceComponentId": "29:4393",
+      "exportNodeId": "90:2169"
     },
     {
       "path": "src/assets/pack/minerals/mineral32.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4404"
+      "sourceComponentId": "29:4404",
+      "exportNodeId": "90:2171"
     },
     {
       "path": "src/assets/pack/minerals/mineral33.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4410"
+      "sourceComponentId": "29:4410",
+      "exportNodeId": "90:2173"
     },
     {
       "path": "src/assets/pack/minerals/mineral34.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4421"
+      "sourceComponentId": "29:4421",
+      "exportNodeId": "90:2175"
     },
     {
       "path": "src/assets/pack/minerals/mineral35.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4435"
+      "sourceComponentId": "29:4435",
+      "exportNodeId": "90:2177"
     },
     {
       "path": "src/assets/pack/minerals/mineral36.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4342"
+      "sourceComponentId": "29:4342",
+      "exportNodeId": "90:2179"
     },
     {
       "path": "src/assets/pack/minerals/mineral37.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4354"
+      "sourceComponentId": "29:4354",
+      "exportNodeId": "90:2181"
     },
     {
       "path": "src/assets/pack/minerals/mineral38.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4369"
+      "sourceComponentId": "29:4369",
+      "exportNodeId": "90:2183"
     },
     {
       "path": "src/assets/pack/minerals/mineral39.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4371"
+      "sourceComponentId": "29:4371",
+      "exportNodeId": "90:2185"
     },
     {
       "path": "src/assets/pack/minerals/mineral4.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4382"
+      "sourceComponentId": "29:4382",
+      "exportNodeId": "90:2187"
     },
     {
       "path": "src/assets/pack/minerals/mineral40.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4391"
+      "sourceComponentId": "29:4391",
+      "exportNodeId": "90:2189"
     },
     {
       "path": "src/assets/pack/minerals/mineral41.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4403"
+      "sourceComponentId": "29:4403",
+      "exportNodeId": "90:2191"
     },
     {
       "path": "src/assets/pack/minerals/mineral42.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4418"
+      "sourceComponentId": "29:4418",
+      "exportNodeId": "90:2193"
     },
     {
       "path": "src/assets/pack/minerals/mineral43.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4429"
+      "sourceComponentId": "29:4429",
+      "exportNodeId": "90:2195"
     },
     {
       "path": "src/assets/pack/minerals/mineral44.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4437"
+      "sourceComponentId": "29:4437",
+      "exportNodeId": "90:2197"
     },
     {
       "path": "src/assets/pack/minerals/mineral45.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4349"
+      "sourceComponentId": "29:4349",
+      "exportNodeId": "90:2199"
     },
     {
       "path": "src/assets/pack/minerals/mineral46.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4352"
+      "sourceComponentId": "29:4352",
+      "exportNodeId": "90:2201"
     },
     {
       "path": "src/assets/pack/minerals/mineral47.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4365"
+      "sourceComponentId": "29:4365",
+      "exportNodeId": "90:2203"
     },
     {
       "path": "src/assets/pack/minerals/mineral48.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4377"
+      "sourceComponentId": "29:4377",
+      "exportNodeId": "90:2205"
     },
     {
       "path": "src/assets/pack/minerals/mineral49.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4386"
+      "sourceComponentId": "29:4386",
+      "exportNodeId": "90:2207"
     },
     {
       "path": "src/assets/pack/minerals/mineral5.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4395"
+      "sourceComponentId": "29:4395",
+      "exportNodeId": "90:2209"
     },
     {
       "path": "src/assets/pack/minerals/mineral50.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4407"
+      "sourceComponentId": "29:4407",
+      "exportNodeId": "90:2211"
     },
     {
       "path": "src/assets/pack/minerals/mineral51.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4414"
+      "sourceComponentId": "29:4414",
+      "exportNodeId": "90:2213"
     },
     {
       "path": "src/assets/pack/minerals/mineral52.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4427"
+      "sourceComponentId": "29:4427",
+      "exportNodeId": "90:2215"
     },
     {
       "path": "src/assets/pack/minerals/mineral53.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4430"
+      "sourceComponentId": "29:4430",
+      "exportNodeId": "90:2217"
     },
     {
       "path": "src/assets/pack/minerals/mineral54.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4348"
+      "sourceComponentId": "29:4348",
+      "exportNodeId": "90:2219"
     },
     {
       "path": "src/assets/pack/minerals/mineral55.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4350"
+      "sourceComponentId": "29:4350",
+      "exportNodeId": "90:2221"
     },
     {
       "path": "src/assets/pack/minerals/mineral56.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4363"
+      "sourceComponentId": "29:4363",
+      "exportNodeId": "90:2223"
     },
     {
       "path": "src/assets/pack/minerals/mineral57.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4379"
+      "sourceComponentId": "29:4379",
+      "exportNodeId": "90:2225"
     },
     {
       "path": "src/assets/pack/minerals/mineral58.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4387"
+      "sourceComponentId": "29:4387",
+      "exportNodeId": "90:2227"
     },
     {
       "path": "src/assets/pack/minerals/mineral59.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4390"
+      "sourceComponentId": "29:4390",
+      "exportNodeId": "90:2229"
     },
     {
       "path": "src/assets/pack/minerals/mineral6.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4408"
+      "sourceComponentId": "29:4408",
+      "exportNodeId": "90:2231"
     },
     {
       "path": "src/assets/pack/minerals/mineral60.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4411"
+      "sourceComponentId": "29:4411",
+      "exportNodeId": "90:2233"
     },
     {
       "path": "src/assets/pack/minerals/mineral61.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4420"
+      "sourceComponentId": "29:4420",
+      "exportNodeId": "90:2235"
     },
     {
       "path": "src/assets/pack/minerals/mineral62.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4438"
+      "sourceComponentId": "29:4438",
+      "exportNodeId": "90:2237"
     },
     {
       "path": "src/assets/pack/minerals/mineral63.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4346"
+      "sourceComponentId": "29:4346",
+      "exportNodeId": "90:2239"
     },
     {
       "path": "src/assets/pack/minerals/mineral64.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4353"
+      "sourceComponentId": "29:4353",
+      "exportNodeId": "90:2241"
     },
     {
       "path": "src/assets/pack/minerals/mineral65.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4368"
+      "sourceComponentId": "29:4368",
+      "exportNodeId": "90:2243"
     },
     {
       "path": "src/assets/pack/minerals/mineral66.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4373"
+      "sourceComponentId": "29:4373",
+      "exportNodeId": "90:2245"
     },
     {
       "path": "src/assets/pack/minerals/mineral67.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4389"
+      "sourceComponentId": "29:4389",
+      "exportNodeId": "90:2247"
     },
     {
       "path": "src/assets/pack/minerals/mineral68.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4399"
+      "sourceComponentId": "29:4399",
+      "exportNodeId": "90:2249"
     },
     {
       "path": "src/assets/pack/minerals/mineral69.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4406"
+      "sourceComponentId": "29:4406",
+      "exportNodeId": "90:2251"
     },
     {
       "path": "src/assets/pack/minerals/mineral7.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4412"
+      "sourceComponentId": "29:4412",
+      "exportNodeId": "90:2253"
     },
     {
       "path": "src/assets/pack/minerals/mineral70.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4422"
+      "sourceComponentId": "29:4422",
+      "exportNodeId": "90:2255"
     },
     {
       "path": "src/assets/pack/minerals/mineral71.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4436"
+      "sourceComponentId": "29:4436",
+      "exportNodeId": "90:2257"
     },
     {
       "path": "src/assets/pack/minerals/mineral72.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4345"
+      "sourceComponentId": "29:4345",
+      "exportNodeId": "90:2259"
     },
     {
       "path": "src/assets/pack/minerals/mineral73.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4356"
+      "sourceComponentId": "29:4356",
+      "exportNodeId": "90:2261"
     },
     {
       "path": "src/assets/pack/minerals/mineral74.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4367"
+      "sourceComponentId": "29:4367",
+      "exportNodeId": "90:2263"
     },
     {
       "path": "src/assets/pack/minerals/mineral75.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4375"
+      "sourceComponentId": "29:4375",
+      "exportNodeId": "90:2265"
     },
     {
       "path": "src/assets/pack/minerals/mineral76.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4385"
+      "sourceComponentId": "29:4385",
+      "exportNodeId": "90:2267"
     },
     {
       "path": "src/assets/pack/minerals/mineral77.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4394"
+      "sourceComponentId": "29:4394",
+      "exportNodeId": "90:2269"
     },
     {
       "path": "src/assets/pack/minerals/mineral78.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4405"
+      "sourceComponentId": "29:4405",
+      "exportNodeId": "90:2271"
     },
     {
       "path": "src/assets/pack/minerals/mineral79.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4413"
+      "sourceComponentId": "29:4413",
+      "exportNodeId": "90:2273"
     },
     {
       "path": "src/assets/pack/minerals/mineral8.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4424"
+      "sourceComponentId": "29:4424",
+      "exportNodeId": "90:2275"
     },
     {
       "path": "src/assets/pack/minerals/mineral80.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4432"
+      "sourceComponentId": "29:4432",
+      "exportNodeId": "90:2277"
     },
     {
       "path": "src/assets/pack/minerals/mineral81.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4344"
+      "sourceComponentId": "29:4344",
+      "exportNodeId": "90:2279"
     },
     {
       "path": "src/assets/pack/minerals/mineral82.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4351"
+      "sourceComponentId": "29:4351",
+      "exportNodeId": "90:2281"
     },
     {
       "path": "src/assets/pack/minerals/mineral83.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4362"
+      "sourceComponentId": "29:4362",
+      "exportNodeId": "90:2283"
     },
     {
       "path": "src/assets/pack/minerals/mineral84.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4372"
+      "sourceComponentId": "29:4372",
+      "exportNodeId": "90:2285"
     },
     {
       "path": "src/assets/pack/minerals/mineral85.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4388"
+      "sourceComponentId": "29:4388",
+      "exportNodeId": "90:2287"
     },
     {
       "path": "src/assets/pack/minerals/mineral86.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4392"
+      "sourceComponentId": "29:4392",
+      "exportNodeId": "90:2289"
     },
     {
       "path": "src/assets/pack/minerals/mineral87.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4402"
+      "sourceComponentId": "29:4402",
+      "exportNodeId": "90:2291"
     },
     {
       "path": "src/assets/pack/minerals/mineral88.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4419"
+      "sourceComponentId": "29:4419",
+      "exportNodeId": "90:2293"
     },
     {
       "path": "src/assets/pack/minerals/mineral89.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4428"
+      "sourceComponentId": "29:4428",
+      "exportNodeId": "90:2295"
     },
     {
       "path": "src/assets/pack/minerals/mineral9.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4431"
+      "sourceComponentId": "29:4431",
+      "exportNodeId": "90:2297"
     },
     {
       "path": "src/assets/pack/minerals/mineral90.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4343"
+      "sourceComponentId": "29:4343",
+      "exportNodeId": "90:2299"
     },
     {
       "path": "src/assets/pack/minerals/mineral91.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4358"
+      "sourceComponentId": "29:4358",
+      "exportNodeId": "90:2301"
     },
     {
       "path": "src/assets/pack/minerals/mineral92.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4364"
+      "sourceComponentId": "29:4364",
+      "exportNodeId": "90:2303"
     },
     {
       "path": "src/assets/pack/minerals/mineral93.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4374"
+      "sourceComponentId": "29:4374",
+      "exportNodeId": "90:2305"
     },
     {
       "path": "src/assets/pack/minerals/mineral94.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4381"
+      "sourceComponentId": "29:4381",
+      "exportNodeId": "90:2307"
     },
     {
       "path": "src/assets/pack/minerals/mineral95.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4398"
+      "sourceComponentId": "29:4398",
+      "exportNodeId": "90:2309"
     },
     {
       "path": "src/assets/pack/minerals/mineral96.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4401"
+      "sourceComponentId": "29:4401",
+      "exportNodeId": "90:2311"
     },
     {
       "path": "src/assets/pack/minerals/mineral97.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4417"
+      "sourceComponentId": "29:4417",
+      "exportNodeId": "90:2313"
     },
     {
       "path": "src/assets/pack/minerals/mineral98.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4423"
+      "sourceComponentId": "29:4423",
+      "exportNodeId": "90:2315"
     },
     {
       "path": "src/assets/pack/minerals/mineral99.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4439"
+      "sourceComponentId": "29:4439",
+      "exportNodeId": "90:2317"
     },
     {
       "path": "src/assets/pack/plant_1/flowers/flower1.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4258"
+      "sourceComponentId": "29:4258",
+      "exportNodeId": "90:2322"
     },
     {
       "path": "src/assets/pack/plant_1/flowers/flower2.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4261"
+      "sourceComponentId": "29:4261",
+      "exportNodeId": "90:2324"
     },
     {
       "path": "src/assets/pack/plant_1/flowers/flower3.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4264"
+      "sourceComponentId": "29:4264",
+      "exportNodeId": "90:2326"
     },
     {
       "path": "src/assets/pack/plant_1/flowers/flower4.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4259"
+      "sourceComponentId": "29:4259",
+      "exportNodeId": "90:2328"
     },
     {
       "path": "src/assets/pack/plant_1/flowers/flower5.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4262"
+      "sourceComponentId": "29:4262",
+      "exportNodeId": "90:2330"
     },
     {
       "path": "src/assets/pack/plant_1/flowers/flower6.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4265"
+      "sourceComponentId": "29:4265",
+      "exportNodeId": "90:2332"
     },
     {
       "path": "src/assets/pack/plant_1/flowers/flower7.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4260"
+      "sourceComponentId": "29:4260",
+      "exportNodeId": "90:2334"
     },
     {
       "path": "src/assets/pack/plant_1/flowers/flower8.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4263"
+      "sourceComponentId": "29:4263",
+      "exportNodeId": "90:2336"
     },
     {
       "path": "src/assets/pack/plant_1/flowers/flower9.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4266"
+      "sourceComponentId": "29:4266",
+      "exportNodeId": "90:2338"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem1.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4267"
+      "sourceComponentId": "29:4267",
+      "exportNodeId": "90:2343"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem10.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4284"
+      "sourceComponentId": "29:4284",
+      "exportNodeId": "90:2345"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem11.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4269"
+      "sourceComponentId": "29:4269",
+      "exportNodeId": "90:2347"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem12.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4273"
+      "sourceComponentId": "29:4273",
+      "exportNodeId": "90:2349"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem13.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4277"
+      "sourceComponentId": "29:4277",
+      "exportNodeId": "90:2351"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem14.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4281"
+      "sourceComponentId": "29:4281",
+      "exportNodeId": "90:2353"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem15.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4285"
+      "sourceComponentId": "29:4285",
+      "exportNodeId": "90:2355"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem16.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4270"
+      "sourceComponentId": "29:4270",
+      "exportNodeId": "90:2357"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem17.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4274"
+      "sourceComponentId": "29:4274",
+      "exportNodeId": "90:2359"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem18.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4278"
+      "sourceComponentId": "29:4278",
+      "exportNodeId": "90:2361"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem19.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4282"
+      "sourceComponentId": "29:4282",
+      "exportNodeId": "90:2363"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem2.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4271"
+      "sourceComponentId": "29:4271",
+      "exportNodeId": "90:2365"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem3.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4275"
+      "sourceComponentId": "29:4275",
+      "exportNodeId": "90:2367"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem4.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4279"
+      "sourceComponentId": "29:4279",
+      "exportNodeId": "90:2369"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem5.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4283"
+      "sourceComponentId": "29:4283",
+      "exportNodeId": "90:2371"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem6.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4268"
+      "sourceComponentId": "29:4268",
+      "exportNodeId": "90:2373"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem7.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4272"
+      "sourceComponentId": "29:4272",
+      "exportNodeId": "90:2375"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem8.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4276"
+      "sourceComponentId": "29:4276",
+      "exportNodeId": "90:2377"
     },
     {
       "path": "src/assets/pack/plant_1/stem/stem9.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4280"
+      "sourceComponentId": "29:4280",
+      "exportNodeId": "90:2379"
     },
     {
       "path": "src/assets/pack/plant_2/flowers/flower1.png",
       "width": 41,
       "height": 8,
-      "sourceComponentId": "29:4254"
+      "sourceComponentId": "29:4254",
+      "exportNodeId": "90:2384"
     },
     {
       "path": "src/assets/pack/plant_2/flowers/flower2.png",
       "width": 41,
       "height": 10,
-      "sourceComponentId": "29:4256"
+      "sourceComponentId": "29:4256",
+      "exportNodeId": "90:2386"
     },
     {
       "path": "src/assets/pack/plant_2/flowers/flower3.png",
       "width": 41,
       "height": 8,
-      "sourceComponentId": "29:4255"
+      "sourceComponentId": "29:4255",
+      "exportNodeId": "90:2388"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem1.png",
       "width": 41,
       "height": 7,
-      "sourceComponentId": "29:4243"
+      "sourceComponentId": "29:4243",
+      "exportNodeId": "90:2393"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem10.png",
       "width": 41,
       "height": 9,
-      "sourceComponentId": "29:4246"
+      "sourceComponentId": "29:4246",
+      "exportNodeId": "90:2395"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem11.png",
       "width": 41,
       "height": 8,
-      "sourceComponentId": "29:4249"
+      "sourceComponentId": "29:4249",
+      "exportNodeId": "90:2397"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem2.png",
       "width": 41,
       "height": 7,
-      "sourceComponentId": "29:4252"
+      "sourceComponentId": "29:4252",
+      "exportNodeId": "90:2399"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem3.png",
       "width": 41,
       "height": 7,
-      "sourceComponentId": "29:4244"
+      "sourceComponentId": "29:4244",
+      "exportNodeId": "90:2401"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem4.png",
       "width": 41,
       "height": 7,
-      "sourceComponentId": "29:4247"
+      "sourceComponentId": "29:4247",
+      "exportNodeId": "90:2403"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem5.png",
       "width": 41,
       "height": 7,
-      "sourceComponentId": "29:4250"
+      "sourceComponentId": "29:4250",
+      "exportNodeId": "90:2405"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem6.png",
       "width": 41,
       "height": 7,
-      "sourceComponentId": "29:4253"
+      "sourceComponentId": "29:4253",
+      "exportNodeId": "90:2407"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem7.png",
       "width": 41,
       "height": 7,
-      "sourceComponentId": "29:4245"
+      "sourceComponentId": "29:4245",
+      "exportNodeId": "90:2409"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem8.png",
       "width": 41,
       "height": 7,
-      "sourceComponentId": "29:4248"
+      "sourceComponentId": "29:4248",
+      "exportNodeId": "90:2411"
     },
     {
       "path": "src/assets/pack/plant_2/stem/stem9.png",
       "width": 41,
       "height": 7,
-      "sourceComponentId": "29:4251"
+      "sourceComponentId": "29:4251",
+      "exportNodeId": "90:2413"
     },
     {
       "path": "src/assets/pack/plant_3/flowers/flower1.png",
       "width": 45,
       "height": 7,
-      "sourceComponentId": "29:4520"
+      "sourceComponentId": "29:4520",
+      "exportNodeId": "90:2418"
     },
     {
       "path": "src/assets/pack/plant_3/flowers/flower2.png",
       "width": 45,
       "height": 7,
-      "sourceComponentId": "29:4521"
+      "sourceComponentId": "29:4521",
+      "exportNodeId": "90:2420"
     },
     {
       "path": "src/assets/pack/plant_3/stem/stem1.png",
       "width": 45,
       "height": 7,
-      "sourceComponentId": "29:4519"
+      "sourceComponentId": "29:4519",
+      "exportNodeId": "90:2425"
     },
     {
       "path": "src/assets/pack/plant_3/stem/stem2.png",
       "width": 45,
       "height": 7,
-      "sourceComponentId": "29:4524"
+      "sourceComponentId": "29:4524",
+      "exportNodeId": "90:2427"
     },
     {
       "path": "src/assets/pack/plant_3/stem/stem3.png",
       "width": 45,
       "height": 7,
-      "sourceComponentId": "29:4526"
+      "sourceComponentId": "29:4526",
+      "exportNodeId": "90:2429"
     },
     {
       "path": "src/assets/pack/plant_3/stem/stem4.png",
       "width": 45,
       "height": 7,
-      "sourceComponentId": "29:4522"
+      "sourceComponentId": "29:4522",
+      "exportNodeId": "90:2431"
     },
     {
       "path": "src/assets/pack/plant_3/stem/stem5.png",
       "width": 45,
       "height": 7,
-      "sourceComponentId": "29:4525"
+      "sourceComponentId": "29:4525",
+      "exportNodeId": "90:2433"
     },
     {
       "path": "src/assets/pack/plant_3/stem/stem6.png",
       "width": 45,
       "height": 7,
-      "sourceComponentId": "29:4527"
+      "sourceComponentId": "29:4527",
+      "exportNodeId": "90:2435"
     },
     {
       "path": "src/assets/pack/plant_3/stem/stem7.png",
       "width": 45,
       "height": 7,
-      "sourceComponentId": "29:4523"
+      "sourceComponentId": "29:4523",
+      "exportNodeId": "90:2437"
     },
     {
       "path": "src/assets/pack/plant_4/flowers/flower1.png",
       "width": 29,
       "height": 10,
-      "sourceComponentId": "29:4295"
+      "sourceComponentId": "29:4295",
+      "exportNodeId": "90:2442"
     },
     {
       "path": "src/assets/pack/plant_4/flowers/flower2.png",
       "width": 29,
       "height": 10,
-      "sourceComponentId": "29:4296"
+      "sourceComponentId": "29:4296",
+      "exportNodeId": "90:2444"
     },
     {
       "path": "src/assets/pack/plant_4/stem/stem1.png",
       "width": 29,
       "height": 10,
-      "sourceComponentId": "29:4287"
+      "sourceComponentId": "29:4287",
+      "exportNodeId": "90:2449"
     },
     {
       "path": "src/assets/pack/plant_4/stem/stem2.png",
       "width": 29,
       "height": 10,
-      "sourceComponentId": "29:4290"
+      "sourceComponentId": "29:4290",
+      "exportNodeId": "90:2451"
     },
     {
       "path": "src/assets/pack/plant_4/stem/stem3.png",
       "width": 29,
       "height": 10,
-      "sourceComponentId": "29:4293"
+      "sourceComponentId": "29:4293",
+      "exportNodeId": "90:2453"
     },
     {
       "path": "src/assets/pack/plant_4/stem/stem4.png",
       "width": 29,
       "height": 10,
-      "sourceComponentId": "29:4288"
+      "sourceComponentId": "29:4288",
+      "exportNodeId": "90:2455"
     },
     {
       "path": "src/assets/pack/plant_4/stem/stem5.png",
       "width": 29,
       "height": 10,
-      "sourceComponentId": "29:4291"
+      "sourceComponentId": "29:4291",
+      "exportNodeId": "90:2457"
     },
     {
       "path": "src/assets/pack/plant_4/stem/stem6.png",
       "width": 29,
       "height": 10,
-      "sourceComponentId": "29:4294"
+      "sourceComponentId": "29:4294",
+      "exportNodeId": "90:2459"
     },
     {
       "path": "src/assets/pack/plant_4/stem/stem7.png",
       "width": 29,
       "height": 10,
-      "sourceComponentId": "29:4289"
+      "sourceComponentId": "29:4289",
+      "exportNodeId": "90:2461"
     },
     {
       "path": "src/assets/pack/plant_4/stem/stem8.png",
       "width": 29,
       "height": 10,
-      "sourceComponentId": "29:4292"
+      "sourceComponentId": "29:4292",
+      "exportNodeId": "90:2463"
     },
     {
       "path": "src/assets/pack/plant_5/flowers/flower1.png",
       "width": 39,
       "height": 12,
-      "sourceComponentId": "29:4303"
+      "sourceComponentId": "29:4303",
+      "exportNodeId": "90:2468"
     },
     {
       "path": "src/assets/pack/plant_5/flowers/flower2.png",
       "width": 39,
       "height": 12,
-      "sourceComponentId": "29:4305"
+      "sourceComponentId": "29:4305",
+      "exportNodeId": "90:2470"
     },
     {
       "path": "src/assets/pack/plant_5/flowers/flower3.png",
       "width": 39,
       "height": 12,
-      "sourceComponentId": "29:4304"
+      "sourceComponentId": "29:4304",
+      "exportNodeId": "90:2472"
     },
     {
       "path": "src/assets/pack/plant_5/stem/stem1.png",
       "width": 39,
       "height": 12,
-      "sourceComponentId": "29:4298"
+      "sourceComponentId": "29:4298",
+      "exportNodeId": "90:2477"
     },
     {
       "path": "src/assets/pack/plant_5/stem/stem2.png",
       "width": 39,
       "height": 12,
-      "sourceComponentId": "29:4300"
+      "sourceComponentId": "29:4300",
+      "exportNodeId": "90:2479"
     },
     {
       "path": "src/assets/pack/plant_5/stem/stem3.png",
       "width": 39,
       "height": 12,
-      "sourceComponentId": "29:4302"
+      "sourceComponentId": "29:4302",
+      "exportNodeId": "90:2481"
     },
     {
       "path": "src/assets/pack/plant_5/stem/stem4.png",
       "width": 39,
       "height": 13,
-      "sourceComponentId": "29:4299"
+      "sourceComponentId": "29:4299",
+      "exportNodeId": "90:2483"
     },
     {
       "path": "src/assets/pack/plant_5/stem/stem5.png",
       "width": 39,
       "height": 12,
-      "sourceComponentId": "29:4301"
+      "sourceComponentId": "29:4301",
+      "exportNodeId": "90:2485"
     },
     {
       "path": "src/assets/pack/plant_6/flowers/flower1.png",
       "width": 41,
       "height": 9,
-      "sourceComponentId": "29:4307"
+      "sourceComponentId": "29:4307",
+      "exportNodeId": "90:2490"
     },
     {
       "path": "src/assets/pack/plant_6/flowers/flower2.png",
       "width": 41,
       "height": 10,
-      "sourceComponentId": "29:4308"
+      "sourceComponentId": "29:4308",
+      "exportNodeId": "90:2492"
     },
     {
       "path": "src/assets/pack/plant_6/stem/stem1.png",
       "width": 41,
       "height": 11,
-      "sourceComponentId": "29:4309"
+      "sourceComponentId": "29:4309",
+      "exportNodeId": "90:2497"
     },
     {
       "path": "src/assets/pack/plant_6/stem/stem10.png",
       "width": 41,
       "height": 9,
-      "sourceComponentId": "29:4312"
+      "sourceComponentId": "29:4312",
+      "exportNodeId": "90:2499"
     },
     {
       "path": "src/assets/pack/plant_6/stem/stem2.png",
       "width": 41,
       "height": 11,
-      "sourceComponentId": "29:4315"
+      "sourceComponentId": "29:4315",
+      "exportNodeId": "90:2501"
     },
     {
       "path": "src/assets/pack/plant_6/stem/stem3.png",
       "width": 41,
       "height": 10,
-      "sourceComponentId": "29:4317"
+      "sourceComponentId": "29:4317",
+      "exportNodeId": "90:2503"
     },
     {
       "path": "src/assets/pack/plant_6/stem/stem4.png",
       "width": 41,
       "height": 11,
-      "sourceComponentId": "29:4310"
+      "sourceComponentId": "29:4310",
+      "exportNodeId": "90:2505"
     },
     {
       "path": "src/assets/pack/plant_6/stem/stem5.png",
       "width": 41,
       "height": 10,
-      "sourceComponentId": "29:4313"
+      "sourceComponentId": "29:4313",
+      "exportNodeId": "90:2507"
     },
     {
       "path": "src/assets/pack/plant_6/stem/stem6.png",
       "width": 41,
       "height": 9,
-      "sourceComponentId": "29:4316"
+      "sourceComponentId": "29:4316",
+      "exportNodeId": "90:2509"
     },
     {
       "path": "src/assets/pack/plant_6/stem/stem7.png",
       "width": 41,
       "height": 9,
-      "sourceComponentId": "29:4318"
+      "sourceComponentId": "29:4318",
+      "exportNodeId": "90:2511"
     },
     {
       "path": "src/assets/pack/plant_6/stem/stem8.png",
       "width": 41,
       "height": 10,
-      "sourceComponentId": "29:4311"
+      "sourceComponentId": "29:4311",
+      "exportNodeId": "90:2513"
     },
     {
       "path": "src/assets/pack/plant_6/stem/stem9.png",
       "width": 41,
       "height": 9,
-      "sourceComponentId": "29:4314"
+      "sourceComponentId": "29:4314",
+      "exportNodeId": "90:2515"
     },
     {
       "path": "src/assets/pack/plant_7/flowers/flower1.png",
       "width": 41,
       "height": 10,
-      "sourceComponentId": "29:4327"
+      "sourceComponentId": "29:4327",
+      "exportNodeId": "90:2520"
     },
     {
       "path": "src/assets/pack/plant_7/flowers/flower2.png",
       "width": 41,
       "height": 10,
-      "sourceComponentId": "29:4329"
+      "sourceComponentId": "29:4329",
+      "exportNodeId": "90:2522"
     },
     {
       "path": "src/assets/pack/plant_7/flowers/flower3.png",
       "width": 41,
       "height": 10,
-      "sourceComponentId": "29:4331"
+      "sourceComponentId": "29:4331",
+      "exportNodeId": "90:2524"
     },
     {
       "path": "src/assets/pack/plant_7/flowers/flower4.png",
       "width": 41,
       "height": 10,
-      "sourceComponentId": "29:4328"
+      "sourceComponentId": "29:4328",
+      "exportNodeId": "90:2526"
     },
     {
       "path": "src/assets/pack/plant_7/flowers/flower5.png",
       "width": 40,
       "height": 10,
-      "sourceComponentId": "29:4330"
+      "sourceComponentId": "29:4330",
+      "exportNodeId": "90:2528"
     },
     {
       "path": "src/assets/pack/plant_7/stem/stem1.png",
       "width": 19,
       "height": 9,
-      "sourceComponentId": "29:4332"
+      "sourceComponentId": "29:4332",
+      "exportNodeId": "90:2533"
     },
     {
       "path": "src/assets/pack/plant_7/stem/stem2.png",
       "width": 23,
       "height": 9,
-      "sourceComponentId": "29:4335"
+      "sourceComponentId": "29:4335",
+      "exportNodeId": "90:2535"
     },
     {
       "path": "src/assets/pack/plant_7/stem/stem3.png",
       "width": 21,
       "height": 10,
-      "sourceComponentId": "29:4337"
+      "sourceComponentId": "29:4337",
+      "exportNodeId": "90:2537"
     },
     {
       "path": "src/assets/pack/plant_7/stem/stem4.png",
       "width": 19,
       "height": 9,
-      "sourceComponentId": "29:4333"
+      "sourceComponentId": "29:4333",
+      "exportNodeId": "90:2539"
     },
     {
       "path": "src/assets/pack/plant_7/stem/stem5.png",
       "width": 21,
       "height": 7,
-      "sourceComponentId": "29:4336"
+      "sourceComponentId": "29:4336",
+      "exportNodeId": "90:2541"
     },
     {
       "path": "src/assets/pack/plant_7/stem/stem6.png",
       "width": 15,
       "height": 8,
-      "sourceComponentId": "29:4338"
+      "sourceComponentId": "29:4338",
+      "exportNodeId": "90:2543"
     },
     {
       "path": "src/assets/pack/plant_7/stem/stem7.png",
       "width": 23,
       "height": 7,
-      "sourceComponentId": "29:4334"
+      "sourceComponentId": "29:4334",
+      "exportNodeId": "90:2545"
     },
     {
       "path": "src/assets/pack/plant_8/flowers/flower1.png",
       "width": 21,
       "height": 11,
-      "sourceComponentId": "29:4323"
+      "sourceComponentId": "29:4323",
+      "exportNodeId": "90:2550"
     },
     {
       "path": "src/assets/pack/plant_8/flowers/flower2.png",
       "width": 21,
       "height": 11,
-      "sourceComponentId": "29:4325"
+      "sourceComponentId": "29:4325",
+      "exportNodeId": "90:2552"
     },
     {
       "path": "src/assets/pack/plant_8/flowers/stem3.png",
       "width": 21,
       "height": 11,
-      "sourceComponentId": "29:4324"
+      "sourceComponentId": "29:4324",
+      "exportNodeId": "90:2554"
     },
     {
       "path": "src/assets/pack/plant_8/stem/stem1.png",
       "width": 21,
       "height": 11,
-      "sourceComponentId": "29:4320"
+      "sourceComponentId": "29:4320",
+      "exportNodeId": "90:2559"
     },
     {
       "path": "src/assets/pack/plant_8/stem/stem2.png",
       "width": 21,
       "height": 11,
-      "sourceComponentId": "29:4322"
+      "sourceComponentId": "29:4322",
+      "exportNodeId": "90:2561"
     },
     {
       "path": "src/assets/pack/plant_8/stem/stem3.png",
       "width": 21,
       "height": 11,
-      "sourceComponentId": "29:4321"
+      "sourceComponentId": "29:4321",
+      "exportNodeId": "90:2563"
     },
     {
       "path": "src/assets/pack/pumpkin/pumpkin_1_off.png",
       "width": 29,
       "height": 27,
-      "sourceComponentId": "29:4511"
+      "sourceComponentId": "29:4511",
+      "exportNodeId": "90:2568"
     },
     {
       "path": "src/assets/pack/pumpkin/pumpkin_1_on_1.png",
       "width": 29,
       "height": 27,
-      "sourceComponentId": "29:4513"
+      "sourceComponentId": "29:4513",
+      "exportNodeId": "90:2570"
     },
     {
       "path": "src/assets/pack/pumpkin/pumpkin_1_on_2.png",
       "width": 29,
       "height": 27,
-      "sourceComponentId": "29:4512"
+      "sourceComponentId": "29:4512",
+      "exportNodeId": "90:2572"
     },
     {
       "path": "src/assets/pack/pumpkin/pumpkin_1_on_3.png",
       "width": 29,
       "height": 27,
-      "sourceComponentId": "29:4514"
+      "sourceComponentId": "29:4514",
+      "exportNodeId": "90:2574"
     },
     {
       "path": "src/assets/pack/roots/root1.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4441"
+      "sourceComponentId": "29:4441",
+      "exportNodeId": "90:2579"
     },
     {
       "path": "src/assets/pack/roots/root10.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4445"
+      "sourceComponentId": "29:4445",
+      "exportNodeId": "90:2581"
     },
     {
       "path": "src/assets/pack/roots/root11.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4449"
+      "sourceComponentId": "29:4449",
+      "exportNodeId": "90:2583"
     },
     {
       "path": "src/assets/pack/roots/root12.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4452"
+      "sourceComponentId": "29:4452",
+      "exportNodeId": "90:2585"
     },
     {
       "path": "src/assets/pack/roots/root13.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4442"
+      "sourceComponentId": "29:4442",
+      "exportNodeId": "90:2587"
     },
     {
       "path": "src/assets/pack/roots/root14.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4446"
+      "sourceComponentId": "29:4446",
+      "exportNodeId": "90:2589"
     },
     {
       "path": "src/assets/pack/roots/root2.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4450"
+      "sourceComponentId": "29:4450",
+      "exportNodeId": "90:2591"
     },
     {
       "path": "src/assets/pack/roots/root3.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4453"
+      "sourceComponentId": "29:4453",
+      "exportNodeId": "90:2593"
     },
     {
       "path": "src/assets/pack/roots/root4.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4443"
+      "sourceComponentId": "29:4443",
+      "exportNodeId": "90:2595"
     },
     {
       "path": "src/assets/pack/roots/root5.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4447"
+      "sourceComponentId": "29:4447",
+      "exportNodeId": "90:2597"
     },
     {
       "path": "src/assets/pack/roots/root6.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4451"
+      "sourceComponentId": "29:4451",
+      "exportNodeId": "90:2599"
     },
     {
       "path": "src/assets/pack/roots/root7.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4454"
+      "sourceComponentId": "29:4454",
+      "exportNodeId": "90:2601"
     },
     {
       "path": "src/assets/pack/roots/root8.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4444"
+      "sourceComponentId": "29:4444",
+      "exportNodeId": "90:2603"
     },
     {
       "path": "src/assets/pack/roots/root9.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4448"
+      "sourceComponentId": "29:4448",
+      "exportNodeId": "90:2605"
     },
     {
       "path": "src/assets/pack/seeds/seed1.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4486"
+      "sourceComponentId": "29:4486",
+      "exportNodeId": "90:2610"
     },
     {
       "path": "src/assets/pack/seeds/seed10.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4491"
+      "sourceComponentId": "29:4491",
+      "exportNodeId": "90:2612"
     },
     {
       "path": "src/assets/pack/seeds/seed11.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4495"
+      "sourceComponentId": "29:4495",
+      "exportNodeId": "90:2614"
     },
     {
       "path": "src/assets/pack/seeds/seed12.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4499"
+      "sourceComponentId": "29:4499",
+      "exportNodeId": "90:2616"
     },
     {
       "path": "src/assets/pack/seeds/seed13.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4503"
+      "sourceComponentId": "29:4503",
+      "exportNodeId": "90:2618"
     },
     {
       "path": "src/assets/pack/seeds/seed14.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4506"
+      "sourceComponentId": "29:4506",
+      "exportNodeId": "90:2620"
     },
     {
       "path": "src/assets/pack/seeds/seed15.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4483"
+      "sourceComponentId": "29:4483",
+      "exportNodeId": "90:2622"
     },
     {
       "path": "src/assets/pack/seeds/seed16.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4489"
+      "sourceComponentId": "29:4489",
+      "exportNodeId": "90:2624"
     },
     {
       "path": "src/assets/pack/seeds/seed17.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4493"
+      "sourceComponentId": "29:4493",
+      "exportNodeId": "90:2626"
     },
     {
       "path": "src/assets/pack/seeds/seed18.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4498"
+      "sourceComponentId": "29:4498",
+      "exportNodeId": "90:2628"
     },
     {
       "path": "src/assets/pack/seeds/seed19.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4502"
+      "sourceComponentId": "29:4502",
+      "exportNodeId": "90:2630"
     },
     {
       "path": "src/assets/pack/seeds/seed2.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4507"
+      "sourceComponentId": "29:4507",
+      "exportNodeId": "90:2632"
     },
     {
       "path": "src/assets/pack/seeds/seed20.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4487"
+      "sourceComponentId": "29:4487",
+      "exportNodeId": "90:2634"
     },
     {
       "path": "src/assets/pack/seeds/seed21.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4488"
+      "sourceComponentId": "29:4488",
+      "exportNodeId": "90:2636"
     },
     {
       "path": "src/assets/pack/seeds/seed22.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4494"
+      "sourceComponentId": "29:4494",
+      "exportNodeId": "90:2638"
     },
     {
       "path": "src/assets/pack/seeds/seed23.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4500"
+      "sourceComponentId": "29:4500",
+      "exportNodeId": "90:2640"
     },
     {
       "path": "src/assets/pack/seeds/seed24.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4504"
+      "sourceComponentId": "29:4504",
+      "exportNodeId": "90:2642"
     },
     {
       "path": "src/assets/pack/seeds/seed25.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4508"
+      "sourceComponentId": "29:4508",
+      "exportNodeId": "90:2644"
     },
     {
       "path": "src/assets/pack/seeds/seed26.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4485"
+      "sourceComponentId": "29:4485",
+      "exportNodeId": "90:2646"
     },
     {
       "path": "src/assets/pack/seeds/seed27.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4490"
+      "sourceComponentId": "29:4490",
+      "exportNodeId": "90:2648"
     },
     {
       "path": "src/assets/pack/seeds/seed3.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4496"
+      "sourceComponentId": "29:4496",
+      "exportNodeId": "90:2650"
     },
     {
       "path": "src/assets/pack/seeds/seed4.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4501"
+      "sourceComponentId": "29:4501",
+      "exportNodeId": "90:2652"
     },
     {
       "path": "src/assets/pack/seeds/seed5.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4505"
+      "sourceComponentId": "29:4505",
+      "exportNodeId": "90:2654"
     },
     {
       "path": "src/assets/pack/seeds/seed6.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4509"
+      "sourceComponentId": "29:4509",
+      "exportNodeId": "90:2656"
     },
     {
       "path": "src/assets/pack/seeds/seed7.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4484"
+      "sourceComponentId": "29:4484",
+      "exportNodeId": "90:2658"
     },
     {
       "path": "src/assets/pack/seeds/seed8.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4492"
+      "sourceComponentId": "29:4492",
+      "exportNodeId": "90:2660"
     },
     {
       "path": "src/assets/pack/seeds/seed9.png",
       "width": 35,
       "height": 7,
-      "sourceComponentId": "29:4497"
+      "sourceComponentId": "29:4497",
+      "exportNodeId": "90:2662"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed1.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4459"
+      "sourceComponentId": "29:4459",
+      "exportNodeId": "97:2003"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed10.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4464"
+      "sourceComponentId": "29:4464",
+      "exportNodeId": "97:2005"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed11.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4468"
+      "sourceComponentId": "29:4468",
+      "exportNodeId": "97:2007"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed12.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4472"
+      "sourceComponentId": "29:4472",
+      "exportNodeId": "97:2009"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed13.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4476"
+      "sourceComponentId": "29:4476",
+      "exportNodeId": "97:2011"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed14.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4479"
+      "sourceComponentId": "29:4479",
+      "exportNodeId": "97:2013"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed15.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4456"
+      "sourceComponentId": "29:4456",
+      "exportNodeId": "97:2015"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed16.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4462"
+      "sourceComponentId": "29:4462",
+      "exportNodeId": "97:2017"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed17.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4466"
+      "sourceComponentId": "29:4466",
+      "exportNodeId": "97:2019"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed18.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4471"
+      "sourceComponentId": "29:4471",
+      "exportNodeId": "97:2021"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed19.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4475"
+      "sourceComponentId": "29:4475",
+      "exportNodeId": "97:2023"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed2.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4480"
+      "sourceComponentId": "29:4480",
+      "exportNodeId": "97:2025"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed20.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4460"
+      "sourceComponentId": "29:4460",
+      "exportNodeId": "97:2027"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed21.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4461"
+      "sourceComponentId": "29:4461",
+      "exportNodeId": "97:2029"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed22.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4467"
+      "sourceComponentId": "29:4467",
+      "exportNodeId": "97:2031"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed23.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4473"
+      "sourceComponentId": "29:4473",
+      "exportNodeId": "97:2033"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed24.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4477"
+      "sourceComponentId": "29:4477",
+      "exportNodeId": "97:2035"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed25.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4481"
+      "sourceComponentId": "29:4481",
+      "exportNodeId": "97:2037"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed26.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4458"
+      "sourceComponentId": "29:4458",
+      "exportNodeId": "97:2039"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed27.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4463"
+      "sourceComponentId": "29:4463",
+      "exportNodeId": "97:2041"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed3.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4469"
+      "sourceComponentId": "29:4469",
+      "exportNodeId": "97:2043"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed4.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4474"
+      "sourceComponentId": "29:4474",
+      "exportNodeId": "97:2045"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed5.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4478"
+      "sourceComponentId": "29:4478",
+      "exportNodeId": "97:2047"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed6.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4482"
+      "sourceComponentId": "29:4482",
+      "exportNodeId": "97:2049"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed7.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4457"
+      "sourceComponentId": "29:4457",
+      "exportNodeId": "97:2051"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed8.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4465"
+      "sourceComponentId": "29:4465",
+      "exportNodeId": "97:2053"
     },
     {
       "path": "src/assets/pack/seeds/seed_icons/seed9.png",
       "width": 5,
       "height": 4,
-      "sourceComponentId": "29:4470"
+      "sourceComponentId": "29:4470",
+      "exportNodeId": "97:2055"
     }
   ]
 }
