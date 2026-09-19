@@ -108,6 +108,10 @@ pack/seeds/seed<n>.png                         27
 
 `PLANT_TYPES` in `assets.ts` is whatever the pack holds, so a new plant folder is a new plant type with no code change. Sprite sizes are per plant (35×7 for `plant_1`, roots, minerals and seeds; 45×7 for `plant_3`; down to 15×8 for a `plant_7` stem) and the view reads each one's natural size before scaling it by `PIXEL_SCALE`, so a folder can hold whatever the drawing needs.
 
+### Figma handoff
+
+The production Figma library keeps source sprites at exact native 1x size. Its `EXPORTS` section maps export frames to repo destinations; `figma/exports.json` is the machine-readable copy of that contract. Run `npm run verify:figma-assets` after changing sprites or the Figma export surface. It checks all mapped PNG paths and native dimensions. `stars_pattern.gif` and the original brand PNGs remain repo-source-of-truth rather than Figma round-trips.
+
 The first web build carried the twelve `plant_1` sprites bundled with the plugin, under their names there (`plant_1_part3.png`, `plant_1_flower2.png`). Gardens saved then still hold those paths, so `asset-paths.ts` maps them onto the same ordinal in the vault naming and they keep rendering.
 
 ## Milestones
