@@ -21,7 +21,7 @@ The manifest is generated from `ext/manifest.ts` by the small plugin in `vite.ex
 
 ## Chrome Web Store
 
-Item `cighiofbnmdgppphnofkgfoneldalbbf` (publisher iverfinne), submitted 18 September 2026 and published automatically once Google approves it. Its listing text, screenshots and promo tiles were made from the real extension. An update: bump `version` in `package.json`, `npm run build:ext`, zip the contents of `dist-ext/` (with `manifest.json` at the top), and upload it under Package in the developer dashboard. The store build's sign-in link lands on `chrome-extension://cighiofbnmdgppphnofkgfoneldalbbf/newtab.html`, which is on the Supabase redirect list.
+Item `cighiofbnmdgppphnofkgfoneldalbbf` (publisher iverfinne). The original 0.1.0 submission entered review on 18 September 2026. If a newer build supersedes a pending review, cancel the pending review first, then upload the higher-version package and submit that revision. The canonical dashboard copy and privacy answers live in `ext/WEBSTORE.md`. To package an update: bump `version` in `package.json`, run `npm run build:ext`, zip the contents of `dist-ext/` with `manifest.json` at the archive root, then upload it under Package.
 
 ## Load unpacked
 
@@ -51,16 +51,24 @@ scripts/test-ext.mjs end-to-end test of dist-ext/
 
 ## Sign-in
 
-The extension only shows the **Sign in** pill when the build has Supabase config (`VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, from the repo root `.env` or the environment; see `supabase/README.md`).
+The extension only shows the **Sign in** pill when the build has Supabase config (`VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`).
 
-**Email and password** is the default way in and needs no setup per extension. So does the **6-digit code** from the emailed-link fallback (it needs `{{ .Token }}` in the Supabase **Magic Link** email template). Only the **magic link** itself has to know the extension: an unpacked extension gets a different id on every machine (the manifest carries no `key`), and the link lands on `chrome-extension://<id>/newtab.html`, where the app picks the session out of the URL. For that to work:
+Email/password and emailed-code sign-in are handled by Supabase Auth. Google sign-in uses a nonce-gated web bridge because Supabase's stable Site URL is `https://cells.garden/`:
 
-1. Find the id on `chrome://extensions` (or in the service worker URL).
-2. Add `chrome-extension://<id>/newtab.html` to the **Redirect URLs** in Supabase (Authentication, URL configuration).
-3. The generated manifest already lists `newtab.html` under `web_accessible_resources` for the Supabase origin only, which is what lets the auth server's redirect navigate into the extension page. This entry is only emitted when a Supabase URL is configured.
+1. The extension stores a short-lived OAuth intent nonce in `chrome.storage.local`.
+2. It opens `https://cells.garden/privacy/oauth-extension-start.html`, which starts Google OAuth.
+3. Supabase returns to `https://cells.garden/`; the static return page forwards only the OAuth result to the declared extension ID through `externally_connectable`.
+4. The extension service worker verifies the matching intent, stores the return briefly, and the extension exchanges the code for its own Supabase session.
+5. Query parameters are removed from the website return URL immediately.
 
-Once signed in on one surface, the other is signed in too.
+The normal garden does not need `chrome.storage`; it uses local app storage. `chrome.storage` exists only for this cross-tab OAuth handoff.
 
 ## Permissions
+
+- `sidePanel`: opens and hosts the garden in Chrome's side panel.
+- `storage`: temporarily stores the nonce and OAuth return needed to finish optional Google sign-in across tabs.
+
+There are **no host permissions**, no browsing-history permission, and no content script. The extension does not inspect pages the user visits. Supabase is reached from extension pages with normal HTTPS/WSS requests allowed by the extension CSP.
+
 
 `sidePanel` only. No host permissions: the garden talks to Supabase with ordinary `fetch` from the extension pages, which needs none.
