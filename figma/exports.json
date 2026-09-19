@@ -15,9 +15,9 @@
     "preserveRepoMetadataWhenPixelStreamMatches": true
   },
   "coverage": {
-    "assetFiles": 285,
+    "assetFiles": 281,
     "figmaExports": 277,
-    "repoSourceReferences": 8
+    "repoSourceReferences": 4
   },
   "references": [
     {
@@ -33,23 +33,7 @@
       "policy": "repo-source-of-truth"
     },
     {
-      "path": "src/assets/pets/swan_fly.gif",
-      "policy": "repo-source-of-truth"
-    },
-    {
-      "path": "src/assets/pets/swan_swim.gif",
-      "policy": "repo-source-of-truth"
-    },
-    {
-      "path": "src/assets/pets/swan_swim_atlas.png",
-      "policy": "repo-source-of-truth"
-    },
-    {
-      "path": "src/assets/pets/swan_fly_atlas.png",
-      "policy": "repo-source-of-truth"
-    },
-    {
-      "path": "src/assets/pets/swan_preview.png",
+      "path": "src/assets/pets/gnome.png",
       "policy": "repo-source-of-truth"
     }
   ],

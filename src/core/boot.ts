@@ -267,7 +267,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
 
     pill.setMenu(async (): Promise<MenuItem[]> => {
         const uid = currentUser;
-        const petCount = [app.settings.petSwan, app.settings.petPumpkin, app.settings.petCrow].filter(Boolean).length;
+        const petCount = [app.settings.petGnome, app.settings.petPumpkin, app.settings.petCrow].filter(Boolean).length;
         const common: MenuItem[] = [
             { label: 'Export or import', onClick: () => openGardenFiles(app) },
             {
