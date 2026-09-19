@@ -1544,6 +1544,14 @@
     width: 128px;
     height: 128px;
     z-index: 5;
+    background: none;
+    will-change: transform;
+}
+
+.garden-pet-crow-sprite {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
     background-image: var(--crow-atlas);
     background-size: 1024px 1024px;
     background-position: 0 0;
@@ -1551,11 +1559,11 @@
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     transform-origin: 50% 50%;
-    will-change: transform, background-position;
+    will-change: background-position, transform;
 }
 
-.garden-pet-crow.is-flipped {
-    scale: -1 1;
+.garden-pet-crow.is-flipped .garden-pet-crow-sprite {
+    transform: scaleX(-1);
 }
 
 /* The preview is the exact 32px native frame enlarged by an integer 2×. */
