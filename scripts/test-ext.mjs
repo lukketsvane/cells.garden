@@ -227,9 +227,8 @@ try {
 
         const supabaseOrigin = new URL(supabaseUrl).origin;
         await bridge.route(`${supabaseOrigin}/auth/v1/authorize**`, (route) => route.fulfill({
-            status: 302,
-            headers: { location: 'https://cells.garden/?code=root-fallback-code' },
-            body: '',
+            contentType: 'text/html',
+            body: '<!doctype html><script>location.replace("https://cells.garden/?code=root-fallback-code")</script>',
         }));
         await bridge.route(/https:\/\/cells\.garden\/\?code=root-fallback-code$/, (route) => route.fulfill({
             contentType: 'text/html',
