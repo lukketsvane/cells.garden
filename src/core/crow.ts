@@ -57,6 +57,7 @@ export function mountCrowNPC(layer: HTMLElement) {
         },
     });
     crow.style.setProperty('--crow-atlas', 'url("' + CROW_ATLAS_URL + '")');
+    const sprite = crow.createDiv('garden-pet-crow-sprite');
 
     const world = layer.parentElement ?? layer;
     const worldWidth = () => Math.max(600, layer.clientWidth || world.clientWidth || 600);
@@ -97,7 +98,7 @@ export function mountCrowNPC(layer: HTMLElement) {
 
     const draw = () => {
         const spec = CROW_ANIMS[animation];
-        crow.style.backgroundPosition = (-frame * 128) + 'px ' + (-spec.row * 128) + 'px';
+        sprite.style.backgroundPosition = (-frame * 128) + 'px ' + (-spec.row * 128) + 'px';
         crow.dataset.state = mode;
     };
 
