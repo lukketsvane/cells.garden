@@ -39,6 +39,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Verify Figma asset contract
+        run: npm run verify:figma-assets
       - name: Typecheck Chrome extension
         run: npm run typecheck:ext
       - name: Build Chrome extension
