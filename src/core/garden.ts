@@ -700,8 +700,8 @@ export class GardenView extends View {
             sleep: { row: 5, frames: 4, ms: 230 },
         } as const;
 
-        fox.setAttr('role', 'button');
-        fox.setAttr('aria-label', 'Fox');
+        fox.setAttribute('role', 'button');
+        fox.setAttribute('aria-label', 'Fox');
         fox.setCssStyles({
             position: 'absolute',
             width: `${cell}px`,
