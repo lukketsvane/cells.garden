@@ -66,21 +66,40 @@ export class AssetManager {
         return (legacy && PACK.get(legacy)) ?? null;
     }
 
+    /** Stable numeric ordering inside one art folder. */
+    private sortedFolder(folder: string): string[] {
+        return [...(FOLDERS.get(folder) ?? [])]
+            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    }
+
     /**
-     * Deterministic real sprites for the plant-type picker: three stems and one
-     * flower from the exact same bundled pack used by the rendered garden.
+     * The exact sprite path used when a plant is switched to a type.
+     * Keeping this deterministic makes the picker truthful: the art shown in
+     * a tile is the art written into the selected plant.
      */
-    getPlantPreview(plantType: string): PlantPreviewPart[] {
-        const numeric = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
-        const stems = [...(FOLDERS.get(`${plantType}/stem`) ?? [])].sort(numeric).slice(0, 3);
-        const flowers = [...(FOLDERS.get(`${plantType}/flowers`) ?? [])].sort(numeric).slice(0, 1);
-        const parts: Array<{ kind: 'stem' | 'flower'; path: string }> = [
-            ...stems.map(path => ({ kind: 'stem' as const, path })),
-            ...flowers.map(path => ({ kind: 'flower' as const, path })),
-        ];
+    getPlantTypeImagePath(category: 'stem' | 'flowers', plantType: string, index: number): string | null {
+        const paths = this.sortedFolder(`${plantType}/${category}`);
+        return paths.length ? paths[Math.abs(index) % paths.length] : null;
+    }
+
+    /**
+     * Preview the exact above-ground composition the selected plant will get.
+     * Empty plants still get a representative 3-stem + 1-flower tile.
+     */
+    getPlantPreview(plantType: string, stemCount = 3, flowerCount = 1): PlantPreviewPart[] {
+        const stems = Array.from({ length: Math.max(0, stemCount) }, (_, index) => {
+            const path = this.getPlantTypeImagePath('stem', plantType, index);
+            return path ? { kind: 'stem' as const, path } : null;
+        }).filter((part): part is { kind: 'stem'; path: string } => part !== null);
+
+        const flowers = Array.from({ length: Math.max(0, flowerCount) }, (_, index) => {
+            const path = this.getPlantTypeImagePath('flowers', plantType, index);
+            return path ? { kind: 'flower' as const, path } : null;
+        }).filter((part): part is { kind: 'flower'; path: string } => part !== null);
+
+        const parts = [...stems.reverse(), ...flowers.reverse()];
         return parts.flatMap(part => {
             const url = PACK.get(part.path);
             return url ? [{ ...part, url }] : [];
         });
-    }
-}
+    }}
