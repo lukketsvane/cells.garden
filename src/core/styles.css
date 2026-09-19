@@ -1427,28 +1427,20 @@
 .garden-pet-crow {
     left: 0;
     top: 0;
-    width: 64px;
-    height: 64px;
+    width: 128px;
+    height: 128px;
     z-index: 9;
-    will-change: transform;
-}
-.garden-pet-crow-sprite {
-    position: absolute;
-    inset: 0;
-    width: 64px;
-    height: 64px;
+    background-image: var(--crow-atlas);
+    background-size: 1024px 1024px;
+    background-position: 0 0;
     background-repeat: no-repeat;
-    background-position: center;
-    background-size: 64px 64px;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
-    transform: scaleX(1);
     transform-origin: 50% 50%;
-    transition: none;
-    pointer-events: none;
+    will-change: transform, background-position;
 }
-.garden-pet-crow-sprite.is-flipped {
-    transform: scaleX(-1);
+.garden-pet-crow.is-flipped {
+    scale: -1 1;
 }
 
 /* Main menu -> Pets */
@@ -1526,8 +1518,10 @@
     height: 54px;
 }
 .garden-pet-tile[data-pet='petCrow'] .garden-pet-tile-preview img {
-    width: 64px;
-    height: 64px;
+    width: 80px;
+    height: 80px;
+    max-width: 80px;
+    max-height: 80px;
 }
 .garden-pet-tile-name {
     display: block;
