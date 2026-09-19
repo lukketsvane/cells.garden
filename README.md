@@ -122,3 +122,5 @@ The first web build carried the twelve `plant_1` sprites bundled with the plugin
 - **M2**: Chrome extension (new tab + side panel), service worker, per-surface camera, hardened sync. Done.
 - **M3**: Obsidian import/export in the UI, the extension popup (one plant at a time), and the Obsidian plugin on the same backend. Done. Custom images are out of scope for now.
 - **M4**: shared gardens (invite by link, live co-editing, merge on conflict). Done.
+
+<!-- force production deploy attempt 2026-09-19 crow ground-only -->
