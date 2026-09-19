@@ -22,7 +22,8 @@
     "typecheck:ext": "tsc --noEmit -p tsconfig.ext.json",
     "build:obsidian": "vite build --config vite.obsidian.config.ts",
     "typecheck:obsidian": "tsc --noEmit -p tsconfig.obsidian.json",
-    "test:obsidian": "node scripts/test-obsidian.mjs"
+    "test:obsidian": "node scripts/test-obsidian.mjs",
+    "verify:figma-assets": "node scripts/verify-figma-assets.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
