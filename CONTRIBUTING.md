@@ -56,7 +56,7 @@ When the Figma export surface changes, regenerate `figma/exports.json` from the 
 
 ### Pulling assets from Figma
 
-Set `FIGMA_TOKEN` to a Figma personal access token with read access to the production file, then run:
+Copy `.env.local.example` to `.env.local` and set `FIGMA_TOKEN` to a Figma personal access token with `file_content:read` access to the production file (or export the variable in your shell), then run:
 
 ```sh
 npm run sync:figma-assets
