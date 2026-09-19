@@ -174,11 +174,13 @@ try {
         console.log('test-ext: headless Chromium has no chrome.sidePanel behavior API; testing the sidepanel page directly');
     }
 
-    // A real cells.garden page can hand an OAuth result to the worker, without
-    // exposing an extension page as a web-accessible resource.
+    // Dedicated callback still works (used by email-link auth).
     const bridge = await context.newPage();
     const bridgeHtml = readFileSync(join(ROOT, 'public/privacy/oauth-return.html'), 'utf8');
     const bridgeJs = readFileSync(join(ROOT, 'public/privacy/oauth-return.js'), 'utf8');
+    const startHtml = readFileSync(join(ROOT, 'public/privacy/oauth-extension-start.html'), 'utf8');
+    const startJs = readFileSync(join(ROOT, 'public/privacy/oauth-extension-start.js'), 'utf8');
+    const rootReturnJs = readFileSync(join(ROOT, 'public/privacy/oauth-extension-return.js'), 'utf8');
     await bridge.route('https://cells.garden/privacy/oauth-return.html**', (route) => route.fulfill({
         contentType: 'text/html',
         body: bridgeHtml,
@@ -186,6 +188,18 @@ try {
     await bridge.route('https://cells.garden/privacy/oauth-return.js', (route) => route.fulfill({
         contentType: 'text/javascript',
         body: bridgeJs,
+    }));
+    await bridge.route('https://cells.garden/privacy/oauth-extension-start.html**', (route) => route.fulfill({
+        contentType: 'text/html',
+        body: startHtml,
+    }));
+    await bridge.route('https://cells.garden/privacy/oauth-extension-start.js', (route) => route.fulfill({
+        contentType: 'text/javascript',
+        body: startJs,
+    }));
+    await bridge.route('https://cells.garden/privacy/oauth-extension-return.js', (route) => route.fulfill({
+        contentType: 'text/javascript',
+        body: rootReturnJs,
     }));
     await bridge.route('https://cells.garden/not-oauth', (route) => route.fulfill({
         contentType: 'text/html',
@@ -198,6 +212,71 @@ try {
     assert(bridged?.value?.code === 'test-oauth-code' && typeof bridged?.receivedAt === 'number',
         `website OAuth return did not reach the extension worker safely: ${JSON.stringify(bridged)}`);
     await worker.evaluate(async () => chrome.storage.local.remove('cells.garden/oauth-return'));
+
+    // Regression: Supabase can fall back to its Site URL (/) even when the
+    // extension requested /privacy/oauth-return.html. The start bridge leaves
+    // a same-tab intent in sessionStorage, and root must return the code to the
+    // extension before the web app can consume it.
+    if (hasSupabase) {
+        const nonce = '0123456789abcdef0123456789abcdef';
+        await worker.evaluate(async ({ nonce }) => {
+            await chrome.storage.local.set({
+                'cells.garden/oauth-intent': { nonce, createdAt: Date.now() },
+            });
+        }, { nonce });
+
+        const supabaseOrigin = new URL(supabaseUrl).origin;
+        await bridge.route(`${supabaseOrigin}/auth/v1/authorize**`, (route) => route.fulfill({
+            status: 302,
+            headers: { location: 'https://cells.garden/?code=root-fallback-code' },
+            body: '',
+        }));
+        await bridge.route(/https:\/\/cells\.garden\/\?code=root-fallback-code$/, (route) => route.fulfill({
+            contentType: 'text/html',
+            body: '<!doctype html><html><head><script src="/privacy/oauth-extension-return.js"></script></head><body><div id="app"></div></body></html>',
+        }));
+
+        const authorize = new URL(`${supabaseOrigin}/auth/v1/authorize`);
+        authorize.searchParams.set('provider', 'google');
+        authorize.searchParams.set('redirect_to', 'https://cells.garden/');
+        authorize.searchParams.set('code_challenge', 'test-challenge');
+        authorize.searchParams.set('code_challenge_method', 's256');
+        const start = new URL('https://cells.garden/privacy/oauth-extension-start.html');
+        start.hash = new URLSearchParams({
+            extension_id: extId,
+            nonce,
+            authorize_url: authorize.toString(),
+        }).toString();
+
+        await bridge.goto(start.toString());
+        await bridge.waitForFunction(() =>
+            location.origin === 'https://cells.garden'
+            && location.pathname === '/'
+            && location.search === ''
+        );
+        await bridge.waitForFunction(() =>
+            document.body.textContent?.includes('Sign-in returned to the extension')
+        );
+
+        const fallback = await worker.evaluate(async () =>
+            (await chrome.storage.local.get('cells.garden/oauth-return'))['cells.garden/oauth-return']
+        );
+        assert(fallback?.value?.code === 'root-fallback-code', `root fallback code was not bridged: ${JSON.stringify(fallback)}`);
+        assert(fallback?.value?.nonce === nonce, `root fallback nonce was not preserved: ${JSON.stringify(fallback)}`);
+        assert((await worker.evaluate(async () =>
+            (await chrome.storage.local.get('cells.garden/oauth-intent'))['cells.garden/oauth-intent']
+        )) === undefined, 'accepted OAuth intent must be consumed');
+        await worker.evaluate(async () => chrome.storage.local.remove('cells.garden/oauth-return'));
+
+        const replay = await bridge.evaluate(({ id, nonce }) => new Promise((resolve) => {
+            chrome.runtime.sendMessage(id, {
+                type: 'cells-garden-oauth-return',
+                code: 'replayed-code',
+                nonce,
+            }, resolve);
+        }), { id: extId, nonce });
+        assert(replay?.ok === false, `consumed root OAuth nonce was replayable: ${JSON.stringify(replay)}`);
+    }
 
     await bridge.goto('https://cells.garden/not-oauth');
     const rejected = await bridge.evaluate((id) => new Promise((resolve) => {

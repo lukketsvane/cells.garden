@@ -2,12 +2,16 @@
  * MV3 service worker and the short-lived website -> extension OAuth hand-off.
  */
 import {
+    OAUTH_INTENT_KEY,
+    OAUTH_INTENT_TTL_MS,
     OAUTH_RETURN_KEY,
     OAUTH_RETURN_READY,
     OAUTH_RETURN_TAKE,
     OAUTH_RETURN_TTL_MS,
+    isOAuthIntent,
     isOAuthReturnMessage,
     isStoredOAuthReturn,
+    type OAuthReturnMessage,
     type StoredOAuthReturn,
 } from './auth-bridge';
 
@@ -18,14 +22,18 @@ function popupOwnsActionClick(): Promise<void> {
         .catch((e: unknown) => console.error('cells.garden: could not set the side panel behavior', e));
 }
 
-function fromOAuthBridge(sender: chrome.runtime.MessageSender): boolean {
-    if (!sender.url) return false;
+type OAuthBridgeKind = 'dedicated' | 'root';
+
+function oauthBridgeKind(sender: chrome.runtime.MessageSender): OAuthBridgeKind | null {
+    if (!sender.url) return null;
     try {
         const url = new URL(sender.url);
-        return url.origin === 'https://cells.garden'
-            && url.pathname === '/privacy/oauth-return.html';
+        if (url.origin !== 'https://cells.garden') return null;
+        if (url.pathname === '/privacy/oauth-return.html') return 'dedicated';
+        if (url.pathname === '/' || url.pathname === '/index.html') return 'root';
+        return null;
     } catch {
-        return false;
+        return null;
     }
 }
 
@@ -34,18 +42,42 @@ function isOAuthTakeRequest(value: unknown): boolean {
     return (value as Record<string, unknown>).type === OAUTH_RETURN_TAKE;
 }
 
+async function acceptRootIntent(message: OAuthReturnMessage): Promise<boolean> {
+    if (!message.nonce) return false;
+    const stored = await chrome.storage.local.get(OAUTH_INTENT_KEY);
+    const intent: unknown = stored[OAUTH_INTENT_KEY];
+    if (!isOAuthIntent(intent) || intent.nonce !== message.nonce) return false;
+    const age = Date.now() - intent.createdAt;
+    if (age < 0 || age > OAUTH_INTENT_TTL_MS) {
+        await chrome.storage.local.remove(OAUTH_INTENT_KEY);
+        return false;
+    }
+    await chrome.storage.local.remove(OAUTH_INTENT_KEY);
+    return true;
+}
+
+async function storeOAuthReturn(message: OAuthReturnMessage): Promise<void> {
+    const stored: StoredOAuthReturn = { receivedAt: Date.now(), value: message };
+    await chrome.storage.local.set({ [OAUTH_RETURN_KEY]: stored });
+    void chrome.runtime.sendMessage({ type: OAUTH_RETURN_READY }).catch(() => {});
+}
+
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
     const incoming: unknown = message;
-    if (!fromOAuthBridge(sender) || !isOAuthReturnMessage(incoming)) {
+    const kind = oauthBridgeKind(sender);
+    if (!kind || !isOAuthReturnMessage(incoming)) {
         sendResponse({ ok: false });
         return false;
     }
 
-    const stored: StoredOAuthReturn = { receivedAt: Date.now(), value: incoming };
-    void chrome.storage.local.set({ [OAUTH_RETURN_KEY]: stored }).then(() => {
+    void (async () => {
+        if (kind === 'root' && !(await acceptRootIntent(incoming))) {
+            sendResponse({ ok: false });
+            return;
+        }
+        await storeOAuthReturn(incoming);
         sendResponse({ ok: true });
-        void chrome.runtime.sendMessage({ type: OAUTH_RETURN_READY }).catch(() => {});
-    }).catch((error: unknown) => {
+    })().catch((error: unknown) => {
         sendResponse({ ok: false, error: String(error) });
     });
     return true;

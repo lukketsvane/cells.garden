@@ -22,8 +22,10 @@ import { openMenu, type MenuItem } from './menu';
 import { Modal, Setting } from './ui';
 
 export interface AuthOptions {
-    /** Where the magic link and the way back from Google land. Defaults to the current page. */
+    /** Where email links land. Defaults to the current page. */
     redirectTo?: string;
+    /** Optional Google-specific return URL. Falls back to redirectTo. */
+    oauthRedirectTo?: string;
     /** How to open Google's sign-in page. Defaults to going there in this page. */
     openOAuth?: (url: string) => void;
     /** Handed the client once it exists, for hosts that finish sign-in themselves (Obsidian). */
@@ -138,7 +140,9 @@ class SignInModal extends Modal {
 
     private async continueWithGoogle(status: HTMLElement) {
         status.setText('Opening Google…');
-        const redirectTo = this.options.redirectTo ?? (window.location.origin + window.location.pathname);
+        const redirectTo = this.options.oauthRedirectTo
+            ?? this.options.redirectTo
+            ?? (window.location.origin + window.location.pathname);
         const { data, error } = await this.client.auth.signInWithOAuth({
             provider: 'google',
             options: { redirectTo, skipBrowserRedirect: true },
