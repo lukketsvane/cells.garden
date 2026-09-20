@@ -1371,33 +1371,6 @@
     outline-offset: 4px;
 }
 
-.garden-pet-gnome {
-    left: 72px;
-    top: calc(var(--sky) - 48px);
-    width: 36px;
-    height: 48px;
-    background-image: var(--gnome-image);
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 36px 48px;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    animation: garden-gnome-wander 9s steps(12, end) infinite;
-}
-.garden-pet-gnome.is-startled {
-    animation: garden-gnome-hop 720ms steps(6, end) 1;
-}
-@keyframes garden-gnome-wander {
-    0%   { transform: translateX(0); }
-    50%  { transform: translateX(92px); }
-    100% { transform: translateX(0); }
-}
-@keyframes garden-gnome-hop {
-    0%, 100% { transform: translateY(0); }
-    35% { transform: translateY(-42px) rotate(-5deg); }
-    60% { transform: translateY(-14px) rotate(4deg); }
-}
-
 .garden-pet-pumpkin {
     left: 212px;
     top: calc(var(--sky) - 54px);
