@@ -1,38 +1,50 @@
 import './shim';
 
 /**
- * Ground crow atlas: 256 x 64 PNG, 8 x 2 cells, each frame 32 x 32 native pixels.
+ * Crow atlas: 160 x 160 PNG, 8 x 8 cells, each frame 20 x 20 native pixels.
  *
- * Row 0 is the idle cycle, row 1 the walk cycle. The older 8 x 8 atlas carried
- * peck/call/hop/takeoff rows too, but its PNG stream was corrupt past scanline
- * 105: browsers dropped every row after the walk cycle, so each of those
- * animations drew nothing and the crow vanished for the whole run. Only the two
- * intact rows survive here, re-encoded as a valid PNG, and only these two rows
- * are ever addressed.
+ * Rows in order: idle/look, walk/hop, run/brake, peck/eat, takeoff, landing,
+ * flight flap, glide/descend, eight frames each. The scene only drives the
+ * ground rows today; the rest are described here so the sheet's layout lives
+ * in one place.
  */
 export const CROW_ATLAS_URL =
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAABACAYAAAD1Xam+AAAE8ElEQVR42u2d0WrbSBSGj0OhpnHdRrJx4lICMYRC2Mtu9r53fYW+Vt+m7Ats79qbEHDBFDtr5MSJcUNys9qLMK4kS06gmjnTzPeBiYmNjvTPnDMjjaxfBAAAAAAAAAAAAAAAAAAAAB4LjcdwEM1WlHb7A2nvdEVEZDFP5Pvp5wbNC7CZJ48tAT993JPjD4k0W1F6s7xoUIQAqtn61Q28PnybFhPQJISLA8jGX8wTOf7wJZeU2Zet+NoaNFtR+vrwbXp0/D49On6/tj8Atc8AykbYuwRMct/Jfl7niFyMn0yGYivWQ4/ftQamAGWPXWsGBIEUANOhu/2BJBNJXSdgWfxuf7D63Pa0u+r4XRch7QIMEs5FQHN+W6S905XFPMn9z0YChh6/ugANV3+LkOxgZQbQ3ulKp/dqbdpb1gltEGL8qgI0OPpLFvPE6QwIAi8AZ6OTtQQwV75dJGHo8bULIEhYqwDZ0efH4lxERGbTsXz952+ZTcdrSWBz9AsxflkBKisKZTMEACurAJ3eq9UoNJuO5Wx0Itvt2NlOhxS/qgCdjU5kb/9NrggwCwCp+yKguej0rPVSRCTX6bIjkkmAZDKsfbkv9PjFAvDHn+9Wn2cLUN2xgVOAVYfaNMLZHH1Dj2+Kikn+vf03MpuOV6/sKUG3P3B28xEEcgoQ7R6k18tLSSZDedZ6WXoOWrUOXgehx79ZXjSarSjdbserIuC6AEGgM4Bo9yA3/d3U0Uznr3MKGnr87D6Y7Z+NTnIv2wUIArwGYDrd9fIyNwqZz3txR/57+uKugtxeyfR8VmvnDz1+cT/MvnT7g9JZgDn/5wYg+OVTgGYrSi/+/dbYeGdZ3EnNXWh133kWevxNBcgk+VoBIvnBJfv7h2nZe+LXt+pwX3zzC0Dznl4JKj8HBrGy6vCQ75nbfhn5wckTge4b7Uaj04arkZf47uMDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID8Br8G9BWsudEfxK07sC+N74s7rrYOWvG19af4iN4DQYo+9J8+7j34qTY2npxz5477Jfed7MtmEmjpoBXfB/21dQ92BqBpTa1tT+6TRbdGfB/0xxpdqQBoNb5v7rjaSeA6vi/6+1T8JSRrsLLGb+90ZTFPcv+z1fjZfSi6486m45w7rs2k09RBM76m/j70P2YAHllTa9tz+6CDZnxN/bFGF92LgBrW1L7Zc/tg0e0yvk/6Y43ueAbgqzW1a3twbR18awdX+mON7uEqgOvkM1PLrD13duQpuuMmE3Gy/qyhg1Z8n/TX1j24AqDd+L6442rroBVfW38fi38wBcCH5NO25/ZBB834mvpjjS66y4Cm8UV+WmRXNYBNe24RXXdcH3TQiK+tv7buEvIqgGl8I/ymSlu3+NHuQWoa/3p5KcatN5kM5Xp5KdvtWJ4/fbL6u3V7Jb24Yy35tXTQiu+D/tq6BzsDqLKmNp+vWVOfz2q/6+y+bTVbUWr2Y+v2Smx441Xp0Is7q+/Y1EGrHbT119Y96GsAzVaUmmpfeWtl3EmTyTC39lqn+A/Z1s3yoiFxJ/1++rlhwx58ow5xJ3cLqg0dNNtBU39t3YM/BcCa2g8dQm0H+t9v9nNgH8hOO23MBrLbzm4fK243+qO7J08E8sWbvrgf2h3C9f5ot4Mv+vvWDwAAAAAAAAAAAAC85H8fjUAh3+1Q5QAAAABJRU5ErkJggg==';
+    'data:image/png;base64,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';
 
 export const CROW_PREVIEW_URL =
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABbUlEQVR4nO2VzU6DQBSFTxsTiRKUv9CfGJI2aXwB48P4Wr6N8QV06aZpggkxUMlQUIKmbhxXg0xL22EguuFbwTDcc++5cwHo6Ojo+Gd6bQRRVIPaoyk03QYAZCnBy+JRKHa/qfjF7IqW7+9uh0VSIu8fyQorqkHXecJVmaUE1zeE21N+vrlfKgEW1B5NQUIUAiT0uH1VYlUIbWI93kTTbWQp4dZEe8+o7YCm27CcMbeWpWTLAVFqH8KlP69MqsqhVhIo2/+RrQAAcRTg6eEecRRwScggNQWWMy7aEEcBlv4cp5oplcDBA8NO/Yl6DgAYupfcc9YSlgAJPeEJAARawILtq1C2ekDAAWMwoZ/5G4BfF3YlwCahNQeMwYSzf1+lMuLADgeYMKt8nSe98mfVMS18H58BAPpf74hWsZQ4UDEFimrQ5PV5KxAX3LQoCT1u9mXEpXHdGa26lqHx77gptWw7VK3vL/6uDR0dbfED34mHkrnn5lQAAAAASUVORK5CYII=';
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAA9ElEQVR42u2WPQ/BUBSGn4pBaMRnEIPEZDD4IwZ/1trZZpFY2AjxGUFsNcgZekOqLYlc59maprfNk/c9p6AoiqIoiqL8M863Ds64JR8g6xYA2K/msd6V+juDpXrbB7iejwDMvUHgfrfvBa7DzNpvULImSOZy+TIA+WIVgNNhA8DltIuUSXsNStaERqsDQKXWfGRvOgZgs5wFnrud945VLU4nNSdZM2l3eoEMTkZDO+dgOukB0koxZSLtjYv9Bk2268XTuWetwdBmmZvC3BhhyE6OOv/s2yRi8pUJ03RcY/o3Y5LU5M8b/NgHZt3C2822yqCSlDv3jkggei1DmQAAAABJRU5ErkJggg==';
 
-type CrowAnimation = 'idle' | 'walk';
+type CrowAnimation =
+    | 'idle'
+    | 'walk'
+    | 'run'
+    | 'peck'
+    | 'takeoff'
+    | 'landing'
+    | 'flight'
+    | 'glide';
 type CrowMode = 'grounded' | 'walking' | 'hopping';
 
 const CROW_ANIMS: Record<CrowAnimation, { row: number; frames: number; duration: number }> = {
-    idle: { row: 0, frames: 4, duration: 220 },
-    walk: { row: 1, frames: 6, duration: 110 },
+    idle: { row: 0, frames: 8, duration: 220 },
+    walk: { row: 1, frames: 8, duration: 110 },
+    run: { row: 2, frames: 8, duration: 70 },
+    peck: { row: 3, frames: 8, duration: 150 },
+    takeoff: { row: 4, frames: 8, duration: 90 },
+    landing: { row: 5, frames: 8, duration: 90 },
+    flight: { row: 6, frames: 8, duration: 80 },
+    glide: { row: 7, frames: 8, duration: 140 },
 };
 
 const CROW_COLUMNS = 8;
-const CROW_ROWS = 2;
-/** 2x the native 32 px frame. The scene reads as pixel art at this size. */
-const CROW_SIZE = 64;
+const CROW_ROWS = 8;
+/** 2x the native 20 px frame. The scene reads as pixel art at this size. */
+const CROW_SIZE = 40;
 const CROW_HALF = CROW_SIZE / 2;
 /** Clear of the world edge by half a crow plus a little air. */
 const CROW_EDGE = CROW_HALF + 10;
-/** The crow's feet sit this far above the box bottom, so this drops it on the soil. */
-const CROW_FOOT = 22;
+/** The crow's feet sit 18 of 20 rows down the frame, so this drops them on the soil. */
+const CROW_FOOT = 16;
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 export function mountCrowNPC(layer: HTMLElement) {

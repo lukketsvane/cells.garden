@@ -1427,11 +1427,11 @@
 .garden-pet-crow {
     left: 0;
     top: 0;
-    width: 64px;
-    height: 64px;
+    width: 40px;
+    height: 40px;
     z-index: 9;
     background-image: var(--crow-atlas);
-    background-size: 512px 128px;
+    background-size: 320px 320px;
     background-position: 0 0;
     background-repeat: no-repeat;
     image-rendering: pixelated;

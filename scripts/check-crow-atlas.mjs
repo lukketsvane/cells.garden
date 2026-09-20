@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Decodes the crow atlas in a real browser and reports which cells carry pixels.
 //
-// The atlas this replaced was a corrupt PNG: its zlib stream went bad partway
-// down, so Chromium dropped every scanline after the walk row and the peck,
-// call and hop animations drew nothing at all. Run with:
+// The 160 x 160 sheet is 8 x 8 cells of 20 x 20 native pixels. An earlier atlas
+// was a corrupt PNG whose zlib stream went bad past scanline 105, so Chromium
+// dropped every row after the walk cycle and those animations drew nothing at
+// all. This guards against that returning. Run with:
 //
 //   node scripts/check-crow-atlas.mjs [path/to/other-atlas-source.ts]
 //
@@ -36,7 +37,7 @@ const report = await page.evaluate(async (src) => {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(image, 0, 0);
 
-    const cell = 32;
+    const cell = 20;
     const rows = [];
     for (let row = 0; row * cell < canvas.height; row++) {
         const counts = [];
