@@ -12,10 +12,13 @@ import pumpkin3Url from '../assets/pack/pumpkin/pumpkin_1_on_3.png';
 
 type PetSettingKey = 'petGnome' | 'petPumpkin' | 'petCrow';
 
-const PETS: { key: PetSettingKey; label: string; preview: string }[] = [
-    { key: 'petGnome', label: 'Garden gnome', preview: gnomeUrl },
-    { key: 'petPumpkin', label: 'Pumpkin', preview: pumpkin1Url },
-    { key: 'petCrow', label: 'Crow', preview: CROW_PREVIEW_URL },
+/** `available: false` keeps a pet in the grid, greyed out, and out of the scene. */
+type PetOption = { key: PetSettingKey; label: string; preview: string; available: boolean };
+
+const PETS: PetOption[] = [
+    { key: 'petGnome', label: 'Garden gnome', preview: gnomeUrl, available: false },
+    { key: 'petPumpkin', label: 'Pumpkin', preview: pumpkin1Url, available: true },
+    { key: 'petCrow', label: 'Crow', preview: CROW_PREVIEW_URL, available: true },
 ];
 
 export class PetsModal extends Modal {
@@ -40,6 +43,23 @@ export class PetsModal extends Modal {
 
         const grid = contentEl.createDiv('garden-pets-grid');
         for (const pet of PETS) {
+            if (!pet.available) {
+                const tile = grid.createEl('button', {
+                    cls: 'garden-pet-tile is-unavailable',
+                    attr: {
+                        type: 'button',
+                        disabled: 'true',
+                        'aria-label': pet.label + ', unavailable',
+                        'data-pet': pet.key,
+                    },
+                });
+                const preview = tile.createDiv('garden-pet-tile-preview');
+                preview.createEl('img', { attr: { src: pet.preview, alt: '' } });
+                tile.createSpan({ cls: 'garden-pet-tile-name', text: pet.label });
+                tile.createSpan({ cls: 'garden-pet-tile-state', text: 'Unavailable' });
+                continue;
+            }
+
             const active = Boolean(this.app.settings[pet.key]);
             const tile = grid.createEl('button', {
                 cls: 'garden-pet-tile',
@@ -111,25 +131,13 @@ function makePetButton(layer: HTMLElement, cls: string, label: string) {
     });
 }
 
+/**
+ * The gnome is greyed out in the grid, so it never joins the scene: a garden
+ * saved while it was still switchable must not keep one standing there.
+ */
 export function renderGardenPets(world: HTMLElement, settings: GardenSettings) {
-    if (!settings.petGnome && !settings.petPumpkin && !settings.petCrow) return;
+    if (!settings.petPumpkin && !settings.petCrow) return;
     const layer = world.createDiv('garden-pets-layer');
-
-    if (settings.petGnome) {
-        const gnome = makePetButton(layer, 'garden-pet-gnome', 'Garden gnome. Tap to make it hop.');
-        gnome.style.setProperty('--gnome-image', 'url("' + gnomeUrl + '")');
-
-        const hop = () => {
-            if (gnome.classList.contains('is-startled')) return;
-            gnome.classList.add('is-startled');
-        };
-        gnome.addEventListener('animationend', (e) => {
-            if ((e as AnimationEvent).animationName === 'garden-gnome-hop') {
-                gnome.classList.remove('is-startled');
-            }
-        });
-        bindTap(gnome, hop);
-    }
 
     if (settings.petCrow) {
         mountCrowNPC(layer);
