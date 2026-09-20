@@ -8,3 +8,5 @@ dist-ext/
 # Copies of the Obsidian plugin build next to manifest.json; the committed build is obsidian-plugin/
 /main.js
 /styles.css
+# Obsidian writes per-vault plugin settings here
+obsidian-plugin/data.json
