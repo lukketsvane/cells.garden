@@ -1,12 +1,7 @@
--- cells.garden — M1 schema
--- Run in the Supabase SQL editor (or `supabase db push`).
--- One row per garden, the whole garden as a JSON blob. No rows per plant yet.
+
 
 create extension if not exists pgcrypto;
 
--- ---------------------------------------------------------------------------
--- profiles: one per auth user, created automatically on sign-up
--- ---------------------------------------------------------------------------
 create table if not exists public.profiles (
     id           uuid primary key references auth.users (id) on delete cascade,
     display_name text,
