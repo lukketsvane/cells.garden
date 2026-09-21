@@ -1,0 +1,66 @@
+name: Temporary Figma plant asset export
+
+on:
+  push:
+    paths:
+      - ".github/workflows/tmp-export-figma-plants.yml"
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect Figma-backed plant assets
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, shutil
+          from pathlib import Path
+
+          manifest = json.loads(Path("figma/exports.json").read_text())
+          out = Path("figma-plant-assets")
+          out.mkdir()
+
+          selected = []
+          for item in manifest["items"]:
+              p = item["path"]
+              keep = (
+                  any(p.startswith(f"src/assets/pack/plant_{i}/") for i in range(1, 9))
+                  or p.startswith("src/assets/pack/roots/")
+                  or p.startswith("src/assets/pack/seeds/")
+                  or p.startswith("src/assets/pack/pumpkin/")
+              )
+              if not keep:
+                  continue
+              src = Path(p)
+              rel = src.relative_to("src/assets/pack")
+              dst = out / rel
+              dst.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(src, dst)
+              selected.append({
+                  "path": rel.as_posix(),
+                  "figmaExportNodeId": item["exportNodeId"],
+                  "figmaSourceComponentId": item["sourceComponentId"],
+                  "width": item["width"],
+                  "height": item["height"],
+              })
+
+          (out / "_figma-export-manifest.json").write_text(
+              json.dumps({
+                  "figmaFileKey": manifest["figma"]["fileKey"],
+                  "figmaPageId": manifest["figma"]["pageId"],
+                  "figmaExportSectionId": manifest["figma"]["exportSectionId"],
+                  "count": len(selected),
+                  "items": selected,
+              }, indent=2) + "\n"
+          )
+          assert len(selected) == 171, len(selected)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: figma-plant-assets
+          path: figma-plant-assets/
+          retention-days: 1
+          if-no-files-found: error
