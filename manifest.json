@@ -1,10 +1,1397 @@
 {
-  "id": "cells-garden",
-  "name": "cells.garden",
-  "version": "0.1.10",
-  "minAppVersion": "1.8.7",
-  "description": "Grow your tasks into a pixel-art garden, synced with the web app, your phone and a Chrome extension.",
-  "author": "tastefinger",
-  "authorUrl": "https://cells.garden",
-  "isDesktopOnly": false
+  "schemaVersion": 1,
+  "count": 171,
+  "source": {
+    "repository": "lukketsvane/cells.garden",
+    "figmaFileKey": "WJgKfsKcxUpuNkDvxI9gEx",
+    "pageId": "27:1966",
+    "exportSectionId": "186:410",
+    "sourceManifest": "figma/exports.json"
+  },
+  "policy": {
+    "format": "PNG",
+    "scale": 1,
+    "pixelArt": "native-1x",
+    "branch": "main",
+    "syncSource": "original-image-fill",
+    "rendering": "none",
+    "preserveRepoMetadataWhenPixelStreamMatches": true
+  },
+  "note": "These are the repository assets mapped by figma/exports.json to the Figma export nodes. The sync policy preserves repository metadata when the pixel stream matches the Figma source.",
+  "excluded": [
+    {
+      "group": "plant_9",
+      "reason": "figma/exports.json marks plant_9 as repo-source-of-truth because it has no counterpart on the Figma ASSETS page."
+    }
+  ],
+  "assets": [
+    {
+      "path": "plant_1/flowers/flower1.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4258",
+      "exportNodeId": "186:906",
+      "sourcePath": "src/assets/pack/plant_1/flowers/flower1.png"
+    },
+    {
+      "path": "plant_1/flowers/flower2.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4261",
+      "exportNodeId": "186:907",
+      "sourcePath": "src/assets/pack/plant_1/flowers/flower2.png"
+    },
+    {
+      "path": "plant_1/flowers/flower3.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4264",
+      "exportNodeId": "186:908",
+      "sourcePath": "src/assets/pack/plant_1/flowers/flower3.png"
+    },
+    {
+      "path": "plant_1/flowers/flower4.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4259",
+      "exportNodeId": "186:909",
+      "sourcePath": "src/assets/pack/plant_1/flowers/flower4.png"
+    },
+    {
+      "path": "plant_1/flowers/flower5.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4262",
+      "exportNodeId": "186:910",
+      "sourcePath": "src/assets/pack/plant_1/flowers/flower5.png"
+    },
+    {
+      "path": "plant_1/flowers/flower6.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4265",
+      "exportNodeId": "186:911",
+      "sourcePath": "src/assets/pack/plant_1/flowers/flower6.png"
+    },
+    {
+      "path": "plant_1/flowers/flower7.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4260",
+      "exportNodeId": "186:912",
+      "sourcePath": "src/assets/pack/plant_1/flowers/flower7.png"
+    },
+    {
+      "path": "plant_1/flowers/flower8.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4263",
+      "exportNodeId": "186:913",
+      "sourcePath": "src/assets/pack/plant_1/flowers/flower8.png"
+    },
+    {
+      "path": "plant_1/flowers/flower9.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4266",
+      "exportNodeId": "186:914",
+      "sourcePath": "src/assets/pack/plant_1/flowers/flower9.png"
+    },
+    {
+      "path": "plant_1/stem/stem1.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4267",
+      "exportNodeId": "186:915",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem1.png"
+    },
+    {
+      "path": "plant_1/stem/stem2.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4271",
+      "exportNodeId": "186:926",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem2.png"
+    },
+    {
+      "path": "plant_1/stem/stem3.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4275",
+      "exportNodeId": "186:927",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem3.png"
+    },
+    {
+      "path": "plant_1/stem/stem4.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4279",
+      "exportNodeId": "186:928",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem4.png"
+    },
+    {
+      "path": "plant_1/stem/stem5.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4283",
+      "exportNodeId": "186:929",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem5.png"
+    },
+    {
+      "path": "plant_1/stem/stem6.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4268",
+      "exportNodeId": "186:930",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem6.png"
+    },
+    {
+      "path": "plant_1/stem/stem7.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4272",
+      "exportNodeId": "186:931",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem7.png"
+    },
+    {
+      "path": "plant_1/stem/stem8.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4276",
+      "exportNodeId": "186:932",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem8.png"
+    },
+    {
+      "path": "plant_1/stem/stem9.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4280",
+      "exportNodeId": "186:933",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem9.png"
+    },
+    {
+      "path": "plant_1/stem/stem10.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4284",
+      "exportNodeId": "186:916",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem10.png"
+    },
+    {
+      "path": "plant_1/stem/stem11.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4269",
+      "exportNodeId": "186:917",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem11.png"
+    },
+    {
+      "path": "plant_1/stem/stem12.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4273",
+      "exportNodeId": "186:918",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem12.png"
+    },
+    {
+      "path": "plant_1/stem/stem13.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4277",
+      "exportNodeId": "186:919",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem13.png"
+    },
+    {
+      "path": "plant_1/stem/stem14.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4281",
+      "exportNodeId": "186:920",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem14.png"
+    },
+    {
+      "path": "plant_1/stem/stem15.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4285",
+      "exportNodeId": "186:921",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem15.png"
+    },
+    {
+      "path": "plant_1/stem/stem16.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4270",
+      "exportNodeId": "186:922",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem16.png"
+    },
+    {
+      "path": "plant_1/stem/stem17.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4274",
+      "exportNodeId": "186:923",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem17.png"
+    },
+    {
+      "path": "plant_1/stem/stem18.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4278",
+      "exportNodeId": "186:924",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem18.png"
+    },
+    {
+      "path": "plant_1/stem/stem19.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4282",
+      "exportNodeId": "186:925",
+      "sourcePath": "src/assets/pack/plant_1/stem/stem19.png"
+    },
+    {
+      "path": "plant_2/flowers/flower1.png",
+      "width": 41,
+      "height": 8,
+      "sourceComponentId": "29:4254",
+      "exportNodeId": "186:934",
+      "sourcePath": "src/assets/pack/plant_2/flowers/flower1.png"
+    },
+    {
+      "path": "plant_2/flowers/flower2.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4256",
+      "exportNodeId": "186:935",
+      "sourcePath": "src/assets/pack/plant_2/flowers/flower2.png"
+    },
+    {
+      "path": "plant_2/flowers/flower3.png",
+      "width": 41,
+      "height": 8,
+      "sourceComponentId": "29:4255",
+      "exportNodeId": "186:936",
+      "sourcePath": "src/assets/pack/plant_2/flowers/flower3.png"
+    },
+    {
+      "path": "plant_2/stem/stem1.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4243",
+      "exportNodeId": "186:937",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem1.png"
+    },
+    {
+      "path": "plant_2/stem/stem2.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4252",
+      "exportNodeId": "186:940",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem2.png"
+    },
+    {
+      "path": "plant_2/stem/stem3.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4244",
+      "exportNodeId": "186:941",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem3.png"
+    },
+    {
+      "path": "plant_2/stem/stem4.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4247",
+      "exportNodeId": "186:942",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem4.png"
+    },
+    {
+      "path": "plant_2/stem/stem5.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4250",
+      "exportNodeId": "186:943",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem5.png"
+    },
+    {
+      "path": "plant_2/stem/stem6.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4253",
+      "exportNodeId": "186:944",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem6.png"
+    },
+    {
+      "path": "plant_2/stem/stem7.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4245",
+      "exportNodeId": "186:945",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem7.png"
+    },
+    {
+      "path": "plant_2/stem/stem8.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4248",
+      "exportNodeId": "186:946",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem8.png"
+    },
+    {
+      "path": "plant_2/stem/stem9.png",
+      "width": 41,
+      "height": 7,
+      "sourceComponentId": "29:4251",
+      "exportNodeId": "186:947",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem9.png"
+    },
+    {
+      "path": "plant_2/stem/stem10.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4246",
+      "exportNodeId": "186:938",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem10.png"
+    },
+    {
+      "path": "plant_2/stem/stem11.png",
+      "width": 41,
+      "height": 8,
+      "sourceComponentId": "29:4249",
+      "exportNodeId": "186:939",
+      "sourcePath": "src/assets/pack/plant_2/stem/stem11.png"
+    },
+    {
+      "path": "plant_3/flowers/flower1.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4520",
+      "exportNodeId": "186:948",
+      "sourcePath": "src/assets/pack/plant_3/flowers/flower1.png"
+    },
+    {
+      "path": "plant_3/flowers/flower2.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4521",
+      "exportNodeId": "186:949",
+      "sourcePath": "src/assets/pack/plant_3/flowers/flower2.png"
+    },
+    {
+      "path": "plant_3/stem/stem1.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4519",
+      "exportNodeId": "186:950",
+      "sourcePath": "src/assets/pack/plant_3/stem/stem1.png"
+    },
+    {
+      "path": "plant_3/stem/stem2.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4524",
+      "exportNodeId": "186:951",
+      "sourcePath": "src/assets/pack/plant_3/stem/stem2.png"
+    },
+    {
+      "path": "plant_3/stem/stem3.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4526",
+      "exportNodeId": "186:952",
+      "sourcePath": "src/assets/pack/plant_3/stem/stem3.png"
+    },
+    {
+      "path": "plant_3/stem/stem4.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4522",
+      "exportNodeId": "186:953",
+      "sourcePath": "src/assets/pack/plant_3/stem/stem4.png"
+    },
+    {
+      "path": "plant_3/stem/stem5.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4525",
+      "exportNodeId": "186:954",
+      "sourcePath": "src/assets/pack/plant_3/stem/stem5.png"
+    },
+    {
+      "path": "plant_3/stem/stem6.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4527",
+      "exportNodeId": "186:955",
+      "sourcePath": "src/assets/pack/plant_3/stem/stem6.png"
+    },
+    {
+      "path": "plant_3/stem/stem7.png",
+      "width": 45,
+      "height": 7,
+      "sourceComponentId": "29:4523",
+      "exportNodeId": "186:956",
+      "sourcePath": "src/assets/pack/plant_3/stem/stem7.png"
+    },
+    {
+      "path": "plant_4/flowers/flower1.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4295",
+      "exportNodeId": "186:957",
+      "sourcePath": "src/assets/pack/plant_4/flowers/flower1.png"
+    },
+    {
+      "path": "plant_4/flowers/flower2.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4296",
+      "exportNodeId": "186:958",
+      "sourcePath": "src/assets/pack/plant_4/flowers/flower2.png"
+    },
+    {
+      "path": "plant_4/stem/stem1.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4287",
+      "exportNodeId": "186:959",
+      "sourcePath": "src/assets/pack/plant_4/stem/stem1.png"
+    },
+    {
+      "path": "plant_4/stem/stem2.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4290",
+      "exportNodeId": "186:960",
+      "sourcePath": "src/assets/pack/plant_4/stem/stem2.png"
+    },
+    {
+      "path": "plant_4/stem/stem3.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4293",
+      "exportNodeId": "186:961",
+      "sourcePath": "src/assets/pack/plant_4/stem/stem3.png"
+    },
+    {
+      "path": "plant_4/stem/stem4.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4288",
+      "exportNodeId": "186:962",
+      "sourcePath": "src/assets/pack/plant_4/stem/stem4.png"
+    },
+    {
+      "path": "plant_4/stem/stem5.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4291",
+      "exportNodeId": "186:963",
+      "sourcePath": "src/assets/pack/plant_4/stem/stem5.png"
+    },
+    {
+      "path": "plant_4/stem/stem6.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4294",
+      "exportNodeId": "186:964",
+      "sourcePath": "src/assets/pack/plant_4/stem/stem6.png"
+    },
+    {
+      "path": "plant_4/stem/stem7.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4289",
+      "exportNodeId": "186:965",
+      "sourcePath": "src/assets/pack/plant_4/stem/stem7.png"
+    },
+    {
+      "path": "plant_4/stem/stem8.png",
+      "width": 29,
+      "height": 10,
+      "sourceComponentId": "29:4292",
+      "exportNodeId": "186:966",
+      "sourcePath": "src/assets/pack/plant_4/stem/stem8.png"
+    },
+    {
+      "path": "plant_5/flowers/flower1.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4303",
+      "exportNodeId": "186:967",
+      "sourcePath": "src/assets/pack/plant_5/flowers/flower1.png"
+    },
+    {
+      "path": "plant_5/flowers/flower2.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4305",
+      "exportNodeId": "186:968",
+      "sourcePath": "src/assets/pack/plant_5/flowers/flower2.png"
+    },
+    {
+      "path": "plant_5/flowers/flower3.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4304",
+      "exportNodeId": "186:969",
+      "sourcePath": "src/assets/pack/plant_5/flowers/flower3.png"
+    },
+    {
+      "path": "plant_5/stem/stem1.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4298",
+      "exportNodeId": "186:970",
+      "sourcePath": "src/assets/pack/plant_5/stem/stem1.png"
+    },
+    {
+      "path": "plant_5/stem/stem2.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4300",
+      "exportNodeId": "186:971",
+      "sourcePath": "src/assets/pack/plant_5/stem/stem2.png"
+    },
+    {
+      "path": "plant_5/stem/stem3.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4302",
+      "exportNodeId": "186:972",
+      "sourcePath": "src/assets/pack/plant_5/stem/stem3.png"
+    },
+    {
+      "path": "plant_5/stem/stem4.png",
+      "width": 39,
+      "height": 13,
+      "sourceComponentId": "29:4299",
+      "exportNodeId": "186:973",
+      "sourcePath": "src/assets/pack/plant_5/stem/stem4.png"
+    },
+    {
+      "path": "plant_5/stem/stem5.png",
+      "width": 39,
+      "height": 12,
+      "sourceComponentId": "29:4301",
+      "exportNodeId": "186:974",
+      "sourcePath": "src/assets/pack/plant_5/stem/stem5.png"
+    },
+    {
+      "path": "plant_6/flowers/flower1.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4307",
+      "exportNodeId": "186:975",
+      "sourcePath": "src/assets/pack/plant_6/flowers/flower1.png"
+    },
+    {
+      "path": "plant_6/flowers/flower2.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4308",
+      "exportNodeId": "186:976",
+      "sourcePath": "src/assets/pack/plant_6/flowers/flower2.png"
+    },
+    {
+      "path": "plant_6/stem/stem1.png",
+      "width": 41,
+      "height": 11,
+      "sourceComponentId": "29:4309",
+      "exportNodeId": "186:977",
+      "sourcePath": "src/assets/pack/plant_6/stem/stem1.png"
+    },
+    {
+      "path": "plant_6/stem/stem2.png",
+      "width": 41,
+      "height": 11,
+      "sourceComponentId": "29:4315",
+      "exportNodeId": "186:979",
+      "sourcePath": "src/assets/pack/plant_6/stem/stem2.png"
+    },
+    {
+      "path": "plant_6/stem/stem3.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4317",
+      "exportNodeId": "186:980",
+      "sourcePath": "src/assets/pack/plant_6/stem/stem3.png"
+    },
+    {
+      "path": "plant_6/stem/stem4.png",
+      "width": 41,
+      "height": 11,
+      "sourceComponentId": "29:4310",
+      "exportNodeId": "186:981",
+      "sourcePath": "src/assets/pack/plant_6/stem/stem4.png"
+    },
+    {
+      "path": "plant_6/stem/stem5.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4313",
+      "exportNodeId": "186:982",
+      "sourcePath": "src/assets/pack/plant_6/stem/stem5.png"
+    },
+    {
+      "path": "plant_6/stem/stem6.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4316",
+      "exportNodeId": "186:983",
+      "sourcePath": "src/assets/pack/plant_6/stem/stem6.png"
+    },
+    {
+      "path": "plant_6/stem/stem7.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4318",
+      "exportNodeId": "186:984",
+      "sourcePath": "src/assets/pack/plant_6/stem/stem7.png"
+    },
+    {
+      "path": "plant_6/stem/stem8.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4311",
+      "exportNodeId": "186:985",
+      "sourcePath": "src/assets/pack/plant_6/stem/stem8.png"
+    },
+    {
+      "path": "plant_6/stem/stem9.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4314",
+      "exportNodeId": "186:986",
+      "sourcePath": "src/assets/pack/plant_6/stem/stem9.png"
+    },
+    {
+      "path": "plant_6/stem/stem10.png",
+      "width": 41,
+      "height": 9,
+      "sourceComponentId": "29:4312",
+      "exportNodeId": "186:978",
+      "sourcePath": "src/assets/pack/plant_6/stem/stem10.png"
+    },
+    {
+      "path": "plant_7/flowers/flower1.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4327",
+      "exportNodeId": "186:987",
+      "sourcePath": "src/assets/pack/plant_7/flowers/flower1.png"
+    },
+    {
+      "path": "plant_7/flowers/flower2.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4329",
+      "exportNodeId": "186:988",
+      "sourcePath": "src/assets/pack/plant_7/flowers/flower2.png"
+    },
+    {
+      "path": "plant_7/flowers/flower3.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4331",
+      "exportNodeId": "186:989",
+      "sourcePath": "src/assets/pack/plant_7/flowers/flower3.png"
+    },
+    {
+      "path": "plant_7/flowers/flower4.png",
+      "width": 41,
+      "height": 10,
+      "sourceComponentId": "29:4328",
+      "exportNodeId": "186:990",
+      "sourcePath": "src/assets/pack/plant_7/flowers/flower4.png"
+    },
+    {
+      "path": "plant_7/flowers/flower5.png",
+      "width": 40,
+      "height": 10,
+      "sourceComponentId": "29:4330",
+      "exportNodeId": "186:991",
+      "sourcePath": "src/assets/pack/plant_7/flowers/flower5.png"
+    },
+    {
+      "path": "plant_7/stem/stem1.png",
+      "width": 19,
+      "height": 9,
+      "sourceComponentId": "29:4332",
+      "exportNodeId": "186:992",
+      "sourcePath": "src/assets/pack/plant_7/stem/stem1.png"
+    },
+    {
+      "path": "plant_7/stem/stem2.png",
+      "width": 23,
+      "height": 9,
+      "sourceComponentId": "29:4335",
+      "exportNodeId": "186:993",
+      "sourcePath": "src/assets/pack/plant_7/stem/stem2.png"
+    },
+    {
+      "path": "plant_7/stem/stem3.png",
+      "width": 21,
+      "height": 10,
+      "sourceComponentId": "29:4337",
+      "exportNodeId": "186:994",
+      "sourcePath": "src/assets/pack/plant_7/stem/stem3.png"
+    },
+    {
+      "path": "plant_7/stem/stem4.png",
+      "width": 19,
+      "height": 9,
+      "sourceComponentId": "29:4333",
+      "exportNodeId": "186:995",
+      "sourcePath": "src/assets/pack/plant_7/stem/stem4.png"
+    },
+    {
+      "path": "plant_7/stem/stem5.png",
+      "width": 21,
+      "height": 7,
+      "sourceComponentId": "29:4336",
+      "exportNodeId": "186:996",
+      "sourcePath": "src/assets/pack/plant_7/stem/stem5.png"
+    },
+    {
+      "path": "plant_7/stem/stem6.png",
+      "width": 15,
+      "height": 8,
+      "sourceComponentId": "29:4338",
+      "exportNodeId": "186:997",
+      "sourcePath": "src/assets/pack/plant_7/stem/stem6.png"
+    },
+    {
+      "path": "plant_7/stem/stem7.png",
+      "width": 23,
+      "height": 7,
+      "sourceComponentId": "29:4334",
+      "exportNodeId": "186:998",
+      "sourcePath": "src/assets/pack/plant_7/stem/stem7.png"
+    },
+    {
+      "path": "plant_8/flowers/flower1.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4323",
+      "exportNodeId": "186:999",
+      "sourcePath": "src/assets/pack/plant_8/flowers/flower1.png"
+    },
+    {
+      "path": "plant_8/flowers/flower2.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4325",
+      "exportNodeId": "186:1000",
+      "sourcePath": "src/assets/pack/plant_8/flowers/flower2.png"
+    },
+    {
+      "path": "plant_8/flowers/flower3.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4324",
+      "exportNodeId": "186:1001",
+      "sourcePath": "src/assets/pack/plant_8/flowers/flower3.png"
+    },
+    {
+      "path": "plant_8/stem/stem1.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4320",
+      "exportNodeId": "186:1002",
+      "sourcePath": "src/assets/pack/plant_8/stem/stem1.png"
+    },
+    {
+      "path": "plant_8/stem/stem2.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4322",
+      "exportNodeId": "186:1003",
+      "sourcePath": "src/assets/pack/plant_8/stem/stem2.png"
+    },
+    {
+      "path": "plant_8/stem/stem3.png",
+      "width": 21,
+      "height": 11,
+      "sourceComponentId": "29:4321",
+      "exportNodeId": "186:1004",
+      "sourcePath": "src/assets/pack/plant_8/stem/stem3.png"
+    },
+    {
+      "path": "pumpkin/pumpkin_1_off.png",
+      "width": 29,
+      "height": 27,
+      "sourceComponentId": "29:4511",
+      "exportNodeId": "186:1005",
+      "sourcePath": "src/assets/pack/pumpkin/pumpkin_1_off.png"
+    },
+    {
+      "path": "pumpkin/pumpkin_1_on_1.png",
+      "width": 29,
+      "height": 27,
+      "sourceComponentId": "29:4513",
+      "exportNodeId": "186:1006",
+      "sourcePath": "src/assets/pack/pumpkin/pumpkin_1_on_1.png"
+    },
+    {
+      "path": "pumpkin/pumpkin_1_on_2.png",
+      "width": 29,
+      "height": 27,
+      "sourceComponentId": "29:4512",
+      "exportNodeId": "186:1007",
+      "sourcePath": "src/assets/pack/pumpkin/pumpkin_1_on_2.png"
+    },
+    {
+      "path": "pumpkin/pumpkin_1_on_3.png",
+      "width": 29,
+      "height": 27,
+      "sourceComponentId": "29:4514",
+      "exportNodeId": "186:1008",
+      "sourcePath": "src/assets/pack/pumpkin/pumpkin_1_on_3.png"
+    },
+    {
+      "path": "roots/root1.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4441",
+      "exportNodeId": "186:1009",
+      "sourcePath": "src/assets/pack/roots/root1.png"
+    },
+    {
+      "path": "roots/root2.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4450",
+      "exportNodeId": "186:1015",
+      "sourcePath": "src/assets/pack/roots/root2.png"
+    },
+    {
+      "path": "roots/root3.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4453",
+      "exportNodeId": "186:1016",
+      "sourcePath": "src/assets/pack/roots/root3.png"
+    },
+    {
+      "path": "roots/root4.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4443",
+      "exportNodeId": "186:1017",
+      "sourcePath": "src/assets/pack/roots/root4.png"
+    },
+    {
+      "path": "roots/root5.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4447",
+      "exportNodeId": "186:1018",
+      "sourcePath": "src/assets/pack/roots/root5.png"
+    },
+    {
+      "path": "roots/root6.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4451",
+      "exportNodeId": "186:1019",
+      "sourcePath": "src/assets/pack/roots/root6.png"
+    },
+    {
+      "path": "roots/root7.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4454",
+      "exportNodeId": "186:1020",
+      "sourcePath": "src/assets/pack/roots/root7.png"
+    },
+    {
+      "path": "roots/root8.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4444",
+      "exportNodeId": "186:1021",
+      "sourcePath": "src/assets/pack/roots/root8.png"
+    },
+    {
+      "path": "roots/root9.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4448",
+      "exportNodeId": "186:1022",
+      "sourcePath": "src/assets/pack/roots/root9.png"
+    },
+    {
+      "path": "roots/root10.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4445",
+      "exportNodeId": "186:1010",
+      "sourcePath": "src/assets/pack/roots/root10.png"
+    },
+    {
+      "path": "roots/root11.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4449",
+      "exportNodeId": "186:1011",
+      "sourcePath": "src/assets/pack/roots/root11.png"
+    },
+    {
+      "path": "roots/root12.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4452",
+      "exportNodeId": "186:1012",
+      "sourcePath": "src/assets/pack/roots/root12.png"
+    },
+    {
+      "path": "roots/root13.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4442",
+      "exportNodeId": "186:1013",
+      "sourcePath": "src/assets/pack/roots/root13.png"
+    },
+    {
+      "path": "roots/root14.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4446",
+      "exportNodeId": "186:1014",
+      "sourcePath": "src/assets/pack/roots/root14.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed1.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4459",
+      "exportNodeId": "186:1050",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed1.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed2.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4480",
+      "exportNodeId": "186:1061",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed2.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed3.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4469",
+      "exportNodeId": "186:1070",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed3.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed4.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4474",
+      "exportNodeId": "186:1071",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed4.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed5.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4478",
+      "exportNodeId": "186:1072",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed5.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed6.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4482",
+      "exportNodeId": "186:1073",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed6.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed7.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4457",
+      "exportNodeId": "186:1074",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed7.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed8.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4465",
+      "exportNodeId": "186:1075",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed8.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed9.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4470",
+      "exportNodeId": "186:1076",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed9.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed10.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4464",
+      "exportNodeId": "186:1051",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed10.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed11.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4468",
+      "exportNodeId": "186:1052",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed11.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed12.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4472",
+      "exportNodeId": "186:1053",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed12.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed13.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4476",
+      "exportNodeId": "186:1054",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed13.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed14.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4479",
+      "exportNodeId": "186:1055",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed14.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed15.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4456",
+      "exportNodeId": "186:1056",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed15.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed16.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4462",
+      "exportNodeId": "186:1057",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed16.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed17.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4466",
+      "exportNodeId": "186:1058",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed17.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed18.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4471",
+      "exportNodeId": "186:1059",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed18.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed19.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4475",
+      "exportNodeId": "186:1060",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed19.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed20.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4460",
+      "exportNodeId": "186:1062",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed20.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed21.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4461",
+      "exportNodeId": "186:1063",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed21.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed22.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4467",
+      "exportNodeId": "186:1064",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed22.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed23.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4473",
+      "exportNodeId": "186:1065",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed23.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed24.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4477",
+      "exportNodeId": "186:1066",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed24.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed25.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4481",
+      "exportNodeId": "186:1067",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed25.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed26.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4458",
+      "exportNodeId": "186:1068",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed26.png"
+    },
+    {
+      "path": "seeds/seed_icons/seed27.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4463",
+      "exportNodeId": "186:1069",
+      "sourcePath": "src/assets/pack/seeds/seed_icons/seed27.png"
+    },
+    {
+      "path": "seeds/seed1.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4486",
+      "exportNodeId": "186:1023",
+      "sourcePath": "src/assets/pack/seeds/seed1.png"
+    },
+    {
+      "path": "seeds/seed2.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4507",
+      "exportNodeId": "186:1034",
+      "sourcePath": "src/assets/pack/seeds/seed2.png"
+    },
+    {
+      "path": "seeds/seed3.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4496",
+      "exportNodeId": "186:1043",
+      "sourcePath": "src/assets/pack/seeds/seed3.png"
+    },
+    {
+      "path": "seeds/seed4.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4501",
+      "exportNodeId": "186:1044",
+      "sourcePath": "src/assets/pack/seeds/seed4.png"
+    },
+    {
+      "path": "seeds/seed5.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4505",
+      "exportNodeId": "186:1045",
+      "sourcePath": "src/assets/pack/seeds/seed5.png"
+    },
+    {
+      "path": "seeds/seed6.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4509",
+      "exportNodeId": "186:1046",
+      "sourcePath": "src/assets/pack/seeds/seed6.png"
+    },
+    {
+      "path": "seeds/seed7.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4484",
+      "exportNodeId": "186:1047",
+      "sourcePath": "src/assets/pack/seeds/seed7.png"
+    },
+    {
+      "path": "seeds/seed8.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4492",
+      "exportNodeId": "186:1048",
+      "sourcePath": "src/assets/pack/seeds/seed8.png"
+    },
+    {
+      "path": "seeds/seed9.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4497",
+      "exportNodeId": "186:1049",
+      "sourcePath": "src/assets/pack/seeds/seed9.png"
+    },
+    {
+      "path": "seeds/seed10.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4491",
+      "exportNodeId": "186:1024",
+      "sourcePath": "src/assets/pack/seeds/seed10.png"
+    },
+    {
+      "path": "seeds/seed11.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4495",
+      "exportNodeId": "186:1025",
+      "sourcePath": "src/assets/pack/seeds/seed11.png"
+    },
+    {
+      "path": "seeds/seed12.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4499",
+      "exportNodeId": "186:1026",
+      "sourcePath": "src/assets/pack/seeds/seed12.png"
+    },
+    {
+      "path": "seeds/seed13.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4503",
+      "exportNodeId": "186:1027",
+      "sourcePath": "src/assets/pack/seeds/seed13.png"
+    },
+    {
+      "path": "seeds/seed14.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4506",
+      "exportNodeId": "186:1028",
+      "sourcePath": "src/assets/pack/seeds/seed14.png"
+    },
+    {
+      "path": "seeds/seed15.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4483",
+      "exportNodeId": "186:1029",
+      "sourcePath": "src/assets/pack/seeds/seed15.png"
+    },
+    {
+      "path": "seeds/seed16.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4489",
+      "exportNodeId": "186:1030",
+      "sourcePath": "src/assets/pack/seeds/seed16.png"
+    },
+    {
+      "path": "seeds/seed17.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4493",
+      "exportNodeId": "186:1031",
+      "sourcePath": "src/assets/pack/seeds/seed17.png"
+    },
+    {
+      "path": "seeds/seed18.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4498",
+      "exportNodeId": "186:1032",
+      "sourcePath": "src/assets/pack/seeds/seed18.png"
+    },
+    {
+      "path": "seeds/seed19.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4502",
+      "exportNodeId": "186:1033",
+      "sourcePath": "src/assets/pack/seeds/seed19.png"
+    },
+    {
+      "path": "seeds/seed20.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4487",
+      "exportNodeId": "186:1035",
+      "sourcePath": "src/assets/pack/seeds/seed20.png"
+    },
+    {
+      "path": "seeds/seed21.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4488",
+      "exportNodeId": "186:1036",
+      "sourcePath": "src/assets/pack/seeds/seed21.png"
+    },
+    {
+      "path": "seeds/seed22.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4494",
+      "exportNodeId": "186:1037",
+      "sourcePath": "src/assets/pack/seeds/seed22.png"
+    },
+    {
+      "path": "seeds/seed23.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4500",
+      "exportNodeId": "186:1038",
+      "sourcePath": "src/assets/pack/seeds/seed23.png"
+    },
+    {
+      "path": "seeds/seed24.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4504",
+      "exportNodeId": "186:1039",
+      "sourcePath": "src/assets/pack/seeds/seed24.png"
+    },
+    {
+      "path": "seeds/seed25.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4508",
+      "exportNodeId": "186:1040",
+      "sourcePath": "src/assets/pack/seeds/seed25.png"
+    },
+    {
+      "path": "seeds/seed26.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4485",
+      "exportNodeId": "186:1041",
+      "sourcePath": "src/assets/pack/seeds/seed26.png"
+    },
+    {
+      "path": "seeds/seed27.png",
+      "width": 35,
+      "height": 7,
+      "sourceComponentId": "29:4490",
+      "exportNodeId": "186:1042",
+      "sourcePath": "src/assets/pack/seeds/seed27.png"
+    }
+  ]
 }

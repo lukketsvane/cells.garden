@@ -1,7 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["vite/client", "chrome"]
-  },
-  "include": ["ext/**/*.ts", "src/core/**/*.ts"]
-}
