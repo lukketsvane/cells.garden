@@ -17,9 +17,16 @@ type PetOption = { key: PetSettingKey; label: string; preview: string; available
 
 const PETS: PetOption[] = [
     { key: 'petGnome', label: 'Garden gnome', preview: gnomeUrl, available: false },
-    { key: 'petPumpkin', label: 'Pumpkin', preview: pumpkin1Url, available: true },
-    { key: 'petCrow', label: 'Crow', preview: CROW_PREVIEW_URL, available: true },
+    { key: 'petPumpkin', label: 'Pumpkin', preview: pumpkin1Url, available: false },
+    { key: 'petCrow', label: 'Crow', preview: CROW_PREVIEW_URL, available: false },
 ];
+
+const isAvailable = (key: PetSettingKey) => PETS.some((pet) => pet.key === key && pet.available);
+
+/** What the menu reports, so an unavailable pet never counts as on. */
+export function activePetCount(settings: GardenSettings) {
+    return PETS.filter((pet) => pet.available && settings[pet.key]).length;
+}
 
 export class PetsModal extends Modal {
     constructor(private readonly app: GardenApp) {
@@ -36,10 +43,6 @@ export class PetsModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         contentEl.createEl('h2', { text: 'Pets' });
-        contentEl.createEl('p', {
-            cls: 'setting-item-description',
-            text: 'Off by default. Tap a pet to let it live in this garden.',
-        });
 
         const grid = contentEl.createDiv('garden-pets-grid');
         for (const pet of PETS) {
@@ -132,18 +135,20 @@ function makePetButton(layer: HTMLElement, cls: string, label: string) {
 }
 
 /**
- * The gnome is greyed out in the grid, so it never joins the scene: a garden
- * saved while it was still switchable must not keep one standing there.
+ * A pet that is greyed out in the grid never joins the scene either: a garden
+ * saved while it was still switchable must not keep one standing there. Every
+ * pet is unavailable at the moment, so this mounts nothing.
  */
 export function renderGardenPets(world: HTMLElement, settings: GardenSettings) {
-    if (!settings.petPumpkin && !settings.petCrow) return;
+    const on = (key: PetSettingKey) => isAvailable(key) && Boolean(settings[key]);
+    if (!on('petPumpkin') && !on('petCrow')) return;
     const layer = world.createDiv('garden-pets-layer');
 
-    if (settings.petCrow) {
+    if (on('petCrow')) {
         mountCrowNPC(layer);
     }
 
-    if (settings.petPumpkin) {
+    if (on('petPumpkin')) {
         const pumpkin = makePetButton(layer, 'garden-pet-pumpkin', 'Pumpkin. Tap to make it jump.');
         pumpkin.style.setProperty('--pumpkin-off', 'url("' + pumpkinOffUrl + '")');
         pumpkin.style.setProperty('--pumpkin-1', 'url("' + pumpkin1Url + '")');
