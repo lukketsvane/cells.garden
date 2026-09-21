@@ -35,10 +35,17 @@ jobs:
           paths = [item["path"] for item in manifest["items"]]
           paths += [ref["path"] for ref in manifest["references"]]
 
+          # Branding logos are raster image assets, but not game pixel-art assets.
+          # Keep them out of the pixel atlas; everything else remains included.
+          pixel_paths = [p for p in paths if p not in {
+              "src/assets/CG_logo_v1.png",
+              "src/assets/CG_logo_v1_transp.png",
+          }]
+
           # One sheet containing every asset file tracked by the Figma export manifest:
           # 277 Figma-backed exports + 9 repo-source files = 286.
           assets = []
-          for p in paths:
+          for p in pixel_paths:
               fp = root / p
               if not fp.exists():
                   raise FileNotFoundError(p)
@@ -48,10 +55,10 @@ jobs:
                   im = src.convert("RGBA")
               assets.append({"path": p.removeprefix("src/assets/"), "image": im, "w": im.width, "h": im.height})
 
-          assert len(assets) == 286, len(assets)
+          assert len(assets) == 284, len(assets)
 
           # Compact shelf pack, exact native pixels, no scaling.
-          target_w = 1024
+          target_w = 2048
           pad = 2
           assets.sort(key=lambda a: (-a["h"], -a["w"], a["path"]))
 
@@ -75,7 +82,7 @@ jobs:
 
           out = root / "exports"
           out.mkdir(exist_ok=True)
-          png = out / "all_pixel_assets_286_native1x.png"
+          png = out / "all_pixel_assets_284_native1x.png"
           atlas.save(png)
 
           meta = {
@@ -85,7 +92,7 @@ jobs:
               "padding": pad,
               "nativeScale": 1,
               "transparent": True,
-              "note": "All 286 asset files referenced by figma/exports.json. GIF sources are represented by frame 0 in the PNG atlas.",
+              "note": "All 284 game pixel-art/image assets referenced by figma/exports.json, excluding the two 3200×3200 branding-logo PNGs. GIF sources are represented by frame 0 in the PNG atlas.",
               "items": [
                   {
                       "index": i,
@@ -98,7 +105,7 @@ jobs:
                   for i, a in enumerate(assets)
               ],
           }
-          (out / "all_pixel_assets_286_native1x.json").write_text(json.dumps(meta, indent=2) + "\n")
+          (out / "all_pixel_assets_284_native1x.json").write_text(json.dumps(meta, indent=2) + "\n")
 
           # Also make a sheet containing only the 106 assets outside the earlier 171 plant/root/seed/pumpkin set.
           plantish = []
@@ -115,7 +122,7 @@ jobs:
 
           # Repo-only plant_9 belongs among the "other" assets because it was not in the original 171 Figma-backed plant sheet.
           assert len(plantish) == 171, len(plantish)
-          assert len(other) == 115, len(other)
+          assert len(other) == 113, len(other)
 
           # Pack the 115 other assets separately.
           items = sorted(other, key=lambda a: (-a["h"], -a["w"], a["path"]))
@@ -135,8 +142,8 @@ jobs:
           other_img = Image.new("RGBA", (target_w, other_h), (0, 0, 0, 0))
           for a in items:
               other_img.alpha_composite(a["image"], (a["_ox"], a["_oy"]))
-          other_img.save(out / "other_pixel_assets_115_native1x.png")
-          (out / "other_pixel_assets_115_native1x.json").write_text(json.dumps({
+          other_img.save(out / "other_pixel_assets_113_native1x.png")
+          (out / "other_pixel_assets_113_native1x.json").write_text(json.dumps({
               "count": len(items),
               "width": target_w,
               "height": other_h,
@@ -157,9 +164,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add exports/all_pixel_assets_286_native1x.png \
-                  exports/all_pixel_assets_286_native1x.json \
-                  exports/other_pixel_assets_115_native1x.png \
-                  exports/other_pixel_assets_115_native1x.json
+          git add exports/all_pixel_assets_284_native1x.png \
+                  exports/all_pixel_assets_284_native1x.json \
+                  exports/other_pixel_assets_113_native1x.png \
+                  exports/other_pixel_assets_113_native1x.json
           git commit -m "Build complete pixel asset atlases"
           git push origin HEAD:all-pixel-assets-sheet-286
