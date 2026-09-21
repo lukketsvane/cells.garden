@@ -1,0 +1,165 @@
+name: Build all pixel assets atlas
+
+on:
+  push:
+    branches:
+      - all-pixel-assets-sheet-286
+    paths:
+      - ".github/workflows/build-all-pixel-assets-atlas.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: all-pixel-assets-sheet-286
+
+      - name: Install Pillow
+        run: python -m pip install pillow
+
+      - name: Build native 1x atlas
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import json
+
+          root = Path(".")
+          manifest = json.loads((root / "figma/exports.json").read_text())
+
+          paths = [item["path"] for item in manifest["items"]]
+          paths += [ref["path"] for ref in manifest["references"]]
+
+          # One sheet containing every asset file tracked by the Figma export manifest:
+          # 277 Figma-backed exports + 9 repo-source files = 286.
+          assets = []
+          for p in paths:
+              fp = root / p
+              if not fp.exists():
+                  raise FileNotFoundError(p)
+              with Image.open(fp) as src:
+                  # GIFs contribute their first rendered frame to the PNG atlas.
+                  src.seek(0)
+                  im = src.convert("RGBA")
+              assets.append({"path": p.removeprefix("src/assets/"), "image": im, "w": im.width, "h": im.height})
+
+          assert len(assets) == 286, len(assets)
+
+          # Compact shelf pack, exact native pixels, no scaling.
+          target_w = 1024
+          pad = 2
+          assets.sort(key=lambda a: (-a["h"], -a["w"], a["path"]))
+
+          x = pad
+          y = pad
+          row_h = 0
+          for a in assets:
+              if x + a["w"] + pad > target_w and x > pad:
+                  x = pad
+                  y += row_h + pad
+                  row_h = 0
+              a["x"] = x
+              a["y"] = y
+              x += a["w"] + pad
+              row_h = max(row_h, a["h"])
+
+          atlas_h = y + row_h + pad
+          atlas = Image.new("RGBA", (target_w, atlas_h), (0, 0, 0, 0))
+          for a in assets:
+              atlas.alpha_composite(a["image"], (a["x"], a["y"]))
+
+          out = root / "exports"
+          out.mkdir(exist_ok=True)
+          png = out / "all_pixel_assets_286_native1x.png"
+          atlas.save(png)
+
+          meta = {
+              "count": len(assets),
+              "width": target_w,
+              "height": atlas_h,
+              "padding": pad,
+              "nativeScale": 1,
+              "transparent": True,
+              "note": "All 286 asset files referenced by figma/exports.json. GIF sources are represented by frame 0 in the PNG atlas.",
+              "items": [
+                  {
+                      "index": i,
+                      "path": a["path"],
+                      "x": a["x"],
+                      "y": a["y"],
+                      "width": a["w"],
+                      "height": a["h"],
+                  }
+                  for i, a in enumerate(assets)
+              ],
+          }
+          (out / "all_pixel_assets_286_native1x.json").write_text(json.dumps(meta, indent=2) + "\n")
+
+          # Also make a sheet containing only the 106 assets outside the earlier 171 plant/root/seed/pumpkin set.
+          plantish = []
+          other = []
+          for a in assets:
+              p = a["path"]
+              is_171 = (
+                  any(p.startswith(f"pack/plant_{i}/") for i in range(1, 9))
+                  or p.startswith("pack/roots/")
+                  or p.startswith("pack/seeds/")
+                  or p.startswith("pack/pumpkin/")
+              )
+              (plantish if is_171 else other).append(a)
+
+          # Repo-only plant_9 belongs among the "other" assets because it was not in the original 171 Figma-backed plant sheet.
+          assert len(plantish) == 171, len(plantish)
+          assert len(other) == 115, len(other)
+
+          # Pack the 115 other assets separately.
+          items = sorted(other, key=lambda a: (-a["h"], -a["w"], a["path"]))
+          x = pad
+          y = pad
+          row_h = 0
+          for a in items:
+              if x + a["w"] + pad > target_w and x > pad:
+                  x = pad
+                  y += row_h + pad
+                  row_h = 0
+              a["_ox"] = x
+              a["_oy"] = y
+              x += a["w"] + pad
+              row_h = max(row_h, a["h"])
+          other_h = y + row_h + pad
+          other_img = Image.new("RGBA", (target_w, other_h), (0, 0, 0, 0))
+          for a in items:
+              other_img.alpha_composite(a["image"], (a["_ox"], a["_oy"]))
+          other_img.save(out / "other_pixel_assets_115_native1x.png")
+          (out / "other_pixel_assets_115_native1x.json").write_text(json.dumps({
+              "count": len(items),
+              "width": target_w,
+              "height": other_h,
+              "padding": pad,
+              "nativeScale": 1,
+              "transparent": True,
+              "items": [
+                  {"index": i, "path": a["path"], "x": a["_ox"], "y": a["_oy"], "width": a["w"], "height": a["h"]}
+                  for i, a in enumerate(items)
+              ],
+          }, indent=2) + "\n")
+
+          print(f"ALL: {len(assets)} assets -> {target_w}x{atlas_h}")
+          print(f"OTHER: {len(items)} assets -> {target_w}x{other_h}")
+          PY
+
+      - name: Commit generated atlases
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add exports/all_pixel_assets_286_native1x.png \
+                  exports/all_pixel_assets_286_native1x.json \
+                  exports/other_pixel_assets_115_native1x.png \
+                  exports/other_pixel_assets_115_native1x.json
+          git commit -m "Build complete pixel asset atlases"
+          git push origin HEAD:all-pixel-assets-sheet-286
