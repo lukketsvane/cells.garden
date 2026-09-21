@@ -1,0 +1,914 @@
+{
+  "count": 113,
+  "width": 2048,
+  "height": 291,
+  "padding": 2,
+  "nativeScale": 1,
+  "transparent": true,
+  "items": [
+    {
+      "index": 0,
+      "path": "mountains.png",
+      "x": 2,
+      "y": 2,
+      "width": 739,
+      "height": 159
+    },
+    {
+      "index": 1,
+      "path": "cloud.png",
+      "x": 743,
+      "y": 2,
+      "width": 540,
+      "height": 119
+    },
+    {
+      "index": 2,
+      "path": "bg_image.png",
+      "x": 1285,
+      "y": 2,
+      "width": 540,
+      "height": 108
+    },
+    {
+      "index": 3,
+      "path": "stars_pattern.gif",
+      "x": 2,
+      "y": 163,
+      "width": 351,
+      "height": 108
+    },
+    {
+      "index": 4,
+      "path": "pets/gnome.png",
+      "x": 355,
+      "y": 163,
+      "width": 18,
+      "height": 24
+    },
+    {
+      "index": 5,
+      "path": "pack/plant_9/stem/Stem_1.png",
+      "x": 375,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 6,
+      "path": "pack/plant_9/stem/Stem_3.png",
+      "x": 416,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 7,
+      "path": "ground_tile.png",
+      "x": 457,
+      "y": 163,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "index": 8,
+      "path": "pack/plant_9/stem/Stem_2.png",
+      "x": 471,
+      "y": 163,
+      "width": 39,
+      "height": 11
+    },
+    {
+      "index": 9,
+      "path": "pack/plant_9/flowers/flower_1.png",
+      "x": 512,
+      "y": 163,
+      "width": 39,
+      "height": 10
+    },
+    {
+      "index": 10,
+      "path": "pack/plant_9/flowers/flower_2.png",
+      "x": 553,
+      "y": 163,
+      "width": 39,
+      "height": 10
+    },
+    {
+      "index": 11,
+      "path": "pack/minerals/mineral1.png",
+      "x": 594,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 12,
+      "path": "pack/minerals/mineral10.png",
+      "x": 631,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 13,
+      "path": "pack/minerals/mineral100.png",
+      "x": 668,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 14,
+      "path": "pack/minerals/mineral11.png",
+      "x": 705,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 15,
+      "path": "pack/minerals/mineral12.png",
+      "x": 742,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 16,
+      "path": "pack/minerals/mineral13.png",
+      "x": 779,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 17,
+      "path": "pack/minerals/mineral14.png",
+      "x": 816,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 18,
+      "path": "pack/minerals/mineral15.png",
+      "x": 853,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 19,
+      "path": "pack/minerals/mineral16.png",
+      "x": 890,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 20,
+      "path": "pack/minerals/mineral17.png",
+      "x": 927,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 21,
+      "path": "pack/minerals/mineral18.png",
+      "x": 964,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 22,
+      "path": "pack/minerals/mineral19.png",
+      "x": 1001,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 23,
+      "path": "pack/minerals/mineral2.png",
+      "x": 1038,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 24,
+      "path": "pack/minerals/mineral20.png",
+      "x": 1075,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 25,
+      "path": "pack/minerals/mineral21.png",
+      "x": 1112,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 26,
+      "path": "pack/minerals/mineral22.png",
+      "x": 1149,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 27,
+      "path": "pack/minerals/mineral23.png",
+      "x": 1186,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 28,
+      "path": "pack/minerals/mineral24.png",
+      "x": 1223,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 29,
+      "path": "pack/minerals/mineral25.png",
+      "x": 1260,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 30,
+      "path": "pack/minerals/mineral26.png",
+      "x": 1297,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 31,
+      "path": "pack/minerals/mineral27.png",
+      "x": 1334,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 32,
+      "path": "pack/minerals/mineral28.png",
+      "x": 1371,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 33,
+      "path": "pack/minerals/mineral29.png",
+      "x": 1408,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 34,
+      "path": "pack/minerals/mineral3.png",
+      "x": 1445,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 35,
+      "path": "pack/minerals/mineral30.png",
+      "x": 1482,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 36,
+      "path": "pack/minerals/mineral31.png",
+      "x": 1519,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 37,
+      "path": "pack/minerals/mineral32.png",
+      "x": 1556,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 38,
+      "path": "pack/minerals/mineral33.png",
+      "x": 1593,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 39,
+      "path": "pack/minerals/mineral34.png",
+      "x": 1630,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 40,
+      "path": "pack/minerals/mineral35.png",
+      "x": 1667,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 41,
+      "path": "pack/minerals/mineral36.png",
+      "x": 1704,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 42,
+      "path": "pack/minerals/mineral37.png",
+      "x": 1741,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 43,
+      "path": "pack/minerals/mineral38.png",
+      "x": 1778,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 44,
+      "path": "pack/minerals/mineral39.png",
+      "x": 1815,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 45,
+      "path": "pack/minerals/mineral4.png",
+      "x": 1852,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 46,
+      "path": "pack/minerals/mineral40.png",
+      "x": 1889,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 47,
+      "path": "pack/minerals/mineral41.png",
+      "x": 1926,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 48,
+      "path": "pack/minerals/mineral42.png",
+      "x": 1963,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 49,
+      "path": "pack/minerals/mineral43.png",
+      "x": 2000,
+      "y": 163,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 50,
+      "path": "pack/minerals/mineral44.png",
+      "x": 2,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 51,
+      "path": "pack/minerals/mineral45.png",
+      "x": 39,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 52,
+      "path": "pack/minerals/mineral46.png",
+      "x": 76,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 53,
+      "path": "pack/minerals/mineral47.png",
+      "x": 113,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 54,
+      "path": "pack/minerals/mineral48.png",
+      "x": 150,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 55,
+      "path": "pack/minerals/mineral49.png",
+      "x": 187,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 56,
+      "path": "pack/minerals/mineral5.png",
+      "x": 224,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 57,
+      "path": "pack/minerals/mineral50.png",
+      "x": 261,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 58,
+      "path": "pack/minerals/mineral51.png",
+      "x": 298,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 59,
+      "path": "pack/minerals/mineral52.png",
+      "x": 335,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 60,
+      "path": "pack/minerals/mineral53.png",
+      "x": 372,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 61,
+      "path": "pack/minerals/mineral54.png",
+      "x": 409,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 62,
+      "path": "pack/minerals/mineral55.png",
+      "x": 446,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 63,
+      "path": "pack/minerals/mineral56.png",
+      "x": 483,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 64,
+      "path": "pack/minerals/mineral57.png",
+      "x": 520,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 65,
+      "path": "pack/minerals/mineral58.png",
+      "x": 557,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 66,
+      "path": "pack/minerals/mineral59.png",
+      "x": 594,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 67,
+      "path": "pack/minerals/mineral6.png",
+      "x": 631,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 68,
+      "path": "pack/minerals/mineral60.png",
+      "x": 668,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 69,
+      "path": "pack/minerals/mineral61.png",
+      "x": 705,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 70,
+      "path": "pack/minerals/mineral62.png",
+      "x": 742,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 71,
+      "path": "pack/minerals/mineral63.png",
+      "x": 779,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 72,
+      "path": "pack/minerals/mineral64.png",
+      "x": 816,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 73,
+      "path": "pack/minerals/mineral65.png",
+      "x": 853,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 74,
+      "path": "pack/minerals/mineral66.png",
+      "x": 890,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 75,
+      "path": "pack/minerals/mineral67.png",
+      "x": 927,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 76,
+      "path": "pack/minerals/mineral68.png",
+      "x": 964,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 77,
+      "path": "pack/minerals/mineral69.png",
+      "x": 1001,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 78,
+      "path": "pack/minerals/mineral7.png",
+      "x": 1038,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 79,
+      "path": "pack/minerals/mineral70.png",
+      "x": 1075,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 80,
+      "path": "pack/minerals/mineral71.png",
+      "x": 1112,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 81,
+      "path": "pack/minerals/mineral72.png",
+      "x": 1149,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 82,
+      "path": "pack/minerals/mineral73.png",
+      "x": 1186,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 83,
+      "path": "pack/minerals/mineral74.png",
+      "x": 1223,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 84,
+      "path": "pack/minerals/mineral75.png",
+      "x": 1260,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 85,
+      "path": "pack/minerals/mineral76.png",
+      "x": 1297,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 86,
+      "path": "pack/minerals/mineral77.png",
+      "x": 1334,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 87,
+      "path": "pack/minerals/mineral78.png",
+      "x": 1371,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 88,
+      "path": "pack/minerals/mineral79.png",
+      "x": 1408,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 89,
+      "path": "pack/minerals/mineral8.png",
+      "x": 1445,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 90,
+      "path": "pack/minerals/mineral80.png",
+      "x": 1482,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 91,
+      "path": "pack/minerals/mineral81.png",
+      "x": 1519,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 92,
+      "path": "pack/minerals/mineral82.png",
+      "x": 1556,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 93,
+      "path": "pack/minerals/mineral83.png",
+      "x": 1593,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 94,
+      "path": "pack/minerals/mineral84.png",
+      "x": 1630,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 95,
+      "path": "pack/minerals/mineral85.png",
+      "x": 1667,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 96,
+      "path": "pack/minerals/mineral86.png",
+      "x": 1704,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 97,
+      "path": "pack/minerals/mineral87.png",
+      "x": 1741,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 98,
+      "path": "pack/minerals/mineral88.png",
+      "x": 1778,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 99,
+      "path": "pack/minerals/mineral89.png",
+      "x": 1815,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 100,
+      "path": "pack/minerals/mineral9.png",
+      "x": 1852,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 101,
+      "path": "pack/minerals/mineral90.png",
+      "x": 1889,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 102,
+      "path": "pack/minerals/mineral91.png",
+      "x": 1926,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 103,
+      "path": "pack/minerals/mineral92.png",
+      "x": 1963,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 104,
+      "path": "pack/minerals/mineral93.png",
+      "x": 2000,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 105,
+      "path": "pack/minerals/mineral94.png",
+      "x": 2,
+      "y": 282,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 106,
+      "path": "pack/minerals/mineral95.png",
+      "x": 39,
+      "y": 282,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 107,
+      "path": "pack/minerals/mineral96.png",
+      "x": 76,
+      "y": 282,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 108,
+      "path": "pack/minerals/mineral97.png",
+      "x": 113,
+      "y": 282,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 109,
+      "path": "pack/minerals/mineral98.png",
+      "x": 150,
+      "y": 282,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 110,
+      "path": "pack/minerals/mineral99.png",
+      "x": 187,
+      "y": 282,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 111,
+      "path": "ant_walk_1.png",
+      "x": 224,
+      "y": 282,
+      "width": 7,
+      "height": 7
+    },
+    {
+      "index": 112,
+      "path": "ant_walk_2.png",
+      "x": 233,
+      "y": 282,
+      "width": 7,
+      "height": 7
+    }
+  ]
+}

@@ -1,0 +1,2283 @@
+{
+  "count": 284,
+  "width": 2048,
+  "height": 312,
+  "padding": 2,
+  "nativeScale": 1,
+  "transparent": true,
+  "note": "All 284 game pixel-art/image assets referenced by figma/exports.json, excluding the two 3200\u00d73200 branding-logo PNGs. GIF sources are represented by frame 0 in the PNG atlas.",
+  "items": [
+    {
+      "index": 0,
+      "path": "mountains.png",
+      "x": 2,
+      "y": 2,
+      "width": 739,
+      "height": 159
+    },
+    {
+      "index": 1,
+      "path": "cloud.png",
+      "x": 743,
+      "y": 2,
+      "width": 540,
+      "height": 119
+    },
+    {
+      "index": 2,
+      "path": "bg_image.png",
+      "x": 1285,
+      "y": 2,
+      "width": 540,
+      "height": 108
+    },
+    {
+      "index": 3,
+      "path": "stars_pattern.gif",
+      "x": 2,
+      "y": 163,
+      "width": 351,
+      "height": 108
+    },
+    {
+      "index": 4,
+      "path": "pack/pumpkin/pumpkin_1_off.png",
+      "x": 355,
+      "y": 163,
+      "width": 29,
+      "height": 27
+    },
+    {
+      "index": 5,
+      "path": "pack/pumpkin/pumpkin_1_on_1.png",
+      "x": 386,
+      "y": 163,
+      "width": 29,
+      "height": 27
+    },
+    {
+      "index": 6,
+      "path": "pack/pumpkin/pumpkin_1_on_2.png",
+      "x": 417,
+      "y": 163,
+      "width": 29,
+      "height": 27
+    },
+    {
+      "index": 7,
+      "path": "pack/pumpkin/pumpkin_1_on_3.png",
+      "x": 448,
+      "y": 163,
+      "width": 29,
+      "height": 27
+    },
+    {
+      "index": 8,
+      "path": "pets/gnome.png",
+      "x": 479,
+      "y": 163,
+      "width": 18,
+      "height": 24
+    },
+    {
+      "index": 9,
+      "path": "pack/plant_5/stem/stem4.png",
+      "x": 499,
+      "y": 163,
+      "width": 39,
+      "height": 13
+    },
+    {
+      "index": 10,
+      "path": "pack/plant_5/flowers/flower1.png",
+      "x": 540,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 11,
+      "path": "pack/plant_5/flowers/flower2.png",
+      "x": 581,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 12,
+      "path": "pack/plant_5/flowers/flower3.png",
+      "x": 622,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 13,
+      "path": "pack/plant_5/stem/stem1.png",
+      "x": 663,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 14,
+      "path": "pack/plant_5/stem/stem2.png",
+      "x": 704,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 15,
+      "path": "pack/plant_5/stem/stem3.png",
+      "x": 745,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 16,
+      "path": "pack/plant_5/stem/stem5.png",
+      "x": 786,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 17,
+      "path": "pack/plant_9/stem/Stem_1.png",
+      "x": 827,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 18,
+      "path": "pack/plant_9/stem/Stem_3.png",
+      "x": 868,
+      "y": 163,
+      "width": 39,
+      "height": 12
+    },
+    {
+      "index": 19,
+      "path": "ground_tile.png",
+      "x": 909,
+      "y": 163,
+      "width": 12,
+      "height": 12
+    },
+    {
+      "index": 20,
+      "path": "pack/plant_6/stem/stem1.png",
+      "x": 923,
+      "y": 163,
+      "width": 41,
+      "height": 11
+    },
+    {
+      "index": 21,
+      "path": "pack/plant_6/stem/stem2.png",
+      "x": 966,
+      "y": 163,
+      "width": 41,
+      "height": 11
+    },
+    {
+      "index": 22,
+      "path": "pack/plant_6/stem/stem4.png",
+      "x": 1009,
+      "y": 163,
+      "width": 41,
+      "height": 11
+    },
+    {
+      "index": 23,
+      "path": "pack/plant_9/stem/Stem_2.png",
+      "x": 1052,
+      "y": 163,
+      "width": 39,
+      "height": 11
+    },
+    {
+      "index": 24,
+      "path": "pack/plant_8/flowers/flower1.png",
+      "x": 1093,
+      "y": 163,
+      "width": 21,
+      "height": 11
+    },
+    {
+      "index": 25,
+      "path": "pack/plant_8/flowers/flower2.png",
+      "x": 1116,
+      "y": 163,
+      "width": 21,
+      "height": 11
+    },
+    {
+      "index": 26,
+      "path": "pack/plant_8/flowers/flower3.png",
+      "x": 1139,
+      "y": 163,
+      "width": 21,
+      "height": 11
+    },
+    {
+      "index": 27,
+      "path": "pack/plant_8/stem/stem1.png",
+      "x": 1162,
+      "y": 163,
+      "width": 21,
+      "height": 11
+    },
+    {
+      "index": 28,
+      "path": "pack/plant_8/stem/stem2.png",
+      "x": 1185,
+      "y": 163,
+      "width": 21,
+      "height": 11
+    },
+    {
+      "index": 29,
+      "path": "pack/plant_8/stem/stem3.png",
+      "x": 1208,
+      "y": 163,
+      "width": 21,
+      "height": 11
+    },
+    {
+      "index": 30,
+      "path": "pack/plant_2/flowers/flower2.png",
+      "x": 1231,
+      "y": 163,
+      "width": 41,
+      "height": 10
+    },
+    {
+      "index": 31,
+      "path": "pack/plant_6/flowers/flower2.png",
+      "x": 1274,
+      "y": 163,
+      "width": 41,
+      "height": 10
+    },
+    {
+      "index": 32,
+      "path": "pack/plant_6/stem/stem3.png",
+      "x": 1317,
+      "y": 163,
+      "width": 41,
+      "height": 10
+    },
+    {
+      "index": 33,
+      "path": "pack/plant_6/stem/stem5.png",
+      "x": 1360,
+      "y": 163,
+      "width": 41,
+      "height": 10
+    },
+    {
+      "index": 34,
+      "path": "pack/plant_6/stem/stem8.png",
+      "x": 1403,
+      "y": 163,
+      "width": 41,
+      "height": 10
+    },
+    {
+      "index": 35,
+      "path": "pack/plant_7/flowers/flower1.png",
+      "x": 1446,
+      "y": 163,
+      "width": 41,
+      "height": 10
+    },
+    {
+      "index": 36,
+      "path": "pack/plant_7/flowers/flower2.png",
+      "x": 1489,
+      "y": 163,
+      "width": 41,
+      "height": 10
+    },
+    {
+      "index": 37,
+      "path": "pack/plant_7/flowers/flower3.png",
+      "x": 1532,
+      "y": 163,
+      "width": 41,
+      "height": 10
+    },
+    {
+      "index": 38,
+      "path": "pack/plant_7/flowers/flower4.png",
+      "x": 1575,
+      "y": 163,
+      "width": 41,
+      "height": 10
+    },
+    {
+      "index": 39,
+      "path": "pack/plant_7/flowers/flower5.png",
+      "x": 1618,
+      "y": 163,
+      "width": 40,
+      "height": 10
+    },
+    {
+      "index": 40,
+      "path": "pack/plant_9/flowers/flower_1.png",
+      "x": 1660,
+      "y": 163,
+      "width": 39,
+      "height": 10
+    },
+    {
+      "index": 41,
+      "path": "pack/plant_9/flowers/flower_2.png",
+      "x": 1701,
+      "y": 163,
+      "width": 39,
+      "height": 10
+    },
+    {
+      "index": 42,
+      "path": "pack/plant_4/flowers/flower1.png",
+      "x": 1742,
+      "y": 163,
+      "width": 29,
+      "height": 10
+    },
+    {
+      "index": 43,
+      "path": "pack/plant_4/flowers/flower2.png",
+      "x": 1773,
+      "y": 163,
+      "width": 29,
+      "height": 10
+    },
+    {
+      "index": 44,
+      "path": "pack/plant_4/stem/stem1.png",
+      "x": 1804,
+      "y": 163,
+      "width": 29,
+      "height": 10
+    },
+    {
+      "index": 45,
+      "path": "pack/plant_4/stem/stem2.png",
+      "x": 1835,
+      "y": 163,
+      "width": 29,
+      "height": 10
+    },
+    {
+      "index": 46,
+      "path": "pack/plant_4/stem/stem3.png",
+      "x": 1866,
+      "y": 163,
+      "width": 29,
+      "height": 10
+    },
+    {
+      "index": 47,
+      "path": "pack/plant_4/stem/stem4.png",
+      "x": 1897,
+      "y": 163,
+      "width": 29,
+      "height": 10
+    },
+    {
+      "index": 48,
+      "path": "pack/plant_4/stem/stem5.png",
+      "x": 1928,
+      "y": 163,
+      "width": 29,
+      "height": 10
+    },
+    {
+      "index": 49,
+      "path": "pack/plant_4/stem/stem6.png",
+      "x": 1959,
+      "y": 163,
+      "width": 29,
+      "height": 10
+    },
+    {
+      "index": 50,
+      "path": "pack/plant_4/stem/stem7.png",
+      "x": 1990,
+      "y": 163,
+      "width": 29,
+      "height": 10
+    },
+    {
+      "index": 51,
+      "path": "pack/plant_4/stem/stem8.png",
+      "x": 2,
+      "y": 273,
+      "width": 29,
+      "height": 10
+    },
+    {
+      "index": 52,
+      "path": "pack/plant_7/stem/stem3.png",
+      "x": 33,
+      "y": 273,
+      "width": 21,
+      "height": 10
+    },
+    {
+      "index": 53,
+      "path": "pack/plant_2/stem/stem10.png",
+      "x": 56,
+      "y": 273,
+      "width": 41,
+      "height": 9
+    },
+    {
+      "index": 54,
+      "path": "pack/plant_6/flowers/flower1.png",
+      "x": 99,
+      "y": 273,
+      "width": 41,
+      "height": 9
+    },
+    {
+      "index": 55,
+      "path": "pack/plant_6/stem/stem10.png",
+      "x": 142,
+      "y": 273,
+      "width": 41,
+      "height": 9
+    },
+    {
+      "index": 56,
+      "path": "pack/plant_6/stem/stem6.png",
+      "x": 185,
+      "y": 273,
+      "width": 41,
+      "height": 9
+    },
+    {
+      "index": 57,
+      "path": "pack/plant_6/stem/stem7.png",
+      "x": 228,
+      "y": 273,
+      "width": 41,
+      "height": 9
+    },
+    {
+      "index": 58,
+      "path": "pack/plant_6/stem/stem9.png",
+      "x": 271,
+      "y": 273,
+      "width": 41,
+      "height": 9
+    },
+    {
+      "index": 59,
+      "path": "pack/plant_7/stem/stem2.png",
+      "x": 314,
+      "y": 273,
+      "width": 23,
+      "height": 9
+    },
+    {
+      "index": 60,
+      "path": "pack/plant_7/stem/stem1.png",
+      "x": 339,
+      "y": 273,
+      "width": 19,
+      "height": 9
+    },
+    {
+      "index": 61,
+      "path": "pack/plant_7/stem/stem4.png",
+      "x": 360,
+      "y": 273,
+      "width": 19,
+      "height": 9
+    },
+    {
+      "index": 62,
+      "path": "pack/plant_2/flowers/flower1.png",
+      "x": 381,
+      "y": 273,
+      "width": 41,
+      "height": 8
+    },
+    {
+      "index": 63,
+      "path": "pack/plant_2/flowers/flower3.png",
+      "x": 424,
+      "y": 273,
+      "width": 41,
+      "height": 8
+    },
+    {
+      "index": 64,
+      "path": "pack/plant_2/stem/stem11.png",
+      "x": 467,
+      "y": 273,
+      "width": 41,
+      "height": 8
+    },
+    {
+      "index": 65,
+      "path": "pack/plant_7/stem/stem6.png",
+      "x": 510,
+      "y": 273,
+      "width": 15,
+      "height": 8
+    },
+    {
+      "index": 66,
+      "path": "pack/plant_3/flowers/flower1.png",
+      "x": 527,
+      "y": 273,
+      "width": 45,
+      "height": 7
+    },
+    {
+      "index": 67,
+      "path": "pack/plant_3/flowers/flower2.png",
+      "x": 574,
+      "y": 273,
+      "width": 45,
+      "height": 7
+    },
+    {
+      "index": 68,
+      "path": "pack/plant_3/stem/stem1.png",
+      "x": 621,
+      "y": 273,
+      "width": 45,
+      "height": 7
+    },
+    {
+      "index": 69,
+      "path": "pack/plant_3/stem/stem2.png",
+      "x": 668,
+      "y": 273,
+      "width": 45,
+      "height": 7
+    },
+    {
+      "index": 70,
+      "path": "pack/plant_3/stem/stem3.png",
+      "x": 715,
+      "y": 273,
+      "width": 45,
+      "height": 7
+    },
+    {
+      "index": 71,
+      "path": "pack/plant_3/stem/stem4.png",
+      "x": 762,
+      "y": 273,
+      "width": 45,
+      "height": 7
+    },
+    {
+      "index": 72,
+      "path": "pack/plant_3/stem/stem5.png",
+      "x": 809,
+      "y": 273,
+      "width": 45,
+      "height": 7
+    },
+    {
+      "index": 73,
+      "path": "pack/plant_3/stem/stem6.png",
+      "x": 856,
+      "y": 273,
+      "width": 45,
+      "height": 7
+    },
+    {
+      "index": 74,
+      "path": "pack/plant_3/stem/stem7.png",
+      "x": 903,
+      "y": 273,
+      "width": 45,
+      "height": 7
+    },
+    {
+      "index": 75,
+      "path": "pack/plant_2/stem/stem1.png",
+      "x": 950,
+      "y": 273,
+      "width": 41,
+      "height": 7
+    },
+    {
+      "index": 76,
+      "path": "pack/plant_2/stem/stem2.png",
+      "x": 993,
+      "y": 273,
+      "width": 41,
+      "height": 7
+    },
+    {
+      "index": 77,
+      "path": "pack/plant_2/stem/stem3.png",
+      "x": 1036,
+      "y": 273,
+      "width": 41,
+      "height": 7
+    },
+    {
+      "index": 78,
+      "path": "pack/plant_2/stem/stem4.png",
+      "x": 1079,
+      "y": 273,
+      "width": 41,
+      "height": 7
+    },
+    {
+      "index": 79,
+      "path": "pack/plant_2/stem/stem5.png",
+      "x": 1122,
+      "y": 273,
+      "width": 41,
+      "height": 7
+    },
+    {
+      "index": 80,
+      "path": "pack/plant_2/stem/stem6.png",
+      "x": 1165,
+      "y": 273,
+      "width": 41,
+      "height": 7
+    },
+    {
+      "index": 81,
+      "path": "pack/plant_2/stem/stem7.png",
+      "x": 1208,
+      "y": 273,
+      "width": 41,
+      "height": 7
+    },
+    {
+      "index": 82,
+      "path": "pack/plant_2/stem/stem8.png",
+      "x": 1251,
+      "y": 273,
+      "width": 41,
+      "height": 7
+    },
+    {
+      "index": 83,
+      "path": "pack/plant_2/stem/stem9.png",
+      "x": 1294,
+      "y": 273,
+      "width": 41,
+      "height": 7
+    },
+    {
+      "index": 84,
+      "path": "pack/minerals/mineral1.png",
+      "x": 1337,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 85,
+      "path": "pack/minerals/mineral10.png",
+      "x": 1374,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 86,
+      "path": "pack/minerals/mineral100.png",
+      "x": 1411,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 87,
+      "path": "pack/minerals/mineral11.png",
+      "x": 1448,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 88,
+      "path": "pack/minerals/mineral12.png",
+      "x": 1485,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 89,
+      "path": "pack/minerals/mineral13.png",
+      "x": 1522,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 90,
+      "path": "pack/minerals/mineral14.png",
+      "x": 1559,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 91,
+      "path": "pack/minerals/mineral15.png",
+      "x": 1596,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 92,
+      "path": "pack/minerals/mineral16.png",
+      "x": 1633,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 93,
+      "path": "pack/minerals/mineral17.png",
+      "x": 1670,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 94,
+      "path": "pack/minerals/mineral18.png",
+      "x": 1707,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 95,
+      "path": "pack/minerals/mineral19.png",
+      "x": 1744,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 96,
+      "path": "pack/minerals/mineral2.png",
+      "x": 1781,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 97,
+      "path": "pack/minerals/mineral20.png",
+      "x": 1818,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 98,
+      "path": "pack/minerals/mineral21.png",
+      "x": 1855,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 99,
+      "path": "pack/minerals/mineral22.png",
+      "x": 1892,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 100,
+      "path": "pack/minerals/mineral23.png",
+      "x": 1929,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 101,
+      "path": "pack/minerals/mineral24.png",
+      "x": 1966,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 102,
+      "path": "pack/minerals/mineral25.png",
+      "x": 2003,
+      "y": 273,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 103,
+      "path": "pack/minerals/mineral26.png",
+      "x": 2,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 104,
+      "path": "pack/minerals/mineral27.png",
+      "x": 39,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 105,
+      "path": "pack/minerals/mineral28.png",
+      "x": 76,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 106,
+      "path": "pack/minerals/mineral29.png",
+      "x": 113,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 107,
+      "path": "pack/minerals/mineral3.png",
+      "x": 150,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 108,
+      "path": "pack/minerals/mineral30.png",
+      "x": 187,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 109,
+      "path": "pack/minerals/mineral31.png",
+      "x": 224,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 110,
+      "path": "pack/minerals/mineral32.png",
+      "x": 261,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 111,
+      "path": "pack/minerals/mineral33.png",
+      "x": 298,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 112,
+      "path": "pack/minerals/mineral34.png",
+      "x": 335,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 113,
+      "path": "pack/minerals/mineral35.png",
+      "x": 372,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 114,
+      "path": "pack/minerals/mineral36.png",
+      "x": 409,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 115,
+      "path": "pack/minerals/mineral37.png",
+      "x": 446,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 116,
+      "path": "pack/minerals/mineral38.png",
+      "x": 483,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 117,
+      "path": "pack/minerals/mineral39.png",
+      "x": 520,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 118,
+      "path": "pack/minerals/mineral4.png",
+      "x": 557,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 119,
+      "path": "pack/minerals/mineral40.png",
+      "x": 594,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 120,
+      "path": "pack/minerals/mineral41.png",
+      "x": 631,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 121,
+      "path": "pack/minerals/mineral42.png",
+      "x": 668,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 122,
+      "path": "pack/minerals/mineral43.png",
+      "x": 705,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 123,
+      "path": "pack/minerals/mineral44.png",
+      "x": 742,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 124,
+      "path": "pack/minerals/mineral45.png",
+      "x": 779,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 125,
+      "path": "pack/minerals/mineral46.png",
+      "x": 816,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 126,
+      "path": "pack/minerals/mineral47.png",
+      "x": 853,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 127,
+      "path": "pack/minerals/mineral48.png",
+      "x": 890,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 128,
+      "path": "pack/minerals/mineral49.png",
+      "x": 927,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 129,
+      "path": "pack/minerals/mineral5.png",
+      "x": 964,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 130,
+      "path": "pack/minerals/mineral50.png",
+      "x": 1001,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 131,
+      "path": "pack/minerals/mineral51.png",
+      "x": 1038,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 132,
+      "path": "pack/minerals/mineral52.png",
+      "x": 1075,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 133,
+      "path": "pack/minerals/mineral53.png",
+      "x": 1112,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 134,
+      "path": "pack/minerals/mineral54.png",
+      "x": 1149,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 135,
+      "path": "pack/minerals/mineral55.png",
+      "x": 1186,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 136,
+      "path": "pack/minerals/mineral56.png",
+      "x": 1223,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 137,
+      "path": "pack/minerals/mineral57.png",
+      "x": 1260,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 138,
+      "path": "pack/minerals/mineral58.png",
+      "x": 1297,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 139,
+      "path": "pack/minerals/mineral59.png",
+      "x": 1334,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 140,
+      "path": "pack/minerals/mineral6.png",
+      "x": 1371,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 141,
+      "path": "pack/minerals/mineral60.png",
+      "x": 1408,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 142,
+      "path": "pack/minerals/mineral61.png",
+      "x": 1445,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 143,
+      "path": "pack/minerals/mineral62.png",
+      "x": 1482,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 144,
+      "path": "pack/minerals/mineral63.png",
+      "x": 1519,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 145,
+      "path": "pack/minerals/mineral64.png",
+      "x": 1556,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 146,
+      "path": "pack/minerals/mineral65.png",
+      "x": 1593,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 147,
+      "path": "pack/minerals/mineral66.png",
+      "x": 1630,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 148,
+      "path": "pack/minerals/mineral67.png",
+      "x": 1667,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 149,
+      "path": "pack/minerals/mineral68.png",
+      "x": 1704,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 150,
+      "path": "pack/minerals/mineral69.png",
+      "x": 1741,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 151,
+      "path": "pack/minerals/mineral7.png",
+      "x": 1778,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 152,
+      "path": "pack/minerals/mineral70.png",
+      "x": 1815,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 153,
+      "path": "pack/minerals/mineral71.png",
+      "x": 1852,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 154,
+      "path": "pack/minerals/mineral72.png",
+      "x": 1889,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 155,
+      "path": "pack/minerals/mineral73.png",
+      "x": 1926,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 156,
+      "path": "pack/minerals/mineral74.png",
+      "x": 1963,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 157,
+      "path": "pack/minerals/mineral75.png",
+      "x": 2000,
+      "y": 285,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 158,
+      "path": "pack/minerals/mineral76.png",
+      "x": 2,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 159,
+      "path": "pack/minerals/mineral77.png",
+      "x": 39,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 160,
+      "path": "pack/minerals/mineral78.png",
+      "x": 76,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 161,
+      "path": "pack/minerals/mineral79.png",
+      "x": 113,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 162,
+      "path": "pack/minerals/mineral8.png",
+      "x": 150,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 163,
+      "path": "pack/minerals/mineral80.png",
+      "x": 187,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 164,
+      "path": "pack/minerals/mineral81.png",
+      "x": 224,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 165,
+      "path": "pack/minerals/mineral82.png",
+      "x": 261,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 166,
+      "path": "pack/minerals/mineral83.png",
+      "x": 298,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 167,
+      "path": "pack/minerals/mineral84.png",
+      "x": 335,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 168,
+      "path": "pack/minerals/mineral85.png",
+      "x": 372,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 169,
+      "path": "pack/minerals/mineral86.png",
+      "x": 409,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 170,
+      "path": "pack/minerals/mineral87.png",
+      "x": 446,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 171,
+      "path": "pack/minerals/mineral88.png",
+      "x": 483,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 172,
+      "path": "pack/minerals/mineral89.png",
+      "x": 520,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 173,
+      "path": "pack/minerals/mineral9.png",
+      "x": 557,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 174,
+      "path": "pack/minerals/mineral90.png",
+      "x": 594,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 175,
+      "path": "pack/minerals/mineral91.png",
+      "x": 631,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 176,
+      "path": "pack/minerals/mineral92.png",
+      "x": 668,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 177,
+      "path": "pack/minerals/mineral93.png",
+      "x": 705,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 178,
+      "path": "pack/minerals/mineral94.png",
+      "x": 742,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 179,
+      "path": "pack/minerals/mineral95.png",
+      "x": 779,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 180,
+      "path": "pack/minerals/mineral96.png",
+      "x": 816,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 181,
+      "path": "pack/minerals/mineral97.png",
+      "x": 853,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 182,
+      "path": "pack/minerals/mineral98.png",
+      "x": 890,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 183,
+      "path": "pack/minerals/mineral99.png",
+      "x": 927,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 184,
+      "path": "pack/plant_1/flowers/flower1.png",
+      "x": 964,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 185,
+      "path": "pack/plant_1/flowers/flower2.png",
+      "x": 1001,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 186,
+      "path": "pack/plant_1/flowers/flower3.png",
+      "x": 1038,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 187,
+      "path": "pack/plant_1/flowers/flower4.png",
+      "x": 1075,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 188,
+      "path": "pack/plant_1/flowers/flower5.png",
+      "x": 1112,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 189,
+      "path": "pack/plant_1/flowers/flower6.png",
+      "x": 1149,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 190,
+      "path": "pack/plant_1/flowers/flower7.png",
+      "x": 1186,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 191,
+      "path": "pack/plant_1/flowers/flower8.png",
+      "x": 1223,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 192,
+      "path": "pack/plant_1/flowers/flower9.png",
+      "x": 1260,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 193,
+      "path": "pack/plant_1/stem/stem1.png",
+      "x": 1297,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 194,
+      "path": "pack/plant_1/stem/stem10.png",
+      "x": 1334,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 195,
+      "path": "pack/plant_1/stem/stem11.png",
+      "x": 1371,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 196,
+      "path": "pack/plant_1/stem/stem12.png",
+      "x": 1408,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 197,
+      "path": "pack/plant_1/stem/stem13.png",
+      "x": 1445,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 198,
+      "path": "pack/plant_1/stem/stem14.png",
+      "x": 1482,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 199,
+      "path": "pack/plant_1/stem/stem15.png",
+      "x": 1519,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 200,
+      "path": "pack/plant_1/stem/stem16.png",
+      "x": 1556,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 201,
+      "path": "pack/plant_1/stem/stem17.png",
+      "x": 1593,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 202,
+      "path": "pack/plant_1/stem/stem18.png",
+      "x": 1630,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 203,
+      "path": "pack/plant_1/stem/stem19.png",
+      "x": 1667,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 204,
+      "path": "pack/plant_1/stem/stem2.png",
+      "x": 1704,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 205,
+      "path": "pack/plant_1/stem/stem3.png",
+      "x": 1741,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 206,
+      "path": "pack/plant_1/stem/stem4.png",
+      "x": 1778,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 207,
+      "path": "pack/plant_1/stem/stem5.png",
+      "x": 1815,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 208,
+      "path": "pack/plant_1/stem/stem6.png",
+      "x": 1852,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 209,
+      "path": "pack/plant_1/stem/stem7.png",
+      "x": 1889,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 210,
+      "path": "pack/plant_1/stem/stem8.png",
+      "x": 1926,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 211,
+      "path": "pack/plant_1/stem/stem9.png",
+      "x": 1963,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 212,
+      "path": "pack/roots/root1.png",
+      "x": 2000,
+      "y": 294,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 213,
+      "path": "pack/roots/root10.png",
+      "x": 2,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 214,
+      "path": "pack/roots/root11.png",
+      "x": 39,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 215,
+      "path": "pack/roots/root12.png",
+      "x": 76,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 216,
+      "path": "pack/roots/root13.png",
+      "x": 113,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 217,
+      "path": "pack/roots/root14.png",
+      "x": 150,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 218,
+      "path": "pack/roots/root2.png",
+      "x": 187,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 219,
+      "path": "pack/roots/root3.png",
+      "x": 224,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 220,
+      "path": "pack/roots/root4.png",
+      "x": 261,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 221,
+      "path": "pack/roots/root5.png",
+      "x": 298,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 222,
+      "path": "pack/roots/root6.png",
+      "x": 335,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 223,
+      "path": "pack/roots/root7.png",
+      "x": 372,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 224,
+      "path": "pack/roots/root8.png",
+      "x": 409,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 225,
+      "path": "pack/roots/root9.png",
+      "x": 446,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 226,
+      "path": "pack/seeds/seed1.png",
+      "x": 483,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 227,
+      "path": "pack/seeds/seed10.png",
+      "x": 520,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 228,
+      "path": "pack/seeds/seed11.png",
+      "x": 557,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 229,
+      "path": "pack/seeds/seed12.png",
+      "x": 594,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 230,
+      "path": "pack/seeds/seed13.png",
+      "x": 631,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 231,
+      "path": "pack/seeds/seed14.png",
+      "x": 668,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 232,
+      "path": "pack/seeds/seed15.png",
+      "x": 705,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 233,
+      "path": "pack/seeds/seed16.png",
+      "x": 742,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 234,
+      "path": "pack/seeds/seed17.png",
+      "x": 779,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 235,
+      "path": "pack/seeds/seed18.png",
+      "x": 816,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 236,
+      "path": "pack/seeds/seed19.png",
+      "x": 853,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 237,
+      "path": "pack/seeds/seed2.png",
+      "x": 890,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 238,
+      "path": "pack/seeds/seed20.png",
+      "x": 927,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 239,
+      "path": "pack/seeds/seed21.png",
+      "x": 964,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 240,
+      "path": "pack/seeds/seed22.png",
+      "x": 1001,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 241,
+      "path": "pack/seeds/seed23.png",
+      "x": 1038,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 242,
+      "path": "pack/seeds/seed24.png",
+      "x": 1075,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 243,
+      "path": "pack/seeds/seed25.png",
+      "x": 1112,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 244,
+      "path": "pack/seeds/seed26.png",
+      "x": 1149,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 245,
+      "path": "pack/seeds/seed27.png",
+      "x": 1186,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 246,
+      "path": "pack/seeds/seed3.png",
+      "x": 1223,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 247,
+      "path": "pack/seeds/seed4.png",
+      "x": 1260,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 248,
+      "path": "pack/seeds/seed5.png",
+      "x": 1297,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 249,
+      "path": "pack/seeds/seed6.png",
+      "x": 1334,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 250,
+      "path": "pack/seeds/seed7.png",
+      "x": 1371,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 251,
+      "path": "pack/seeds/seed8.png",
+      "x": 1408,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 252,
+      "path": "pack/seeds/seed9.png",
+      "x": 1445,
+      "y": 303,
+      "width": 35,
+      "height": 7
+    },
+    {
+      "index": 253,
+      "path": "pack/plant_7/stem/stem7.png",
+      "x": 1482,
+      "y": 303,
+      "width": 23,
+      "height": 7
+    },
+    {
+      "index": 254,
+      "path": "pack/plant_7/stem/stem5.png",
+      "x": 1507,
+      "y": 303,
+      "width": 21,
+      "height": 7
+    },
+    {
+      "index": 255,
+      "path": "ant_walk_1.png",
+      "x": 1530,
+      "y": 303,
+      "width": 7,
+      "height": 7
+    },
+    {
+      "index": 256,
+      "path": "ant_walk_2.png",
+      "x": 1539,
+      "y": 303,
+      "width": 7,
+      "height": 7
+    },
+    {
+      "index": 257,
+      "path": "pack/seeds/seed_icons/seed1.png",
+      "x": 1548,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 258,
+      "path": "pack/seeds/seed_icons/seed10.png",
+      "x": 1555,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 259,
+      "path": "pack/seeds/seed_icons/seed11.png",
+      "x": 1562,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 260,
+      "path": "pack/seeds/seed_icons/seed12.png",
+      "x": 1569,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 261,
+      "path": "pack/seeds/seed_icons/seed13.png",
+      "x": 1576,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 262,
+      "path": "pack/seeds/seed_icons/seed14.png",
+      "x": 1583,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 263,
+      "path": "pack/seeds/seed_icons/seed15.png",
+      "x": 1590,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 264,
+      "path": "pack/seeds/seed_icons/seed16.png",
+      "x": 1597,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 265,
+      "path": "pack/seeds/seed_icons/seed17.png",
+      "x": 1604,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 266,
+      "path": "pack/seeds/seed_icons/seed18.png",
+      "x": 1611,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 267,
+      "path": "pack/seeds/seed_icons/seed19.png",
+      "x": 1618,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 268,
+      "path": "pack/seeds/seed_icons/seed2.png",
+      "x": 1625,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 269,
+      "path": "pack/seeds/seed_icons/seed20.png",
+      "x": 1632,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 270,
+      "path": "pack/seeds/seed_icons/seed21.png",
+      "x": 1639,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 271,
+      "path": "pack/seeds/seed_icons/seed22.png",
+      "x": 1646,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 272,
+      "path": "pack/seeds/seed_icons/seed23.png",
+      "x": 1653,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 273,
+      "path": "pack/seeds/seed_icons/seed24.png",
+      "x": 1660,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 274,
+      "path": "pack/seeds/seed_icons/seed25.png",
+      "x": 1667,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 275,
+      "path": "pack/seeds/seed_icons/seed26.png",
+      "x": 1674,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 276,
+      "path": "pack/seeds/seed_icons/seed27.png",
+      "x": 1681,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 277,
+      "path": "pack/seeds/seed_icons/seed3.png",
+      "x": 1688,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 278,
+      "path": "pack/seeds/seed_icons/seed4.png",
+      "x": 1695,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 279,
+      "path": "pack/seeds/seed_icons/seed5.png",
+      "x": 1702,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 280,
+      "path": "pack/seeds/seed_icons/seed6.png",
+      "x": 1709,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 281,
+      "path": "pack/seeds/seed_icons/seed7.png",
+      "x": 1716,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 282,
+      "path": "pack/seeds/seed_icons/seed8.png",
+      "x": 1723,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    },
+    {
+      "index": 283,
+      "path": "pack/seeds/seed_icons/seed9.png",
+      "x": 1730,
+      "y": 303,
+      "width": 5,
+      "height": 4
+    }
+  ]
+}
