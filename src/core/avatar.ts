@@ -21,9 +21,20 @@ export {
     type Drawing,
 } from './avatar-pixels';
 
+let clips = 0;
+
 /** An element holding the picture, for lists and the pill. `avatar` is a drawing or a seed. */
 export function avatarEl(avatar: string, size = 24, cls = 'garden-avatar'): HTMLElement {
     const el = createSpan(cls);
     setIcon(el, avatarSvg(avatar, size));
+    // A circle of its own for each picture. With the one id every picture's
+    // markup carries, all of them were cut by the first in the page, and none
+    // showed while that one was hidden (a cell's, with the board hidden).
+    const clip = el.querySelector('clipPath');
+    const group = el.querySelector('g[clip-path]');
+    if (clip && group) {
+        clip.id = `garden-avatar-clip-${++clips}`;
+        group.setAttribute('clip-path', `url(#${clip.id})`);
+    }
     return el;
 }
