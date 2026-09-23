@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Browser smoke test for the web build plus the PWA. Run with "npm run test:web".
 //
-// Starts "vite preview" on port 4173 against dist/ (building first when dist/
+// Starts "vite preview" on port 4173 (TEST_WEB_PORT overrides it, so two
+// checkouts can test at once) against dist/ (building first when dist/
 // is missing) and drives the garden with Playwright: plants seeds, adds cells
 // to every zone, context menus, pan/zoom, reload persistence, a mobile
 // viewport. Then the PWA: the manifest and sw.js are served, the service
@@ -20,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const PORT = 4173;
+const PORT = Number(process.env.TEST_WEB_PORT) || 4173;
 const BASE = `http://127.0.0.1:${PORT}/`;
 const VITE = join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
 const SHOTS = process.env.SCREENSHOTS || '';
