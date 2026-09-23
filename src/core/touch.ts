@@ -11,10 +11,11 @@
  *  - drag the divider: mousedown on it, then mousemove / mouseup on window
  *
  * A hold that moves is left to Sortable, which picks the cell up after its
- * touch delay; a swipe scrolls the board as usual.
+ * touch delay; a swipe scrolls the board as usual. The chip a tapped plant part
+ * shows with the board hidden is a cell too, selected while it is pinned.
  */
 
-const CELL = '.garden-item, .seed-content';
+const CELL = '.garden-item, .seed-content, .garden-peek-chip';
 const HOLD_MS = 450;
 const MOVE_TOLERANCE = 8;
 

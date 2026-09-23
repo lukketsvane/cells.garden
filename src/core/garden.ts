@@ -99,6 +99,53 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     });
 }
 
+/** Every sprite of a plant, each with its cell's id. */
+const PART = '.garden-part[data-item-id]';
+
+/**
+ * Which pixels of each sprite are drawn, by URL: read once, when the garden
+ * loads the image, so a tap or a hover can tell a part's own pixels from the
+ * see-through rest of its box. Null for an image that cannot be read.
+ */
+const spritePixels = new Map<string, { width: number; height: number; alpha: Uint8Array } | null>();
+
+function learnSprite(url: string, img: HTMLImageElement) {
+    if (spritePixels.has(url) || !img.naturalWidth || !img.naturalHeight) return;
+    try {
+        const canvas = createEl('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) throw new Error('no 2d context');
+        ctx.drawImage(img, 0, 0);
+        const rgba = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const alpha = new Uint8Array(canvas.width * canvas.height);
+        for (let i = 0; i < alpha.length; i++) alpha[i] = rgba[i * 4 + 3];
+        spritePixels.set(url, { width: canvas.width, height: canvas.height, alpha });
+    } catch {
+        spritePixels.set(url, null);
+    }
+}
+
+/**
+ * Whether a plant part has a pixel of its own at a point on screen. Its box
+ * is its sprite at a whole number of pixels per art pixel, flipped on every
+ * other part (renderPlantSprite). A sprite not read counts as drawn all over.
+ */
+function drawnAt(part: HTMLElement, clientX: number, clientY: number): boolean {
+    const image = part.style.backgroundImage || part.style.getPropertyValue('mask-image');
+    const url = /url\("?(.*?)"?\)/.exec(image)?.[1];
+    const sprite = url ? spritePixels.get(url) : null;
+    if (!sprite) return true;
+    const rect = part.getBoundingClientRect();
+    if (!rect.width || !rect.height) return false;
+    const column = Math.floor(((clientX - rect.left) / rect.width) * sprite.width);
+    const row = Math.floor(((clientY - rect.top) / rect.height) * sprite.height);
+    const x = part.dataset.flipped ? sprite.width - 1 - column : column;
+    if (x < 0 || row < 0 || x >= sprite.width || row >= sprite.height) return false;
+    return sprite.alpha[row * sprite.width + x] > 32;
+}
+
 /**
  * A plant's hue on its sprites. Standby paints the whole plant one colour, so a
  * hue on top of it would fight it. (The board's seed takes the hue either way.)
@@ -161,8 +208,10 @@ export class GardenView extends View {
 
     // --- Mobile Touch Handlers ---
     private handleTouchStart = (e: TouchEvent) => {
+        // A pinned chip's touches are its own: the touch adapter makes a second
+        // tap an edit and a hold its menu, as on the board.
         if (this.inPeek(e.target)) {
-            this.pinPeek();
+            this._touchTap = null;
             return;
         }
         // Prevent the browser from doing its own scrolling/zooming
@@ -216,6 +265,8 @@ export class GardenView extends View {
             // 1 Finger Move: Pan
             const dx = e.touches[0].clientX - this.touchStartX;
             const dy = e.touches[0].clientY - this.touchStartY;
+            // Past a tap's wobble the garden moves on, and the chip goes.
+            if (this._peek && Math.hypot(dx, dy) >= 8) this.hidePeek();
             const b = this.cameraBounds(world, viewport);
             this.currentTranslateX = this.softAxis(this.rawAxis(this.touchStartTranslateX, b.x) + dx, b.x);
             this.currentTranslateY = this.softAxis(this.rawAxis(this.touchStartTranslateY, b.y) + dy, b.y);
@@ -225,7 +276,8 @@ export class GardenView extends View {
             const t1 = e.touches[0];
             const t2 = e.touches[1];
             const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-            
+            if (this._peek) this.hidePeek();
+
             if (this.initialPinchDistance > 0) {
                 let newZoom = this.initialPinchZoom * (currentDist / this.initialPinchDistance);
                 newZoom = Math.max(this.minZoomFor(world, viewport), Math.min(this.zoomMax, newZoom));
@@ -249,18 +301,14 @@ export class GardenView extends View {
             if (tap && end && Math.hypot(end.clientX - tap.x, end.clientY - tap.y) < 8 && performance.now() - tap.t < 400) {
                 // touchstart is preventDefault()'d so iOS does not reliably synthesize
                 // the click listener attached to a plant part. Resolve the part under
-                // the lifted finger and focus its board cell directly.
-                const target = this.containerEl.ownerDocument.elementFromPoint(end.clientX, end.clientY) as HTMLElement | null;
-                const part = target?.closest<HTMLElement>('.garden-part[data-item-id]') ?? null;
-                const wrapper = part?.closest<HTMLElement>('.garden-plant-wrapper') ?? null;
-                const itemId = part?.dataset.itemId;
-                const projectId = wrapper?.dataset.projectId;
-                // Pan view covers the board, so a tap there has no cell to show.
-                if (!this.boardHidden() && !this.panView.active && part && itemId && projectId) {
-                    if (part.matches('.garden-stem-part, .garden-flower-part')) this.scareFireflies(projectId);
-                    this.focusKanbanCell(itemId, projectId);
+                // the lifted finger directly: with the board on screen it focuses its
+                // cell; with the board hidden, and in pan view, it shows its chip.
+                const target = this.containerEl.ownerDocument.elementFromPoint(end.clientX, end.clientY);
+                if (this.peeking()) {
+                    this.tapGarden(end.clientX, end.clientY, target ?? e.target);
                 } else {
-                    this.peekTap(end.clientX, end.clientY, target ?? e.target);
+                    const part = this.partAt(end.clientX, end.clientY, target);
+                    if (part) this.focusPart(part);
                 }
             }
             this.isTouchPanning = false;
@@ -1556,8 +1604,9 @@ export class GardenView extends View {
         if (!viewport) return;
         this.cancelSettle();
         this._panCentreX = (viewport.offsetWidth / 2 - this.currentTranslateX) / this.zoom;
+        // The garden changes size and hands, in and out: a chip from before would point at the wrong spot.
+        this.hidePeek();
         if (entering) {
-            this.hidePeek();
             this._panReturn = { zoom: this.zoom, ratio: this.groundScreenRatio(viewport), scroll: this.saveScrollPositions() };
         }
     }
@@ -1677,11 +1726,8 @@ export class GardenView extends View {
         this.scheduleViewStateSave(); 
     };
     private handleMouseDown = (e: MouseEvent) => {
-        // Working in a plant's card: keep it open, and do not pan the garden under it.
-        if (this.inPeek(e.target)) {
-            this.pinPeek();
-            return;
-        }
+        // Working in the pinned chip: do not pan the garden under it.
+        if (this.inPeek(e.target)) return;
         // Middle mouse pans even in drawing mode!
         if (this.isDrawingMode && e.button !== 1) return; 
         
@@ -1718,6 +1764,9 @@ export class GardenView extends View {
         const world = this.world;
         if (!viewport || !world) return;
 
+        // A drag, not a click: the garden moves on, and the chip goes.
+        const down = this._mouseDownAt;
+        if (this._peek && (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) >= 6)) this.hidePeek();
         const b = this.cameraBounds(world, viewport);
         this.currentTranslateX = this.softAxis(e.clientX - this.startX, b.x);
         this.currentTranslateY = this.softAxis(e.clientY - this.startY, b.y);
@@ -1744,6 +1793,8 @@ export class GardenView extends View {
         const viewport = this.viewport;
         const world = this.world;
         if (!viewport || !world) return;
+        this.cancelPeekHover();
+        if (this._peek) this.hidePeek();
         // A wheel has no release, so the camera settles once it goes quiet.
         this.cancelSettle();
         this._settleTimeout = window.setTimeout(() => this.settleCamera(), 140);
@@ -1965,46 +2016,66 @@ export class GardenView extends View {
     }
 
 
-    // --- Peeking at a plant with the board hidden ---
-    // With the board out of the way, hovering a plant (or tapping it) floats its
-    // card over the garden. The card is read-only and sits on top of the scene:
-    // the camera, the plants and the layout stay exactly where they are.
+    // --- Peeking at one part with the board hidden ---
+    // With the board out of the way the garden speaks for itself, one part at a
+    // time: hover a flower, a stem piece, a root, a mineral or the seed (or tap
+    // it) and that part is ringed, with its one cell beside it in a chip, in the
+    // board's own look. A click or a tap pins the chip; pinned, a double-click
+    // or a second tap writes in it and a right-click or a hold opens the cell's
+    // menu, through the board's own cell. Pan view shows the chip and nothing
+    // more. The camera, the plants and the layout stay where they are.
 
-    private _peekEl: HTMLElement | null = null;
-    private _peekProjectId: string | null = null;
+    /** The part the chip speaks for, by the ids its board cell carries. */
+    private _peek: { itemId: string; projectId: string } | null = null;
     private _peekPinned = false;
-    private _peekPinnedId: string | null = null;
+    private _peekEl: HTMLElement | null = null;
+    /** The part wearing the ring. */
+    private _peekPart: HTMLElement | null = null;
     private _peekHoverTimer: number | null = null;
-    private _peekHoverProjectId: string | null = null;
+    private _peekHoverPart: HTMLElement | null = null;
+    private _peekHideTimer: number | null = null;
     private _touchTap: { x: number; y: number; t: number } | null = null;
+    /** Per garden drawn: settles once its plants are drawn, part by part (renderPlantSprite). */
+    private _plantsDrawn = new WeakMap<HTMLElement, Promise<unknown>>();
 
     /**
      * Right-click in the garden: on a plant's part, that cell's menu; anywhere else
      * on a plant, the plant's own menu. The same menus as on the board, opened where
-     * the pointer is, so they work with the board hidden too.
+     * the pointer is, so they work with the board hidden too. There the part's chip
+     * stays pinned while its menu is open, so what a choice changes shows on it.
      */
     private handleGardenContextMenu = (e: MouseEvent) => {
         if (this.isDrawingMode || this.inPeek(e.target)) return;
         e.preventDefault();
-        this.hidePeek();
-        const forward = (target: Element | null) => {
-            if (!target) return false;
-            target.dispatchEvent(new MouseEvent('contextmenu', { bubbles: false, cancelable: true, clientX: e.clientX, clientY: e.clientY, button: 2 }));
-            return true;
-        };
-        const part = (e.target as HTMLElement).closest<HTMLElement>('[data-item-id]');
-        const itemId = part?.dataset.itemId;
-        if (itemId && forward(this.shownEl(`.garden-item[data-id="${itemId}"]`))) return;
-        const hit = this.plantAt(e.clientX, e.clientY);
-        if (hit) forward(this.contentEl.querySelector(`.project-column[data-project-id="${hit.project.id}"] .seed-content`));
+        const part = this.partAt(e.clientX, e.clientY, e.target);
+        const ids = part ? this.partIds(part) : null;
+        if (part && ids) {
+            if (this.boardHidden() && !this.panView.active) this.showPeek(part, true);
+            if (this.forwardMenu(this.kanbanCell(ids.itemId, ids.projectId), e)) return;
+        }
+        if (this._peek) this.hidePeek();
+        const project = this.plantAt(e.clientX, e.clientY);
+        if (project) this.forwardMenu(this.kanbanCell(project.id, project.id), e);
     };
+
+    /** Open a board cell's own menu where the pointer is. */
+    private forwardMenu(cell: HTMLElement | null, e: MouseEvent): boolean {
+        if (!cell) return false;
+        cell.dispatchEvent(new MouseEvent('contextmenu', { bubbles: false, cancelable: true, clientX: e.clientX, clientY: e.clientY, button: 2 }));
+        return true;
+    }
 
     private boardHidden(): boolean {
         return document.documentElement.dataset.board === 'hidden';
     }
 
+    /** Whether the garden's parts speak for themselves: with the board hidden, and in pan view, which covers it. */
+    private peeking(): boolean {
+        return this.boardHidden() || this.panView.active;
+    }
+
     /** The plant under a point in the viewport, if the point is on it. */
-    private plantAt(clientX: number, clientY: number): { project: ProjectData; x: number; top: number } | null {
+    private plantAt(clientX: number, clientY: number): ProjectData | null {
         const viewport = this.viewport;
         if (!viewport) return null;
         const rect = viewport.getBoundingClientRect();
@@ -2016,171 +2087,373 @@ export class GardenView extends View {
         const extents = this.calculateProjectExtents(project);
         const ground = this._dynamicGroundLineY;
         if (wy < ground - extents.aboveHeight - 60 || wy > ground + extents.undergroundDepth + 60) return null;
-        return this.plantHit(index);
+        return project;
     }
 
-    private showPeek(hit: { project: ProjectData; x: number; top: number }) {
-        const viewport = this.viewport;
-        if (!viewport) return;
-        if (!this._peekEl || !this._peekEl.isConnected) {
-            this._peekEl = viewport.createDiv('garden-peek-card');
-            this._peekProjectId = null;
+    /**
+     * The plant part under a point. A sprite's box is mostly see-through, so the
+     * topmost part with a pixel of its own there wins; a point on none of their
+     * pixels falls back to the topmost box, an easy target for a finger.
+     * `target` is what the pointer or the finger is on: off every box there is
+     * no part, and nothing more to look up.
+     */
+    private partAt(clientX: number, clientY: number, target: EventTarget | null): HTMLElement | null {
+        const on = target as HTMLElement | null;
+        const box = on && typeof on.closest === 'function' ? on.closest<HTMLElement>(PART) : null;
+        if (!box) return null;
+        for (const el of this.containerEl.ownerDocument.elementsFromPoint(clientX, clientY)) {
+            if (el.matches(PART) && drawnAt(el as HTMLElement, clientX, clientY)) return el as HTMLElement;
         }
-        const card = this._peekEl;
-        if (this._peekProjectId !== hit.project.id) {
-            this._peekProjectId = hit.project.id;
-            card.empty();
-            // The board's own card for this plant: add, write, edit, drag and the
-            // menus all work in it, the same as on the board.
-            this.createProjectColumn(card, hit.project);
+        return box;
+    }
+
+    /** The ids a part carries: its cell's, and its plant's. */
+    private partIds(part: HTMLElement): { itemId: string; projectId: string } | null {
+        const itemId = part.dataset.itemId;
+        const projectId = part.closest<HTMLElement>('.garden-plant-wrapper')?.dataset.projectId;
+        return itemId && projectId ? { itemId, projectId } : null;
+    }
+
+    /** A part of the garden in `viewport`, found by its ids. */
+    private findPart(viewport: HTMLElement, itemId: string, projectId: string): HTMLElement | null {
+        const wrapper = Array.from(viewport.querySelectorAll<HTMLElement>('.garden-plant-wrapper'))
+            .find(el => el.dataset.projectId === projectId);
+        return Array.from(wrapper?.querySelectorAll<HTMLElement>(PART) ?? []).find(el => el.dataset.itemId === itemId) ?? null;
+    }
+
+    /** What a part's cell holds: its item and zone, or for the seed its plant's name. */
+    private peekCell(itemId: string, projectId: string): { project: ProjectData; zone: LayerName | null; item: LayerItem | null; text: string } | null {
+        const project = this.app.gardenData.find(p => p.id === projectId);
+        if (!project) return null;
+        if (itemId === project.id) return { project, zone: null, item: null, text: project.seed };
+        for (const zone of ['flowers', 'stem', 'roots', 'minerals'] as const) {
+            const item = project[zone].find(i => i.id === itemId);
+            if (item) return { project, zone, item, text: item.content };
         }
-        // Keep the card visually attached to the plant instead of merely sharing its
-        // top edge. Its seed row lines up with the soil line, and the card chooses the
-        // side with enough room so it reads as that plant's board rather than a random
-        // floating panel.
-        const rect = viewport.getBoundingClientRect();
-        const vw = viewport.offsetWidth, vh = viewport.offsetHeight;
-        const w = card.offsetWidth || 230, h = card.offsetHeight || 120;
-        let plantLeft = hit.x, plantRight = hit.x;
-        const wrapper = this.contentEl.querySelector(`.garden-plant-wrapper[data-project-id="${hit.project.id}"]`);
-        if (wrapper) {
-            let found = false;
-            for (const part of Array.from(wrapper.querySelectorAll('*'))) {
-                const r = part.getBoundingClientRect();
-                if (r.width === 0 || r.height === 0 || r.top - rect.top > this.currentTranslateY + this._dynamicGroundLineY * this.zoom) continue;
-                plantLeft = found ? Math.min(plantLeft, r.left - rect.left) : r.left - rect.left;
-                plantRight = found ? Math.max(plantRight, r.right - rect.left) : r.right - rect.left;
-                found = true;
+        return null;
+    }
+
+    /** With the board on screen, a part's tap brings its cell into view (and startles the fireflies on it). */
+    private focusPart(part: HTMLElement) {
+        const ids = this.partIds(part);
+        if (!ids) return;
+        if (part.matches('.garden-stem-part, .garden-flower-part')) this.scareFireflies(ids.projectId);
+        this.focusKanbanCell(ids.itemId, ids.projectId);
+    }
+
+    /** Ring `part` and put its cell beside it: pinned, or for as long as the pointer stays. */
+    private showPeek(part: HTMLElement, pinned: boolean, instant = false) {
+        const ids = this.partIds(part);
+        const cell = ids ? this.peekCell(ids.itemId, ids.projectId) : null;
+        const viewport = part.closest<HTMLElement>('.garden-canvas-viewport');
+        if (!ids || !cell || !viewport) {
+            this.hidePeek();
+            return;
+        }
+        this.cancelPeekHover();
+        this.cancelPeekHide();
+        // Moving on from a chip being written in keeps what was written.
+        if (this._peek?.itemId !== ids.itemId || this._peekEl?.parentElement !== viewport) this.finishPeekEdit(true);
+        let chip = this._peekEl;
+        if (!chip || chip.parentElement !== viewport) {
+            chip?.remove();
+            chip = this._peekEl = this.createPeekChip(viewport);
+        }
+        if (this._peekPart !== part) {
+            this._peekPart?.removeClass('garden-part-peeked');
+            part.addClass('garden-part-peeked');
+            this._peekPart = part;
+        }
+        this._peek = ids;
+        this._peekPinned = pinned;
+        if (!chip.hasClass('is-editing')) this.fillPeekChip(chip, cell);
+        // Pinned, the chip is the selected cell: a second tap on it edits (touch.ts).
+        chip.toggleClass('is-selected', pinned);
+        chip.toggleClass('is-instant', instant);
+        this.placePeek();
+        chip.addClass('is-visible');
+        if (instant) {
+            const win = this.containerEl.ownerDocument.defaultView || window;
+            const shown = chip;
+            win.requestAnimationFrame(() => win.requestAnimationFrame(() => shown.removeClass('is-instant')));
+        }
+    }
+
+    /** The chip, one per garden drawn: a cell's look, and the way to its edit and its menu. */
+    private createPeekChip(viewport: HTMLElement): HTMLElement {
+        const chip = viewport.createDiv('garden-peek-chip');
+        chip.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            this.startPeekEdit();
+        });
+        chip.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const peek = this._peek;
+            if (!peek || this.panView.active || chip.hasClass('is-editing')) return;
+            this.forwardMenu(this.kanbanCell(peek.itemId, peek.projectId), e);
+        });
+        chip.addEventListener('keydown', (e) => {
+            if (!chip.hasClass('is-editing')) return;
+            e.stopPropagation();
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.finishPeekEdit(true);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                this.finishPeekEdit(false);
             }
+        });
+        // A longer text widens the chip: keep it beside its part and in the pane.
+        chip.addEventListener('input', () => this.placePeek());
+        chip.addEventListener('focusout', () => this.finishPeekEdit(true));
+        return chip;
+    }
+
+    private fillPeekChip(chip: HTMLElement, cell: NonNullable<ReturnType<GardenView['peekCell']>>) {
+        chip.empty();
+        chip.dataset.id = cell.item?.id ?? cell.project.id;
+        chip.toggleClass('is-seed', !cell.zone);
+        chip.toggleClass('is-highlighted', !!cell.item?.highlighted);
+        if (cell.zone) {
+            const icon = chip.createSpan({ cls: 'zone-icon', attr: { title: ZONE_LABELS[cell.zone] } });
+            setIcon(icon, ZONE_ICONS[cell.zone]);
         }
+        const text = chip.createSpan({ cls: 'garden-peek-text', text: cell.text });
+        // The seed wears its plant's hue, as on the board.
+        if (!cell.zone) text.style.filter = `hue-rotate(${cell.project.hue ?? 0}deg)`;
+    }
 
-        const gap = 14;
-        const right = plantRight + gap;
-        const leftOfPlant = plantLeft - gap - w;
-        const roomRight = vw - plantRight;
-        const roomLeft = plantLeft;
-        const useLeft = right + w > vw - 8 && (leftOfPlant >= 8 || roomLeft > roomRight);
-        const left = useLeft
-            ? Math.max(8, Math.min(vw - w - 8, leftOfPlant))
-            : Math.max(8, Math.min(vw - w - 8, right));
+    /**
+     * Put the chip beside its part and never on it: to its right, else its left,
+     * else above or below it, whichever fits the pane without covering the part
+     * or being pushed along the most. The buttons in the top corners keep clear.
+     */
+    private placePeek() {
+        const chip = this._peekEl;
+        const part = this._peekPart;
+        const viewport = chip?.parentElement;
+        if (!chip || !viewport || !part?.isConnected) return;
+        const frame = viewport.getBoundingClientRect();
+        const r = part.getBoundingClientRect();
+        const box = { left: r.left - frame.left, top: r.top - frame.top, right: r.right - frame.left, bottom: r.bottom - frame.top };
+        const w = chip.offsetWidth, h = chip.offsetHeight;
+        const vw = viewport.clientWidth, vh = viewport.clientHeight;
+        const gap = 8, edge = 8;
+        const doc = this.containerEl.ownerDocument;
+        let clear = 0;
+        for (const el of Array.from(doc.querySelectorAll<HTMLElement>('.garden-board-toggle, .garden-pan-toggle, .garden-pan-exit, .auth-pill, .garden-files-button'))) {
+            const b = el.getBoundingClientRect();
+            if (b.width && b.height) clear = Math.max(clear, b.bottom + 6 - frame.top);
+        }
+        const top = Math.max(edge, Math.min(clear, vh / 3));
+        const midX = (box.left + box.right - w) / 2;
+        const midY = (box.top + box.bottom - h) / 2;
+        const spots = [
+            { x: box.right + gap, y: midY },
+            { x: box.left - gap - w, y: midY },
+            { x: midX, y: box.top - gap - h },
+            { x: midX, y: box.bottom + gap },
+        ];
+        let best = { x: edge, y: top };
+        let bestCost = Infinity;
+        spots.forEach((spot, i) => {
+            const x = Math.min(Math.max(edge, spot.x), vw - edge - w);
+            const y = Math.min(Math.max(top, spot.y), vh - edge - h);
+            const covered = Math.max(0, Math.min(x + w, box.right) - Math.max(x, box.left))
+                * Math.max(0, Math.min(y + h, box.bottom) - Math.max(y, box.top));
+            const cost = covered * 100 + Math.abs(x - spot.x) + Math.abs(y - spot.y) + i;
+            if (cost < bestCost) {
+                bestCost = cost;
+                best = { x, y };
+            }
+        });
+        chip.style.left = `${Math.round(best.x)}px`;
+        chip.style.top = `${Math.round(best.y)}px`;
+    }
 
-        const seed = card.querySelector<HTMLElement>('.seed-cell');
-        const seedCenter = seed ? seed.offsetTop + seed.offsetHeight / 2 : h / 2;
-        const soilY = this.currentTranslateY + this._dynamicGroundLineY * this.zoom;
-        const top = Math.max(8, Math.min(vh - h - 8, soilY - seedCenter));
+    /** Write in the pinned chip, as double-clicking its board cell would. Pan view only shows. */
+    private startPeekEdit() {
+        const chip = this._peekEl;
+        const field = chip?.querySelector<HTMLElement>('.garden-peek-text');
+        if (!chip || !field || !this._peekPinned || this.panView.active || chip.hasClass('is-editing')) return;
+        chip.addClass('is-editing');
+        field.contentEditable = 'true';
+        field.focus();
+        const doc = this.containerEl.ownerDocument;
+        const range = doc.createRange();
+        range.selectNodeContents(field);
+        const selection = doc.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+    }
 
-        card.dataset.peekSide = useLeft ? 'left' : 'right';
-        // Appearing: jump straight to the spot. Already shown: glide there.
-        const wasVisible = card.hasClass('is-visible');
-        card.toggleClass('is-gliding', wasVisible);
-        card.style.left = `${left}px`;
-        card.style.top = `${top}px`;
-        card.addClass('is-visible');
+    /**
+     * Stop writing in the chip: keep what was written, the way the board keeps
+     * it, or put the cell back. An emptied chip is put back too: Delete is in
+     * the cell's menu.
+     */
+    private finishPeekEdit(keep: boolean) {
+        const chip = this._peekEl;
+        const peek = this._peek;
+        if (!chip?.hasClass('is-editing')) return;
+        chip.removeClass('is-editing');
+        const field = chip.querySelector<HTMLElement>('.garden-peek-text');
+        if (field) field.contentEditable = 'false';
+        const cell = peek ? this.peekCell(peek.itemId, peek.projectId) : null;
+        const text = field?.getText().trim() ?? '';
+        if (keep && peek && cell && text && text !== cell.text) {
+            if (cell.item) this.keepText(cell.item, text);
+            else this.renameSeed(cell.project, text);
+            // The board under the garden says the same.
+            this.kanbanCell(peek.itemId, peek.projectId)?.setText(text);
+        }
+        if (field && this.containerEl.ownerDocument.activeElement === field) field.blur();
+        const now = peek ? this.peekCell(peek.itemId, peek.projectId) : null;
+        if (now) {
+            this.fillPeekChip(chip, now);
+            this.placePeek();
+        }
     }
 
     private cancelPeekHover() {
-        if (this._peekHoverTimer !== null) window.clearTimeout(this._peekHoverTimer);
-        this._peekHoverTimer = null;
-        this._peekHoverProjectId = null;
+        this._peekHoverTimer = stop(this._peekHoverTimer);
+        this._peekHoverPart = null;
     }
 
-    /** Hover intent: a plant must be held for a beat before its board appears. */
-    private schedulePeek(hit: { project: ProjectData; x: number; top: number }) {
-        if (this._peekEl?.hasClass('is-visible') && this._peekProjectId === hit.project.id) return;
-        if (this._peekHoverTimer !== null && this._peekHoverProjectId === hit.project.id) return;
+    private cancelPeekHide() {
+        this._peekHideTimer = stop(this._peekHideTimer);
+    }
+
+    /** Hover intent: a part must be held for a beat before its chip appears. */
+    private schedulePeek(part: HTMLElement) {
+        if (this._peekHoverTimer !== null && this._peekHoverPart === part) return;
         this.cancelPeekHover();
-        this._peekHoverProjectId = hit.project.id;
+        this._peekHoverPart = part;
         this._peekHoverTimer = window.setTimeout(() => {
             this._peekHoverTimer = null;
-            this._peekHoverProjectId = null;
-            if (this.boardHidden() && !this._peekPinned) this.showPeek(hit);
+            this._peekHoverPart = null;
+            if (part.isConnected && this.boardHidden() && !this.panView.active && !this.isDragging && !this.isDrawingMode && !this._peekPinned) {
+                this.showPeek(part, false);
+            }
         }, 280);
     }
 
-    private hidePeek() {
-        this.cancelPeekHover();
-        this._peekPinned = false;
-        this._peekEl?.removeClass('is-visible');
+    /** Off every part the hover chip lingers a moment, so a gap between two parts does not blink it. */
+    private schedulePeekHide() {
+        if (this._peekHideTimer !== null) return;
+        this._peekHideTimer = window.setTimeout(() => {
+            this._peekHideTimer = null;
+            if (!this._peekPinned) this.hidePeek();
+        }, 150);
     }
 
-    /** Keep the open card open, across re-renders too. */
-    private pinPeek() {
-        this._peekPinned = true;
-        this._peekPinnedId = this._peekProjectId;
+    /** Let the chip go, and the ring with it. */
+    private hidePeek() {
+        this.cancelPeekHover();
+        this.cancelPeekHide();
+        this.finishPeekEdit(true);
+        this._peekPart?.removeClass('garden-part-peeked');
+        this._peekPart = null;
+        this._peekEl?.removeClass('is-visible', 'is-selected');
+        this._peek = null;
+        this._peekPinned = false;
+        // A menu opened from the chip left its cell selected on the hidden board, and its part lit.
+        if (this.boardHidden()) this.clearSelection();
     }
 
     private inPeek(target: EventTarget | null): boolean {
         return !!this._peekEl && target instanceof Node && this._peekEl.contains(target);
     }
 
-    /** Where plant `index` stands on screen: its centre and its top, for placing its card. */
-    private plantHit(index: number): { project: ProjectData; x: number; top: number } {
-        const project = this.app.gardenData[index];
-        const extents = this.calculateProjectExtents(project);
-        return {
-            project,
-            x: this.currentTranslateX + plantCentre(index) * this.zoom,
-            top: this.currentTranslateY + (this._dynamicGroundLineY - extents.aboveHeight - 20) * this.zoom,
-        };
-    }
-
-    /** After a re-render, bring back the card that was being worked in, without fading. */
+    /**
+     * After a re-render (an edit, a sync), bring the pinned chip back on the same
+     * part at once, when its cell is still there. The parts are drawn a moment
+     * after the garden is swapped in, so it waits for them.
+     */
     private restorePeek() {
-        const id = this._peekPinnedId;
-        if (!this._peekPinned || !id || !this.boardHidden()) return;
-        const index = this.app.gardenData.findIndex(p => p.id === id);
-        if (index === -1) {
+        // The chip and the ring went with the old garden.
+        this._peekEl = null;
+        this._peekPart = null;
+        this.cancelPeekHover();
+        this.cancelPeekHide();
+        const peek = this._peekPinned ? this._peek : null;
+        const viewport = this.viewport;
+        if (!peek || !viewport || !this.peeking()) {
+            this._peek = null;
             this._peekPinned = false;
             return;
         }
-        this._peekEl = null;
-        this.showPeek(this.plantHit(index));
-        (this._peekEl as HTMLElement | null)?.addClass('is-instant');
-        this._peekPinned = true;
-        const win = this.containerEl.ownerDocument.defaultView || window;
-        win.requestAnimationFrame(() => win.requestAnimationFrame(() => this._peekEl?.removeClass('is-instant')));
+        void (this._plantsDrawn.get(viewport) ?? Promise.resolve()).then(() => {
+            if (this._peek !== peek || this._peekEl || !viewport.isConnected) return;
+            const part = this.findPart(viewport, peek.itemId, peek.projectId);
+            if (part && this.peeking()) {
+                this.showPeek(part, true, true);
+            } else {
+                this._peek = null;
+                this._peekPinned = false;
+            }
+        });
     }
 
-    /** The element for a selector, preferring one that is on screen (the card over the board). */
+    /** The camera moved by itself (a resize, a re-anchor): a shown chip keeps to its part; with the board back, it goes. */
+    private followPeek() {
+        if (!this._peekEl?.hasClass('is-visible')) return;
+        if (this.peeking()) this.placePeek();
+        else this.hidePeek();
+    }
+
+    /** The element for a selector, preferring one that is on screen. */
     private shownEl(selector: string): HTMLElement | null {
         const all = Array.from(this.contentEl.querySelectorAll<HTMLElement>(selector));
         return all.find(el => el.getClientRects().length > 0) ?? all[0] ?? null;
     }
 
     private handlePeekMove = (e: MouseEvent) => {
-        if (!this.boardHidden() || this.panView.active || this.isDragging || this._peekPinned || this.inPeek(e.target)) return;
-        const hit = this.plantAt(e.clientX, e.clientY);
-        if (hit) this.schedulePeek(hit);
-        else this.hidePeek();
+        if (!this.boardHidden() || this.panView.active || this.isDragging || this.isDrawingMode || this._peekPinned || this.inPeek(e.target)) return;
+        const part = this.partAt(e.clientX, e.clientY, e.target);
+        const shown = !!this._peekEl?.hasClass('is-visible');
+        if (!part) {
+            this.cancelPeekHover();
+            if (shown) this.schedulePeekHide();
+            return;
+        }
+        this.cancelPeekHide();
+        // Already showing one: the chip follows the pointer from part to part at once.
+        if (shown) {
+            if (part !== this._peekPart) this.showPeek(part, false);
+            return;
+        }
+        this.schedulePeek(part);
     };
 
     private handlePeekLeave = () => {
-        if (!this._peekPinned) this.hidePeek();
+        if (this._peekPinned) return;
+        this.cancelPeekHover();
+        if (this._peek) this.hidePeek();
     };
 
     /**
-     * A tap (touch or a click without a drag) pins the card, a tap elsewhere lets it go.
-     * Not in pan view, which keeps every touch to the garden: the card's cells need
-     * theirs to reach the page (the touch adapter, Sortable).
+     * A tap on the garden, or a click without a drag, while its parts speak for
+     * themselves: on a part it pins that part's chip, anywhere else it lets the
+     * chip go.
      */
-    private peekTap(clientX: number, clientY: number, target: EventTarget | null = null) {
-        if (!this.boardHidden() || this.panView.active || this.inPeek(target)) return;
-        const hit = this.plantAt(clientX, clientY);
-        if (hit) {
-            this.cancelPeekHover();
-            this.showPeek(hit);
-            this.pinPeek();
+    private tapGarden(clientX: number, clientY: number, target: EventTarget | null) {
+        if (!this.peeking() || this.isDrawingMode || this.inPeek(target)) return;
+        const part = this.partAt(clientX, clientY, target);
+        if (part) {
+            this.showPeek(part, true);
         } else {
-            this.hidePeek();
+            this.cancelPeekHover();
+            if (this._peek) this.hidePeek();
         }
     }
 
     private applyWorldTransform(world: HTMLElement, viewport: HTMLElement) {
         // Standard 2D camera math: origin at top-left makes centering predictable
-        if (!this._peekPinned) this.cancelPeekHover();
-        if (this._peekEl && !this._peekPinned) this._peekEl.removeClass('is-visible');
         world.setCssStyles({ transformOrigin: '0 0' });
         world.style.transform = `translate(${this.currentTranslateX}px, ${this.currentTranslateY}px) scale(${this.zoom})`;
+        this.followPeek();
     }
 
     // --- Scroll Position Preservation ---
@@ -2516,14 +2789,16 @@ export class GardenView extends View {
         this.createWormElements(wormLayer);
 
         // A plant stands in the middle of its slot, its top-left on the horizon:
-        // renderPlantSprite grows the sprite up and down from there.
-        this.app.gardenData.forEach((project, i) => {
+        // renderPlantSprite grows the sprite up and down from there, a part at a
+        // time, after the garden is swapped in. A pinned chip waits for it.
+        const drawn = this.app.gardenData.map((project, i) => {
             const wrapper = plantsLayer.createDiv("garden-plant-wrapper");
             wrapper.dataset.projectId = project.id;
             wrapper.style.left = `${WORLD_PADDING + i * PLANT_SPACING + PLANT_SPACING / 2}px`;
             wrapper.style.top = `${skyHeight}px`;
-            void this.renderPlantSprite(wrapper, project);
+            return this.renderPlantSprite(wrapper, project);
         });
+        this._plantsDrawn.set(viewport, Promise.allSettled(drawn));
 
 
         // --- The borders between your plants and your friends' ---
@@ -2550,7 +2825,10 @@ export class GardenView extends View {
         // A divider drag, side-panel open/close, phone rotation or window resize
         // keeps the same horizon ratio instead of reusing stale pixel translateY.
         this._viewportObserver = new ResizeObserver(() => {
-            if (viewport.isConnected) this.resizeCameraToViewport(viewport, world);
+            if (!viewport.isConnected) return;
+            this.resizeCameraToViewport(viewport, world);
+            // The board shown again (its toggle, or B) takes the chip away; otherwise it keeps to its part.
+            this.followPeek();
         });
         this._viewportObserver.observe(viewport);
 
@@ -2562,11 +2840,9 @@ export class GardenView extends View {
         viewport.addEventListener('mouseleave', this.handlePeekLeave);
         viewport.addEventListener('click', (e) => {
             const down = this._mouseDownAt;
-            if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6) this.peekTap(e.clientX, e.clientY, e.target);
+            if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6) this.tapGarden(e.clientX, e.clientY, e.target);
         });
-        this._peekEl = null;
-        this._peekProjectId = null;
-        
+
         // Mobile Touch Listeners
         viewport.addEventListener('touchstart', this.handleTouchStart, { passive: false });
         viewport.addEventListener('touchmove', this.handleTouchMove, { passive: false });
@@ -2600,9 +2876,10 @@ export class GardenView extends View {
     /** A sprite's size on screen. A missing or unreadable one falls back to a stem's. */
     private async getImageDimensions(url: string | null): Promise<{ width: number; height: number }> {
         const img = url ? await loadImage(url) : null;
-        if (!img || img.naturalWidth === 0) {
+        if (!url || !img || img.naturalWidth === 0) {
             return { width: STEM_ORIGIN_WIDTH * PIXEL_SCALE, height: STEM_ORIGIN_HEIGHT * PIXEL_SCALE };
         }
+        learnSprite(url, img);
         return { width: Math.round(img.naturalWidth * PIXEL_SCALE), height: Math.round(img.naturalHeight * PIXEL_SCALE) };
     }
 
@@ -2678,10 +2955,20 @@ export class GardenView extends View {
             if (cell) cell.removeClass('is-hover-highlighted');
         });
 
+        // The part a click means is the one drawn under the pointer, not merely the topmost box.
         partDiv.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (isAboveGround) this.scareFireflies(projectId);
-            this.focusKanbanCell(itemId, projectId);
+            const part = this.partAt(e.clientX, e.clientY, e.target) ?? partDiv;
+            if (!this.peeking()) this.focusPart(part);
+            else if (!this.isDrawingMode) this.showPeek(part, true);
+        });
+
+        // With the board hidden a double-click writes in the part's chip, as it would in its cell.
+        partDiv.addEventListener('dblclick', (e) => {
+            if (!this.boardHidden() || this.panView.active || this.isDrawingMode) return;
+            e.stopPropagation();
+            this.showPeek(this.partAt(e.clientX, e.clientY, e.target) ?? partDiv, true);
+            this.startPeekEdit();
         });
     }
 
@@ -2735,6 +3022,8 @@ export class GardenView extends View {
             el.style.height = `${height}px`;
             el.style.top = `${top(height)}px`;
             el.style.transform = flipped ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%)';
+            // A tap reads the sprite's pixels, mirrored on this one (drawnAt).
+            if (flipped) el.dataset.flipped = 'true';
             return el;
         };
 
@@ -3030,7 +3319,7 @@ export class GardenView extends View {
             return;
         }
         if (key === 'Escape') {
-            if (this.selectedCells.length === 0) this.hidePeek();
+            this.hidePeek();
             this.clearSelection();
             (document.activeElement as HTMLElement | null)?.blur?.();
             return;
@@ -3139,13 +3428,23 @@ export class GardenView extends View {
     private stopEditing(el: HTMLElement, item: LayerItem) {
         el.removeClass('is-editing');
         el.contentEditable = "false";
-        const newText = el.getText().trim();
-        if (newText !== item.content) {
-            item.content = newText;
-            const live = this.liveItem(item.id);
-            if (live && live !== item) live.content = newText;
-            void this.app.saveGardenData();
-        }
+        this.keepText(item, el.getText().trim());
+    }
+
+    /** Keep a cell's new text: how a board cell and the garden's chip both write it. */
+    private keepText(item: LayerItem, text: string) {
+        if (text === item.content) return;
+        item.content = text;
+        const live = this.liveItem(item.id);
+        if (live && live !== item) live.content = text;
+        void this.app.saveGardenData();
+    }
+
+    /** Give a plant a new name, its seed's text: from its card's header or from the seed's chip. */
+    private renameSeed(project: ProjectData, name: string) {
+        const live = this.live(project);
+        live.seed = live.name = project.seed = project.name = name;
+        void this.app.saveGardenData();
     }
 
     private async deleteCell(item: LayerItem, project: ProjectData, arrayName: LayerName) {
@@ -3464,9 +3763,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 return;
             }
             if (seed === project.seed) return;
-            const live = this.live(project);
-            live.seed = live.name = project.seed = project.name = seed;
-            void this.app.saveGardenData();
+            this.renameSeed(project, seed);
         });
 
         seedContent.addEventListener("keydown", (e: KeyboardEvent) => {

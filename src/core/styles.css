@@ -1218,56 +1218,164 @@
     margin-right: auto;
 }
 
-/* A plant's card floating over the garden while the board is hidden: the board's
-   own card, so everything on it works here too. */
-.garden-peek-card {
+/* One cell over the garden while the board is hidden, and in pan view
+   (garden.ts, peeking): the cell of the part under the pointer, or of the one
+   tapped, in the board's own look, beside its part and never on it. Pinned, it
+   takes the pointer: a double-click or a second tap writes in it, a right-click
+   or a hold opens the cell's menu. */
+.garden-peek-chip {
     position: absolute;
     z-index: 40;
-    width: 230px;
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    box-sizing: border-box;
+    max-width: min(240px, calc(100% - 16px));
     max-height: calc(100% - 16px);
     overflow-y: auto;
-    overscroll-behavior: contain;
-    border-radius: 6px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+    padding: 5px 8px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 1.3;
     color: var(--text-normal);
-    cursor: auto;
-    user-select: text;
+    word-break: break-word;
+    cursor: default;
     pointer-events: none;
     opacity: 0;
-    transform: translateY(4px) scale(0.985);
-    transform-origin: center center;
     visibility: hidden;
-    will-change: opacity, transform, left, top;
-    transition: opacity 150ms ease-out, transform 180ms ease-out, visibility 0s linear 180ms;
+    transition: opacity 120ms ease-out, visibility 0s linear 120ms;
 }
 
-.garden-peek-card.is-visible {
+.garden-peek-chip.is-visible {
     opacity: 1;
-    transform: none;
     visibility: visible;
-    pointer-events: auto;
-    transition: opacity 190ms ease-out, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s;
+    transition: opacity 120ms ease-out, visibility 0s;
 }
 
-.garden-peek-card.is-instant {
+.garden-peek-chip.is-instant {
     transition: none;
 }
 
-.garden-peek-card .project-column {
-    width: 100%;
+/* Pinned: the part's cell as the board highlights it, a ring on its own edge. */
+.garden-peek-chip.is-selected {
+    pointer-events: auto;
+    border-color: var(--interactive-accent);
+    box-shadow: inset 0 0 0 1px var(--interactive-accent), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.garden-peek-card .column-card {
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 6px;
+.garden-peek-chip.is-editing {
+    background: var(--background-primary-alt);
+    cursor: text;
 }
 
-.garden-peek-card .seed-cell {
-    position: static;
+/* A highlighted cell is bold on the board, and here. */
+.garden-peek-chip.is-highlighted {
+    font-weight: bold;
 }
 
-.garden-peek-card.is-visible.is-gliding {
-    transition: opacity 190ms ease-out, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), left 360ms cubic-bezier(0.2, 0.8, 0.2, 1), top 360ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s;
+/* The seed: the plant's name, as its card's header shows it. */
+.garden-peek-chip.is-seed {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.garden-peek-chip.is-seed .garden-peek-text {
+    color: #6e7f9c;
+}
+
+/* The zone's pixel icon on the first line, on whole pixels. */
+.garden-peek-chip .zone-icon {
+    margin-top: 2px;
+    color: var(--text-faint);
+}
+
+.garden-peek-text {
+    min-width: 0;
+    outline: none;
+}
+
+.garden-peek-chip.is-editing .garden-peek-text {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+/* Pan view keeps every touch for the garden: there the chip only shows, and
+   looks it. */
+.garden-pan-layer .garden-peek-chip,
+.garden-pan-layer .garden-peek-chip.is-selected {
+    pointer-events: none;
+    border-color: var(--background-modifier-border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+@media (pointer: coarse) {
+    .garden-peek-chip {
+        padding: 9px 10px;
+        font-size: 14px;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+    }
+
+    .garden-peek-chip .zone-icon {
+        margin-top: 3px;
+    }
+
+    /* iOS zooms into any field under 16px when it gains focus. */
+    .garden-peek-chip.is-editing {
+        font-size: 16px;
+    }
+
+    .garden-peek-chip.is-editing .zone-icon {
+        margin-top: 4px;
+    }
+}
+
+/* The part a chip speaks for: ringed one art pixel wide, light inside and dark
+   outside, so it reads on a day sky, a night sky and the soil alike. The
+   offsets are world pixels, four to an art pixel (PIXEL_SCALE), so the ring
+   keeps to the sprite's own grid at any zoom. Raised over its neighbours so
+   none of them covers the ring; the rest of the plant stays as it is. */
+.garden-plants-layer {
+    --garden-peek-ring:
+        drop-shadow(4px 0 0 #ffffff) drop-shadow(-4px 0 0 #ffffff)
+        drop-shadow(0 4px 0 #ffffff) drop-shadow(0 -4px 0 #ffffff)
+        drop-shadow(4px 0 0 #16161d) drop-shadow(-4px 0 0 #16161d)
+        drop-shadow(0 4px 0 #16161d) drop-shadow(0 -4px 0 #16161d);
+}
+
+.garden-part.garden-part-peeked {
+    z-index: 1;
+    filter: var(--garden-peek-ring);
+}
+
+/* Under the pointer it keeps the hover's light, so the ring comes on without a flicker. */
+.garden-part.garden-part-peeked:hover {
+    filter: brightness(1.4) var(--garden-peek-ring);
+}
+
+.garden-part-slow-pulse.garden-part-peeked {
+    animation: none;
+}
+
+/* A plant on standby keeps its silhouette under the ring. */
+.garden-stem-container.is-standby-plant .garden-seed-part.garden-part-peeked,
+.garden-stem-container.is-standby-plant .garden-root-part.garden-part-peeked {
+    filter: brightness(0) invert(4%) sepia(10%) saturate(708%) hue-rotate(2deg) brightness(92%) contrast(98%) var(--garden-peek-ring);
+}
+
+.garden-stem-container.is-standby-plant .garden-stem-part.garden-part-peeked,
+.garden-stem-container.is-standby-plant .garden-flower-part.garden-part-peeked {
+    filter: brightness(0) invert(19%) sepia(19%) saturate(984%) hue-rotate(127deg) brightness(95%) contrast(90%) var(--garden-peek-ring);
+}
+
+/* A silhouette in the garden's own colour is a mask, which would cut the ring
+   away: it lightens instead. */
+.garden-stem-container.is-standby-plant .garden-part.is-tinted.garden-part-peeked {
+    filter: brightness(1.5);
 }
 
 /* Your garden in the middle, your friends' plants at its borders (app.ts arrange). */

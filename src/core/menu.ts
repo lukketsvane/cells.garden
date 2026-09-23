@@ -113,7 +113,7 @@ export function openMenu(
     const close = (cancelled = false) => {
         if (closed) return;
         closed = true;
-        win.removeEventListener('mousedown', onOutside, true);
+        win.removeEventListener('pointerdown', onOutside, true);
         win.removeEventListener('keydown', onEscape, true);
         if (openMenus.get(doc) === close) openMenus.delete(doc);
         const hadFocus = menu.contains(doc.activeElement);
@@ -212,12 +212,16 @@ export function openMenu(
     build?.(menu);
     place(menu, at, win);
     openMenus.set(doc, close);
+    // Escape closes it from the start: a key pressed right after the click
+    // that opened it can reach the page before any timer does.
+    win.addEventListener('keydown', onEscape, true);
 
-    // After this click has finished, or it would close the menu it opened.
+    // After this click has finished, or it would close the menu it opened. A
+    // pointer, not a mouse: the garden keeps a finger's touches from ever
+    // becoming mouse events, and a tap there must close the menu too.
     window.setTimeout(() => {
         if (closed) return;
-        win.addEventListener('mousedown', onOutside, true);
-        win.addEventListener('keydown', onEscape, true);
+        win.addEventListener('pointerdown', onOutside, true);
     }, 0);
 
     return menu;

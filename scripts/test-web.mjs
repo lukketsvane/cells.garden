@@ -4,8 +4,9 @@
 // Starts "vite preview" on port 4173 (TEST_WEB_PORT overrides it, so two
 // checkouts can test at once) against dist/ (building first when dist/
 // is missing) and drives the garden with Playwright: plants seeds, adds cells
-// to every zone, context menus, pan/zoom, reload persistence, a mobile
-// viewport with pan view. Then the PWA: the manifest and sw.js are served, the service
+// to every zone, context menus, pan/zoom, reload persistence, one part's chip
+// with the board hidden (hover, click and tap), a mobile viewport with pan view.
+// Then the PWA: the manifest and sw.js are served, the service
 // worker takes control of the page, and the garden still renders offline.
 //
 // Console errors that are exactly network failures to Supabase/Google are
@@ -83,6 +84,141 @@ async function checkZoneIcons(page, label) {
             `${label}: a zone icon is not a whole number of CSS pixels per art pixel: ${JSON.stringify(icon)}`);
     }
     console.log(`${label} zone icons:`, [...new Set(icons.map((icon) => `${icon.grid} at ${icon.scaleX}x`))].join(', '));
+}
+
+// The garden on screen is the stored one, drawn whole: no redraw under way,
+// every plant drawn part by part (renderPlantSprite leaves data-width when it
+// is done), then a moment for the horizon, which settles two frames after a
+// swap. A save writes the store before it draws, so counting the parts against
+// the store waits out the redraw an edit starts, too.
+async function gardenSettled(page) {
+    await page.waitForFunction(() => {
+        const garden = JSON.parse(localStorage.getItem('cells.garden/v1') || 'null');
+        if (!garden || document.querySelector('.garden-render-stage')) return false;
+        const wrappers = [...document.querySelectorAll('.garden-plant-wrapper')];
+        const parts = document.querySelectorAll('.garden-plant-wrapper .garden-part[data-item-id]').length;
+        const cells = garden.projects.reduce((n, p) => n + 1 + p.flowers.length + p.stem.length + p.roots.length + p.minerals.length, 0);
+        return wrappers.length === garden.projects.length && wrappers.every((w) => w.dataset.width) && parts === cells;
+    });
+    await page.waitForTimeout(200);
+}
+
+// A point on a plant part's own pixels with no part drawn over it there: the
+// part a tap or a hover at that point means. A sprite's box is mostly
+// see-through; `covered` asks for a point under another part's box, where only
+// a pixel-true hit test finds the part underneath.
+async function partSpot(page, selector, { covered = false } = {}) {
+    return page.evaluate(async ({ selector, covered }) => {
+        const sprites = new Map();
+        const spriteOf = async (part) => {
+            const url = /url\("?(.*?)"?\)/.exec(part.style.backgroundImage || part.style.getPropertyValue('mask-image'))?.[1];
+            if (!url) return null;
+            if (!sprites.has(url)) {
+                const img = new Image();
+                img.src = url;
+                await img.decode();
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                sprites.set(url, { w: canvas.width, h: canvas.height, data: ctx.getImageData(0, 0, canvas.width, canvas.height).data });
+            }
+            return sprites.get(url);
+        };
+        const drawn = async (part, x, y) => {
+            const sprite = await spriteOf(part);
+            if (!sprite) return true;
+            const r = part.getBoundingClientRect();
+            const col = Math.floor(((x - r.left) / r.width) * sprite.w);
+            const row = Math.floor(((y - r.top) / r.height) * sprite.h);
+            const ax = part.dataset.flipped ? sprite.w - 1 - col : col;
+            return ax >= 0 && row >= 0 && ax < sprite.w && row < sprite.h && sprite.data[(row * sprite.w + ax) * 4 + 3] > 128;
+        };
+        for (const part of document.querySelectorAll(selector)) {
+            const sprite = await spriteOf(part);
+            if (!sprite) continue;
+            const r = part.getBoundingClientRect();
+            const cells = [];
+            for (let row = 0; row < sprite.h; row++) for (let col = 0; col < sprite.w; col++) cells.push([col, row]);
+            cells.sort((a, b) => Math.hypot(a[0] - sprite.w / 2, a[1] - sprite.h / 2) - Math.hypot(b[0] - sprite.w / 2, b[1] - sprite.h / 2));
+            for (const [col, row] of cells) {
+                const x = r.left + ((col + 0.5) * r.width) / sprite.w;
+                const y = r.top + ((row + 0.5) * r.height) / sprite.h;
+                if (!(await drawn(part, x, y))) continue;
+                const stack = document.elementsFromPoint(x, y);
+                const at = stack.indexOf(part);
+                // On screen, and under nothing but other parts' boxes (not the board, a button, a chip).
+                if (at === -1 || stack.slice(0, at).some((el) => !el.matches('.garden-part'))) continue;
+                if (covered !== (at > 0)) continue;
+                let over = false;
+                for (const el of stack.slice(0, at)) over ||= await drawn(el, x, y);
+                if (!over) return { x, y, itemId: part.dataset.itemId, covered: at > 0 };
+            }
+        }
+        return null;
+    }, { selector, covered });
+}
+
+// A point on the garden with nothing on it: no part, no chip, no worm (which
+// starts drawing), no menu, no button.
+async function emptySpot(page) {
+    return page.evaluate(() => {
+        const frame = document.querySelector('.garden-canvas-viewport').getBoundingClientRect();
+        for (let fy = 0.92; fy > 0.08; fy -= 0.04) {
+            for (let fx = 0.1; fx < 0.95; fx += 0.08) {
+                const x = frame.left + frame.width * fx;
+                const y = frame.top + frame.height * fy;
+                const el = document.elementFromPoint(x, y);
+                if (el?.closest('.garden-canvas-viewport') && !el.closest('.garden-part, .garden-peek-chip, .garden-worm-hitbox, .garden-context-menu, button')) return { x, y };
+            }
+        }
+        return null;
+    });
+}
+
+// The chip over the garden and the part it speaks for, as a reader sees them.
+async function chipState(page) {
+    return page.evaluate(() => {
+        const chips = [...document.querySelectorAll('.garden-peek-chip.is-visible')];
+        const parts = [...document.querySelectorAll('.garden-part-peeked')];
+        const chip = chips[0];
+        if (!chip) return { count: 0, marked: parts.length };
+        const c = chip.getBoundingClientRect();
+        const p = parts[0]?.getBoundingClientRect();
+        const frame = chip.closest('.garden-canvas-viewport').getBoundingClientRect();
+        return {
+            count: chips.length,
+            id: chip.dataset.id,
+            text: chip.textContent.trim(),
+            column: !!chip.querySelector('.project-column, .column-card, .garden-zone, .zone-add-btn'),
+            pinned: chip.classList.contains('is-selected'),
+            editing: chip.classList.contains('is-editing'),
+            pointer: getComputedStyle(chip).pointerEvents,
+            inPanLayer: !!chip.closest('.garden-pan-layer'),
+            marked: parts.length,
+            markedId: parts[0]?.dataset.itemId,
+            inView: c.left >= Math.max(0, frame.left) && c.top >= Math.max(0, frame.top)
+                && c.right <= Math.min(innerWidth, frame.right) && c.bottom <= Math.min(innerHeight, frame.bottom),
+            overlapsPart: !!p && c.left < p.right && c.right > p.left && c.top < p.bottom && c.bottom > p.top,
+            rect: [Math.round(c.left), Math.round(c.top), Math.round(c.width), Math.round(c.height)],
+        };
+    });
+}
+
+// Wait for the chip, its ring and any menu to be gone; say what stayed if they do not go.
+async function peekGone(page, label) {
+    try {
+        await page.waitForFunction(() => !document.querySelector('.garden-context-menu, .garden-peek-chip.is-visible, .garden-part-peeked'), null, { timeout: 5000 });
+    } catch {
+        const left = await page.evaluate(() => ({
+            menu: !!document.querySelector('.garden-context-menu'),
+            chips: [...document.querySelectorAll('.garden-peek-chip')].map((c) => `${c.className} ${c.dataset.id} ${c.isConnected}`),
+            peeked: [...document.querySelectorAll('.garden-part-peeked')].map((p) => p.dataset.itemId),
+            active: document.activeElement?.className ?? document.activeElement?.tagName,
+        }));
+        throw new Error(`${label}: the chip should be gone: ${JSON.stringify(left)}`);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -185,6 +321,7 @@ async function scenario(browser, errors) {
     console.log('items:', items);
     assert(items.length === zones.length, `expected ${zones.length} items, got ${items.length}`);
     console.log('plant parts:', await page.$$eval('.garden-stem-container > div', (els) => els.map((e) => e.className)));
+    await gardenSettled(page);
     await checkZoneIcons(page, 'desktop');
     await shot(page, '02-one-plant.png');
 
@@ -388,6 +525,78 @@ async function scenario(browser, errors) {
     console.log('after reload columns:', columns);
     console.log('after reload items:', (await page.$$('.garden-item')).length);
     assert(columns.length === 2, `expected 2 columns after reload, got ${columns.length}`);
+
+    // With the board hidden the garden speaks for itself one part at a time:
+    // hovering a flower rings that flower and shows its one cell beside it.
+    await page.click('.garden-board-toggle');
+    await page.waitForFunction(() => document.documentElement.dataset.board === 'hidden');
+    await gardenSettled(page);
+    await page.waitForTimeout(300); // the camera follows the pane growing
+    const deskFlower = await partSpot(page, '.garden-flower-part');
+    assert(deskFlower, 'no flower to hover with the board hidden');
+    const deskEmpty = await emptySpot(page);
+    assert(deskEmpty, 'no empty garden to point at');
+    await page.mouse.move(deskEmpty.x, deskEmpty.y);
+    await page.mouse.move(deskFlower.x, deskFlower.y);
+    await page.waitForTimeout(100);
+    assert((await chipState(page)).count === 0, 'the chip should wait a beat before it appears (hover intent)');
+    await page.waitForSelector('.garden-peek-chip.is-visible');
+    const hoverChip = await chipState(page);
+    console.log('hover chip:', hoverChip);
+    assert(hoverChip.count === 1 && hoverChip.text === 'Runs in browser' && hoverChip.id === deskFlower.itemId, `hovering a flower should show that flower's cell alone: ${JSON.stringify(hoverChip)}`);
+    assert(!hoverChip.column && !hoverChip.pinned, `the chip should be one cell, not a card: ${JSON.stringify(hoverChip)}`);
+    assert(hoverChip.marked === 1 && hoverChip.markedId === deskFlower.itemId, `the flower should be ringed: ${JSON.stringify(hoverChip)}`);
+    assert(hoverChip.inView && !hoverChip.overlapsPart, `the chip should sit beside the flower, on screen: ${JSON.stringify(hoverChip)}`);
+    await shot(page, '03b-peek-hover.png');
+    await page.mouse.move(deskEmpty.x, deskEmpty.y);
+    await peekGone(page, 'pointer off the plant');
+
+    // A click pins it: it stays when the pointer leaves, and through a redraw.
+    await page.mouse.click(deskFlower.x, deskFlower.y);
+    await page.mouse.move(deskEmpty.x, deskEmpty.y);
+    await page.waitForTimeout(400);
+    assert((await chipState(page)).pinned, 'a click on a part should pin its chip');
+    await page.evaluate(() => window.garden.view.onOpen());
+    await page.waitForFunction((id) => document.querySelector('.garden-peek-chip.is-visible')?.dataset.id === id
+        && document.querySelector('.garden-part-peeked')?.dataset.itemId === id, deskFlower.itemId);
+
+    // Pinned, a double-click writes in it through the board's own path.
+    await page.dblclick('.garden-peek-chip.is-visible');
+    await page.waitForSelector('.garden-peek-chip.is-editing');
+    await page.keyboard.press('End');
+    await page.keyboard.type(' fast');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction((id) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects
+        .flatMap((p) => p.flowers).find((f) => f.id === id)?.content === 'Runs in browser fast', deskFlower.itemId);
+    const written = await page.evaluate((id) => ({
+        chip: document.querySelector('.garden-peek-chip.is-visible')?.textContent,
+        board: [...document.querySelectorAll('.kanban-scroll-container .garden-item')].find((el) => el.dataset.id === id)?.textContent,
+    }), deskFlower.itemId);
+    assert(written.chip === 'Runs in browser fast' && written.board === 'Runs in browser fast', `the chip's edit should show in the chip and on the board: ${JSON.stringify(written)}`);
+
+    // A right-click opens the cell's own menu; Escape closes it and lets the chip go.
+    await page.click('.garden-peek-chip.is-visible', { button: 'right' });
+    await page.waitForSelector('.garden-context-menu');
+    const chipMenu = await page.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
+    // The flower was highlighted from its menu on the board, earlier.
+    assert.deepEqual(chipMenu, ['Delete', 'Remove highlight', 'Convert to stem'], 'the chip should open its cell\'s menu');
+    await page.keyboard.press('Escape');
+    await peekGone(page, 'Escape');
+
+    // A click on the empty garden lets it go, and so does a drag of the garden.
+    await page.mouse.click(deskFlower.x, deskFlower.y);
+    await page.waitForSelector('.garden-peek-chip.is-visible.is-selected');
+    await page.mouse.click(deskEmpty.x, deskEmpty.y);
+    await peekGone(page, 'click on the empty garden');
+    await page.mouse.click(deskFlower.x, deskFlower.y);
+    await page.waitForSelector('.garden-peek-chip.is-visible.is-selected');
+    await page.mouse.move(deskEmpty.x, deskEmpty.y);
+    await page.mouse.down();
+    await page.mouse.move(deskEmpty.x + 60, deskEmpty.y - 20, { steps: 4 });
+    await page.mouse.up();
+    await peekGone(page, 'a drag of the garden');
+    await page.click('.garden-board-toggle');
+    await page.waitForFunction(() => document.documentElement.dataset.board === 'shown');
 
     // Items and pets wait for Max's approval, so this build shows neither, not
     // even for a garden that holds them (one used on dev.cells.garden), and it
@@ -599,6 +808,8 @@ async function scenario(browser, errors) {
         await mpage.keyboard.press('Enter');
         await mpage.waitForFunction((t) => [...document.querySelectorAll('.garden-item')].some((el) => el.textContent === t), text);
     }
+    // The last cell's redraw would swap the board out from under the icons being measured.
+    await gardenSettled(mpage);
     await checkZoneIcons(mpage, 'mobile');
 
     // A card per plant on the board, a line between plants.
@@ -632,17 +843,11 @@ async function scenario(browser, errors) {
 
     // Tapping a rendered plant part on iPhone must focus its exact board cell.
     // The canvas prevents the native touch default, so this specifically guards the
-    // direct touch-end path rather than a synthetic click.
-    const plantPartTap = await mpage.evaluate(() => {
-        for (const part of document.querySelectorAll('.garden-part[data-item-id]')) {
-            const rect = part.getBoundingClientRect();
-            const x = rect.left + rect.width / 2;
-            const y = rect.top + rect.height / 2;
-            const hit = document.elementFromPoint(x, y)?.closest('.garden-part[data-item-id]');
-            if (hit?.dataset.itemId) return { x, y, itemId: hit.dataset.itemId };
-        }
-        return null;
-    });
+    // direct touch-end path rather than a synthetic click. The stem just added is
+    // still being drawn: wait for the garden to hold still, then tap one of the
+    // part's own pixels, so the part meant is not a guess from its box.
+    await gardenSettled(mpage);
+    const plantPartTap = await partSpot(mpage, '.garden-stem-part');
     assert(plantPartTap, 'no tappable plant part was found on mobile');
     await touch('touchStart', plantPartTap.x, plantPartTap.y);
     await touch('touchEnd', plantPartTap.x, plantPartTap.y);
@@ -832,6 +1037,90 @@ async function scenario(browser, errors) {
     await mpage.waitForSelector('.garden-pan-layer');
     await mpage.keyboard.press('Escape');
     await mpage.waitForFunction(() => !document.querySelector('.garden-pan-layer') && !!document.querySelector('#app .garden-canvas-viewport'));
+
+    // The board hidden on a phone: a tap on a flower shows that flower's one
+    // cell beside it, a second tap writes in it, a hold opens its menu, and a
+    // tap on the empty garden lets it go.
+    await tapAt('.flowers-zone .zone-add-btn');
+    await mpage.waitForSelector('.garden-item.is-draft');
+    await mpage.fill('.garden-item.is-draft', 'Phone flower');
+    await mpage.keyboard.press('Enter');
+    await gardenSettled(mpage);
+    await tapAt('.garden-board-toggle');
+    await mpage.waitForFunction(() => document.documentElement.dataset.board === 'hidden');
+    await gardenSettled(mpage);
+    await mpage.waitForTimeout(300); // the camera follows the pane growing
+    const phoneFlower = await partSpot(mpage, '.garden-flower-part');
+    assert(phoneFlower, 'no flower to tap with the board hidden');
+    await touch('touchStart', phoneFlower.x, phoneFlower.y);
+    await touch('touchEnd', phoneFlower.x, phoneFlower.y);
+    await mpage.waitForTimeout(200);
+    const phoneChip = await chipState(mpage);
+    console.log('phone chip:', phoneChip);
+    assert(phoneChip.count === 1 && phoneChip.text === 'Phone flower' && phoneChip.id === phoneFlower.itemId && phoneChip.pinned,
+        `tapping a flower should pin that flower's cell alone: ${JSON.stringify(phoneChip)}`);
+    assert(!phoneChip.column && phoneChip.marked === 1 && phoneChip.markedId === phoneFlower.itemId, `one cell, its flower ringed: ${JSON.stringify(phoneChip)}`);
+    assert(phoneChip.inView && !phoneChip.overlapsPart, `the chip should sit beside the flower, on screen: ${JSON.stringify(phoneChip)}`);
+    await shot(mpage, '04b-mobile-peek.png');
+
+    await tapAt('.garden-peek-chip.is-visible');
+    await mpage.waitForSelector('.garden-peek-chip.is-editing');
+    const chipFont = await mpage.$eval('.garden-peek-chip.is-editing', (el) => parseFloat(getComputedStyle(el).fontSize));
+    assert(chipFont >= 16, `the chip being written in is ${chipFont}px; iOS would zoom`);
+    await mpage.keyboard.press('End');
+    await mpage.keyboard.type(' grown');
+    await mpage.keyboard.press('Enter');
+    await mpage.waitForFunction(() => JSON.parse(localStorage.getItem('cells.garden/v1')).projects[0].flowers[0]?.content === 'Phone flower grown');
+    assert((await chipState(mpage)).text === 'Phone flower grown', 'the chip should show what was written');
+
+    await holdAt('.garden-peek-chip.is-visible');
+    await mpage.waitForSelector('.garden-context-menu', { timeout: 3000 });
+    const phoneChipMenu = await mpage.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
+    assert.deepEqual(phoneChipMenu, ['Delete', 'Highlight', 'Convert to stem'], 'holding the chip should open its cell\'s menu');
+    const phoneEmpty = await emptySpot(mpage);
+    assert(phoneEmpty, 'no empty garden to tap');
+    await touch('touchStart', phoneEmpty.x, phoneEmpty.y);
+    await touch('touchEnd', phoneEmpty.x, phoneEmpty.y);
+    await peekGone(mpage, 'a tap on the empty garden');
+
+    // A part under the see-through box of the part above it: the tap means the part drawn there.
+    const coveredPart = await partSpot(mpage, '.garden-part[data-item-id]', { covered: true });
+    if (coveredPart) {
+        await touch('touchStart', coveredPart.x, coveredPart.y);
+        await touch('touchEnd', coveredPart.x, coveredPart.y);
+        await mpage.waitForTimeout(200);
+        const under = await chipState(mpage);
+        assert(under.id === coveredPart.itemId && under.markedId === coveredPart.itemId, `a tap should mean the part drawn under the finger, not the box on top: ${JSON.stringify({ coveredPart, under })}`);
+        await touch('touchStart', phoneEmpty.x, phoneEmpty.y);
+        await touch('touchEnd', phoneEmpty.x, phoneEmpty.y);
+        await mpage.waitForFunction(() => !document.querySelector('.garden-peek-chip.is-visible'));
+    } else {
+        console.log('no part drawn under another part\'s box on this phone garden; skipped the pixel-true tap');
+    }
+
+    // Pan view: the same chip, and it only shows.
+    await tapAt('.garden-pan-toggle');
+    await mpage.waitForSelector('.garden-pan-layer .garden-canvas-viewport', { state: 'attached' });
+    await gardenSettled(mpage);
+    const panFlower = await partSpot(mpage, '.garden-flower-part');
+    assert(panFlower, 'no flower to tap in pan view');
+    await touch('touchStart', panFlower.x, panFlower.y);
+    await touch('touchEnd', panFlower.x, panFlower.y);
+    await mpage.waitForTimeout(200);
+    const panChip = await chipState(mpage);
+    console.log('pan view chip:', panChip);
+    assert(panChip.count === 1 && panChip.text === 'Phone flower grown' && panChip.inPanLayer && panChip.inView && !panChip.overlapsPart,
+        `a tap on a flower in pan view should show its cell: ${JSON.stringify(panChip)}`);
+    assert(panChip.pointer === 'none', `the chip in pan view only shows: ${JSON.stringify(panChip)}`);
+    await shot(mpage, '04c-mobile-pan-peek.png');
+    await tapAt('.garden-peek-chip.is-visible');
+    await mpage.waitForTimeout(200);
+    assert(!(await mpage.$('.garden-peek-chip.is-editing')), 'the chip in pan view must not be written in');
+    await tapAt('.garden-pan-exit');
+    await mpage.waitForFunction(() => !document.querySelector('.garden-pan-layer'));
+    assert((await chipState(mpage)).count === 0, 'leaving pan view should let the chip go');
+    await tapAt('.garden-board-toggle');
+    await mpage.waitForFunction(() => document.documentElement.dataset.board === 'shown');
 
     // Everything was saved.
     await mpage.waitForTimeout(300);
