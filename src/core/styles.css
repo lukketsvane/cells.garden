@@ -1340,3 +1340,202 @@
 .plant-type-preview img[data-level='1'] { bottom: 16px; transform: translateX(-50%) scaleX(-1); }
 .plant-type-preview img[data-level='2'] { bottom: 27px; }
 .plant-type-preview img[data-level='3'] { bottom: 39px; }
+
+
+/* --- Pets: opt-in scene NPCs --- */
+.garden-pets-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    pointer-events: none;
+}
+
+.garden-pet {
+    position: absolute;
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    pointer-events: auto;
+    touch-action: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.garden-pet:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 4px;
+}
+
+.garden-pet-pumpkin {
+    left: 212px;
+    top: calc(var(--sky) - 54px);
+    width: 58px;
+    height: 54px;
+    background-image: var(--pumpkin-off);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    animation: garden-pumpkin-glow 2.8s steps(1, end) infinite;
+}
+.garden-pet-pumpkin.is-startled {
+    animation: garden-pumpkin-pop 650ms steps(6, end) 1, garden-pumpkin-glow 2.8s steps(1, end) infinite;
+}
+@keyframes garden-pumpkin-glow {
+    0%, 24% { background-image: var(--pumpkin-off); }
+    25%, 49% { background-image: var(--pumpkin-1); }
+    50%, 74% { background-image: var(--pumpkin-2); }
+    75%, 100% { background-image: var(--pumpkin-3); }
+}
+@keyframes garden-pumpkin-pop {
+    0%, 100% { transform: translateY(0) scale(1); }
+    35% { transform: translateY(-24px) scale(1.08); }
+    65% { transform: translateY(-8px) scale(0.96); }
+}
+
+.garden-pet-crow {
+    left: 0;
+    top: 0;
+    width: 40px;
+    height: 40px;
+    z-index: 9;
+    background-image: var(--crow-atlas);
+    background-size: 320px 320px;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    transform-origin: 50% 50%;
+    will-change: transform, background-position;
+}
+.garden-pet-crow.is-flipped {
+    scale: -1 1;
+}
+
+/* Main menu -> Pets */
+.garden-pets-modal {
+    width: min(92vw, 420px);
+    max-width: calc(100vw - 24px);
+    min-width: 0;
+    overflow-x: hidden;
+}
+.garden-pets-modal .modal-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+.garden-pets-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    gap: 0;
+    margin: 14px 0 2px;
+    overflow-x: hidden;
+}
+.garden-pet-tile {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 112px;
+    padding: 6px 2px 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-normal);
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+.garden-pet-tile:hover,
+.garden-pet-tile:active,
+.garden-pet-tile.is-active {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.garden-pet-tile-preview {
+    width: 100%;
+    max-width: 100%;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.garden-pet-tile-preview img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+.garden-pet-tile[data-pet='petGnome'] .garden-pet-tile-preview img {
+    width: 36px;
+    height: 48px;
+}
+.garden-pet-tile[data-pet='petPumpkin'] .garden-pet-tile-preview img {
+    width: 58px;
+    height: 54px;
+}
+.garden-pet-tile[data-pet='petCrow'] .garden-pet-tile-preview img {
+    width: 80px;
+    height: 80px;
+    max-width: 80px;
+    max-height: 80px;
+}
+.garden-pet-tile-name {
+    display: block;
+    max-width: 100%;
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+    font-weight: 600;
+}
+.garden-pet-tile-state {
+    display: block;
+    margin-top: 1px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-faint);
+}
+.garden-pet-tile.is-active .garden-pet-tile-name,
+.garden-pet-tile.is-active .garden-pet-tile-state {
+    color: var(--interactive-accent);
+}
+
+/* A pet that is not ready yet: still shown, but greyed out and inert. */
+.garden-pet-tile.is-unavailable,
+.garden-pet-tile.is-unavailable:hover,
+.garden-pet-tile.is-unavailable:active {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: var(--text-faint);
+    cursor: default;
+    opacity: 0.4;
+}
+.garden-pet-tile.is-unavailable .garden-pet-tile-preview img {
+    filter: grayscale(1);
+}
+.garden-pet-tile.is-unavailable .garden-pet-tile-name,
+.garden-pet-tile.is-unavailable .garden-pet-tile-state {
+    color: var(--text-faint);
+}
+
+@media (max-width: 420px) {
+    .garden-pets-grid { gap: 0; }
+    .garden-pet-tile { padding-inline: 0; }
+}

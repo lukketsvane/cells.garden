@@ -8,6 +8,7 @@ import { openMenu, type MenuItem } from './menu';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
 import { mineralOpacity, skyAt } from './garden-settings';
+import { renderGardenPets } from './pets';
 import type { LayerItem, LayerName, ProjectData, ViewState } from './model';
 
 declare const __CELLS_SYSTEM_CLIPBOARD__: boolean;
@@ -677,6 +678,7 @@ export class GardenView extends View {
             }, 500 + Math.random() * 1500);
         }, 4000 + Math.random() * 6000);
     }
+
 
     // --- The Worm Logic ---
     private startWorm() {
@@ -2343,6 +2345,10 @@ export class GardenView extends View {
                 border.style.left = `${WORLD_PADDING + i * PLANT_SPACING}px`;
             }
         });
+
+        // Optional pets live in the same world/camera as the plants.
+        // All pets are off by default.
+        renderGardenPets(world, this.app.settings);
 
         // Apply the restored pan/zoom transform.
         this.applyWorldTransform(world, viewport);

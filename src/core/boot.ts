@@ -13,6 +13,7 @@ import { PlantSync } from './plants';
 import { GardenQuestionModal, NewSpaceModal, ShareGardenModal } from './share';
 import { SharePlantModal } from './share-plant';
 import { FriendsModal } from './friends';
+import { PetsModal, activePetCount } from './pets';
 import { applyScene } from './scene';
 import { SettingsModal } from './settings';
 import {
@@ -266,8 +267,14 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
 
     pill.setMenu(async (): Promise<MenuItem[]> => {
         const uid = currentUser;
+        const petCount = activePetCount(app.settings);
         const common: MenuItem[] = [
             { label: 'Export or import', onClick: () => openGardenFiles(app) },
+            {
+                label: 'Pets',
+                sub: petCount ? petCount + ' on' : 'Off',
+                onClick: () => new PetsModal(app).open(),
+            },
             {
                 label: 'Settings',
                 onClick: () => new SettingsModal(uid ? { client: supabase, userId: uid, onAvatar: (seed) => pill.setAvatar(seed) } : null, app).open(),

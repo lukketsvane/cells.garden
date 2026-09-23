@@ -77,6 +77,10 @@ export interface GardenSettings {
     /** '#rrggbb' for the stem and flowers of a plant in standby; '' is the usual dark green. */
     silhouetteColor: string;
     standbyHidesMinerals: boolean;
+    /** Scene pets are opt-in per garden. */
+    petGnome: boolean;
+    petPumpkin: boolean;
+    petCrow: boolean;
     viewState?: ViewState;
 }
 
@@ -113,6 +117,9 @@ export const DEFAULT_SETTINGS: GardenSettings = {
     silhouetteOpacity: 100,
     silhouetteColor: '',
     standbyHidesMinerals: true,
+    petGnome: false,
+    petPumpkin: false,
+    petCrow: false,
 };
 
 /** A fresh copy of the defaults, so no garden shares the node list with another. */

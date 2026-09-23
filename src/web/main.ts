@@ -22,11 +22,16 @@ if (!extensionOAuthHandoff) {
 
     const updateServiceWorker = registerSW({
         immediate: true,
+        // Safari/PWA can otherwise keep an older worker for a surprisingly long
+        // time. Explicitly ask for an update on every app boot.
+        onRegisteredSW(_swUrl, registration) {
+            void registration?.update();
+        },
         onNeedRefresh() {
             const busy = () => document.querySelector('.modal-container, .is-editing') !== null;
             const apply = () => {
                 if (busy()) {
-                    window.setTimeout(apply, 2000);
+                    window.setTimeout(apply, 1200);
                     return;
                 }
                 void updateServiceWorker(true);

@@ -8,11 +8,16 @@
 
     history.replaceState(null, '', location.pathname);
 
+    const fail = (message) => {
+        if (status) status.textContent = message;
+        if (document.body) document.body.hidden = false;
+    };
+
     let authorize;
     try {
         authorize = new URL(authorizeRaw);
     } catch {
-        status.textContent = 'The Google sign-in address is invalid. Return to the extension and try again.';
+        fail('The Google sign-in address is invalid. Return to the extension and try again.');
         return;
     }
 
@@ -27,7 +32,7 @@
         && redirectTo === 'https://cells.garden/';
 
     if (!valid) {
-        status.textContent = 'The Google sign-in request is invalid. Return to the extension and try again.';
+        fail('The Google sign-in request is invalid. Return to the extension and try again.');
         return;
     }
 
@@ -36,5 +41,6 @@
         nonce,
         createdAt: Date.now(),
     }));
+
     location.replace(authorize.toString());
 })();
