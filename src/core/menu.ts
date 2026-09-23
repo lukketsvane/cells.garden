@@ -128,8 +128,12 @@ export function openMenu(
     const onOutside = (e: Event) => {
         if (!menu.contains(e.target as Node)) close();
     };
+    // Escape closes the menu and nothing under it: not the chip or the pan view
+    // it was opened over, nor a modal.
     const onEscape = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') close(true);
+        if (e.key !== 'Escape') return;
+        e.stopPropagation();
+        close(true);
     };
 
     const toggle = (open: { row: HTMLElement; panel: HTMLElement }, e: MouseEvent) => {
