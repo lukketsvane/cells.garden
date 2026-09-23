@@ -35,11 +35,12 @@ const TTL_SECONDS = 24 * 60 * 60;
 /** The one record's size (RFC 8188); a payload here is far smaller. */
 const RECORD_SIZE = 4096;
 
-/** Where the app runs: the web app, its dev deploy, the Chrome extension, Obsidian, and local development. */
+/** Where the app runs: the web app, its dev deploy, both Chrome Web Store listings, Obsidian, and local development. */
 const ORIGINS = new Set([
     'https://cells.garden',
     'https://dev.cells.garden',
     'chrome-extension://cighiofbnmdgppphnofkgfoneldalbbf',
+    'chrome-extension://flgbihgnkkhjokjblnbcjmmjhdejokfd',
     'app://obsidian.md',
 ]);
 const LOCAL_ORIGIN = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/;
