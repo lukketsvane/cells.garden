@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { hourOf, mineralOpacity, skyAt, skyGradient, starsFor, timeOf } from './garden-settings';
 import { mergeGardens } from './merge';
-import { DEFAULT_SETTINGS, defaultSettings, settingsFrom, type Garden, type GardenSettings } from './model';
+import { DEFAULT_SETTINGS, defaultSettings, itemsFrom, settingsFrom, type Garden, type GardenItem, type GardenSettings } from './model';
 
 /** The sky table and the lookup the garden used before it had settings, kept here to compare against. */
 const OLD_SKY: { hour: number; color: [number, number, number]; stars: number }[] = [
@@ -143,4 +143,108 @@ test('stored settings fill in the defaults and a broken node list is the default
     assert.deepEqual(settingsFrom({ skyNodes: null } as never).skyNodes, defaultSettings().skyNodes);
     assert.deepEqual(settingsFrom({ skyNodes: [] }).skyNodes, defaultSettings().skyNodes);
     assert.deepEqual(settingsFrom({ skyNodes: [{ color: '#000000', hour: 1 }], fireflies: 3 }).skyNodes, [{ color: '#000000', hour: 1 }]);
+});
+
+// --- Items ---
+
+const gnome = (id: string, x: number, extra: Partial<GardenItem> = {}): GardenItem => ({ id, kind: 'gnome', x, ...extra });
+const ids = (settings: GardenSettings) => settings.items.map(i => i.id).sort();
+const withItems = (items: GardenItem[], extra: Partial<GardenSettings> = {}): Garden => garden({ ...defaultSettings(), items, ...extra });
+
+test('a garden from before items has none, and no two gardens share the list', () => {
+    const { items: _items, ...old } = defaultSettings();
+    assert.deepEqual(settingsFrom(old as GardenSettings).items, []);
+    assert.deepEqual(DEFAULT_SETTINGS.items, []);
+    const a = defaultSettings();
+    a.items.push(gnome('g1', 1));
+    assert.deepEqual(defaultSettings().items, []);
+    assert.deepEqual(settingsFrom(undefined).items, []);
+});
+
+test('stored items: malformed ones are dropped, the rest kept as they are', () => {
+    const stored: unknown = [
+        gnome('g1', 0.5),
+        { id: 'p1', kind: 'pumpkin', x: -0.75 },
+        null,
+        'gnome',
+        [1, 2],
+        { kind: 'gnome', x: 1 },
+        { id: '', kind: 'gnome', x: 1 },
+        { id: 7, kind: 'gnome', x: 1 },
+        { id: 'k1', x: 1 },
+        { id: 'k2', kind: '', x: 1 },
+        { id: 'x1', kind: 'gnome' },
+        { id: 'x2', kind: 'gnome', x: '1' },
+        { id: 'x3', kind: 'gnome', x: Number.NaN },
+        { id: 'x4', kind: 'gnome', x: Number.POSITIVE_INFINITY },
+        gnome('g1', 9),
+    ];
+    assert.deepEqual(itemsFrom(stored), [gnome('g1', 0.5), { id: 'p1', kind: 'pumpkin', x: -0.75 }]);
+    assert.deepEqual(settingsFrom({ items: stored } as never).items, itemsFrom(stored));
+    assert.deepEqual(itemsFrom('not a list'), []);
+    assert.deepEqual(itemsFrom({ g1: gnome('g1', 1) }), []);
+});
+
+test('an item of a kind this client does not know, and fields it does not know, survive', () => {
+    const frog = { id: 'f1', kind: 'frog-statue', x: 2, tilt: 3 };
+    assert.deepEqual(settingsFrom({ items: [frog] } as never).items, [frog]);
+});
+
+test('items placed on two devices at once are all kept', () => {
+    const base = withItems([gnome('g1', 1)]);
+    const local = withItems([gnome('g1', 1), gnome('L', 2)]);
+    const remote = withItems([gnome('g1', 1), { id: 'R', kind: 'pumpkin', x: 3 }]);
+    const merged = mergeGardens(base, local, remote, () => 'now').settings;
+    assert.deepEqual(ids(merged), ['L', 'R', 'g1']);
+});
+
+test('an item moved on one side lands there, beside one added on the other', () => {
+    const base = withItems([gnome('g1', 1)]);
+    const local = withItems([gnome('g1', 4.25)]);
+    const remote = withItems([gnome('g1', 1), gnome('R', 0)]);
+    const merged = mergeGardens(base, local, remote, () => 'now').settings;
+    assert.equal(merged.items.find(i => i.id === 'g1')?.x, 4.25);
+    assert.deepEqual(ids(merged), ['R', 'g1']);
+});
+
+test('an item moved on both sides: remote wins', () => {
+    const base = withItems([gnome('g1', 1)]);
+    const merged = mergeGardens(base, withItems([gnome('g1', 2)]), withItems([gnome('g1', 3)]), () => 'now').settings;
+    assert.deepEqual(merged.items, [gnome('g1', 3)]);
+});
+
+test('a removed item stays removed, unless the other side moved it meanwhile', () => {
+    const base = withItems([gnome('gone', 1), gnome('moved', 2)]);
+    const local = withItems([]);
+    const remote = withItems([gnome('gone', 1), gnome('moved', 5)]);
+    const merged = mergeGardens(base, local, remote, () => 'now').settings;
+    assert.deepEqual(merged.items, [gnome('moved', 5)]);
+});
+
+test('items placed offline survive a base and a remote from before items', () => {
+    const { items: _items, ...old } = defaultSettings();
+    const base = garden(old as GardenSettings);
+    const local = withItems([gnome('g1', 1)]);
+    const merged = mergeGardens(base, local, garden(old as GardenSettings), () => 'now').settings;
+    assert.deepEqual(merged.items, [gnome('g1', 1)]);
+});
+
+test('with no base the items are a union, and malformed ones never get in', () => {
+    const local = withItems([gnome('L', 1)]);
+    const remote = garden({ ...defaultSettings(), items: [gnome('R', 2), { id: 'bad', kind: 'gnome' }] as never });
+    const merged = mergeGardens(null, local, remote, () => 'now').settings;
+    assert.deepEqual(ids(merged), ['L', 'R']);
+});
+
+test('item and pet settings merge alongside the rest, pet switches this client does not know included', () => {
+    const base = withItems([]);
+    const local = withItems([gnome('g1', 1)], { petCrow: true });
+    const remote = garden({ ...defaultSettings(), petFrog: true } as GardenSettings);
+    const merged = mergeGardens(base, local, remote, () => 'now').settings as GardenSettings & { petFrog?: boolean };
+    assert.equal(merged.petCrow, true);
+    assert.equal(merged.petFrog, true);
+    assert.deepEqual(merged.items, [gnome('g1', 1)]);
+    // Old gardens' pet switches are still carried.
+    assert.equal(merged.petGnome, false);
+    assert.equal(merged.petPumpkin, false);
 });

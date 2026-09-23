@@ -126,10 +126,12 @@ function mergeProject(b: ProjectData | undefined, l: ProjectData, r: ProjectData
 function mergeSettings(base: GardenSettings | undefined, local: GardenSettings, remote: GardenSettings, prefer: Prefer): GardenSettings {
     // viewState is per surface and never synced; keep whatever remote carries.
     // All three over the defaults: a base remembered before a setting existed must not read as a change.
-    const { viewState: _l, ...l } = settingsFrom(local);
-    const { viewState, ...r } = settingsFrom(remote);
-    const b = base ? (({ viewState: _b, ...rest }) => rest)(settingsFrom(base)) : undefined;
-    const merged = mergeFields(b, l, r, prefer) as GardenSettings;
+    const { viewState: _l, items: localItems, ...l } = settingsFrom(local);
+    const { viewState, items: remoteItems, ...r } = settingsFrom(remote);
+    const { viewState: _b, items: baseItems, ...b } = settingsFrom(base);
+    const merged = mergeFields(base ? b : undefined, l, r, prefer) as GardenSettings;
+    // Items are matched by id like cells, so two devices placing things at once both keep theirs.
+    merged.items = mergeList(base ? baseItems : null, localItems, remoteItems, prefer, mergeFields);
     return viewState === undefined ? merged : { ...merged, viewState };
 }
 

@@ -173,6 +173,18 @@ test('a settings file fills in anything a newer version added', () => {
     assert.ok(!result.settings?.viewState, 'an imported camera must not move this device');
 });
 
+test('the items standing in the garden travel with the settings, broken ones left behind', () => {
+    const items = [{ id: 'g1', kind: 'gnome', x: 1.5 }, { id: 'p1', kind: 'pumpkin', x: -0.25 }];
+    const files = gardenToVaultFiles(garden([], { ...DEFAULT_SETTINGS, items }));
+    assert.deepEqual(vaultFilesToGarden(files).settings?.items, items);
+
+    const result = vaultFilesToGarden([{
+        path: SETTINGS_FILE,
+        bytes: enc.encode(JSON.stringify({ version: 1, settings: { items: [...items, { id: 'x', kind: 'gnome', x: 'far' }] } })),
+    }]);
+    assert.deepEqual(result.settings?.items, items);
+});
+
 test('files arrive in column order however the archive listed them', () => {
     const files = gardenToVaultFiles(garden([
         plant({ id: 'a', seed: 'Alpha', order: 0 }),

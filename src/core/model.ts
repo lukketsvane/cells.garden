@@ -48,6 +48,30 @@ export interface SkyNode {
     hour: number;
 }
 
+/** The kinds of item this client can draw. */
+export type ItemKind = 'gnome' | 'pumpkin';
+
+/**
+ * Something standing in the garden, placed from the Items menu.
+ *
+ * `x` is where its middle stands, in plant slots from the left edge of the
+ * first plant's slot: 0.5 is the first plant, 1 the gap after it, -0.5 out in
+ * the padding before it. Measured from the first plant, it does not move when
+ * the padding around the plants changes; in slots, not when their spacing
+ * does; and as a place in the world, not on the screen, a resize or the
+ * camera never moves it. Plants added on the right leave it where it is.
+ * Removing plants can leave it past the end of the world: it is then drawn at
+ * the end, in the garden and never in the void, and its stored place is kept
+ * for when the plants come back.
+ *
+ * `kind` may be one a newer client knows. Such an item is kept, not drawn.
+ */
+export interface GardenItem {
+    id: string;
+    kind: string;
+    x: number;
+}
+
 /**
  * Stored with the garden, so everyone who shares it sees the same garden.
  * Every default draws the garden as it has always looked.
@@ -77,10 +101,16 @@ export interface GardenSettings {
     /** '#rrggbb' for the stem and flowers of a plant in standby; '' is the usual dark green. */
     silhouetteColor: string;
     standbyHidesMinerals: boolean;
-    /** Scene pets are opt-in per garden. */
+    /**
+     * Pets are switched on per garden, one `pet<Name>` flag each; a pet's key
+     * is its entry in pets.ts. The gnome and the pumpkin are items now, so
+     * nothing reads their flags, but gardens in the wild still carry them.
+     */
     petGnome: boolean;
     petPumpkin: boolean;
     petCrow: boolean;
+    /** What stands in the garden, back to front. */
+    items: GardenItem[];
     viewState?: ViewState;
 }
 
@@ -120,11 +150,34 @@ export const DEFAULT_SETTINGS: GardenSettings = {
     petGnome: false,
     petPumpkin: false,
     petCrow: false,
+    items: [],
 };
 
-/** A fresh copy of the defaults, so no garden shares the node list with another. */
+/** A fresh copy of the defaults, so no garden shares the node list or the items with another. */
 export function defaultSettings(): GardenSettings {
-    return { ...DEFAULT_SETTINGS, skyNodes: DEFAULT_SKY_NODES.map(n => ({ ...n })) };
+    return { ...DEFAULT_SETTINGS, skyNodes: DEFAULT_SKY_NODES.map(n => ({ ...n })), items: [] };
+}
+
+/**
+ * The stored items that can be placed: an id, a kind and a finite x. Anything
+ * else is dropped, and so is a second item with an id already taken. Fields a
+ * newer client added to an item stay on it.
+ */
+export function itemsFrom(stored: unknown): GardenItem[] {
+    if (!Array.isArray(stored)) return [];
+    const entries: unknown[] = stored;
+    const seen = new Set<string>();
+    const items: GardenItem[] = [];
+    for (const entry of entries) {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+        const { id, kind, x } = entry as Record<string, unknown>;
+        if (typeof id !== 'string' || !id || seen.has(id)) continue;
+        if (typeof kind !== 'string' || !kind) continue;
+        if (typeof x !== 'number' || !Number.isFinite(x)) continue;
+        seen.add(id);
+        items.push({ ...entry, id, kind, x });
+    }
+    return items;
 }
 
 /** Stored settings over the defaults (older gardens lack the newer keys); a broken node list is the default day. */
@@ -134,6 +187,7 @@ export function settingsFrom(stored: Partial<GardenSettings> | null | undefined)
     if (!Array.isArray(nodes) || nodes.length === 0 || !nodes.every(n => n && typeof n === 'object')) {
         settings.skyNodes = defaultSettings().skyNodes;
     }
+    settings.items = itemsFrom(settings.items);
     return settings;
 }
 
