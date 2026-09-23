@@ -27,18 +27,6 @@ html, body {
     touch-action: pan-x pan-y;
 }
 
-/* Light mode, after the page died once (main.ts): the garden without the
-   moving and blurred layers that cost a phone the most memory. */
-:root[data-lite] .garden-cloud-layer { animation: none !important; }
-:root[data-lite] .garden-stars-layer,
-:root[data-lite] .garden-shooting-star-layer,
-:root[data-lite] .garden-satellite-layer,
-:root[data-lite] .garden-firefly-layer { display: none !important; }
-:root[data-lite] .garden-firefly,
-:root[data-lite] .garden-worm-segment { will-change: auto; }
-:root[data-lite] .garden-peek-chip { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--background-primary); }
-:root[data-lite] * { animation-iteration-count: 1 !important; }
-
 .garden-problem {
     position: fixed;
     left: 12px;

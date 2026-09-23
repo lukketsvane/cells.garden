@@ -1,7 +1,7 @@
 {
   "id": "cells-garden",
   "name": "cells.garden",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "minAppVersion": "1.8.7",
   "description": "Turn projects and tasks into a pixel-art garden. Work locally in Obsidian, or sign in to sync, share and assign tasks across devices.",
   "author": "tastefinger",

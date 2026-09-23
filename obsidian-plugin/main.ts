@@ -6,7 +6,7 @@
  * Max's original plugin (the `original` branch) keeps the garden in vault files; the
  * "Import this vault's garden" command brings that garden into the synced one.
  */
-import { ItemView, Notice, Plugin, TFile, TFolder, Vault } from 'obsidian';
+import { ItemView, Notice, Platform, Plugin, TFile, TFolder, Vault } from 'obsidian';
 
 import '../src/core/shim';
 import '../src/core/styles.css';
@@ -77,6 +77,9 @@ export default class CellsGardenPlugin extends Plugin {
     private saveTail: Promise<void> = Promise.resolve();
 
     async onload() {
+        // On an iPhone or iPad the garden starts light (styles.css, data-lite): the
+        // moving and blurred layers cost a phone's small web view the most memory.
+        if (Platform.isIosApp) document.documentElement.dataset.lite = 'true';
         await this.usePluginStorage();
         this.registerView(VIEW_TYPE, (leaf) => new GardenTabView(leaf));
         this.registerObsidianProtocolHandler('cells-garden', (params) => void this.finishSignIn(params));

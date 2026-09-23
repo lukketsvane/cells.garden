@@ -97,7 +97,7 @@ class Vault {
         for (const child of root.children ?? []) Vault.recurseChildren(child, cb);
     }
 }
-const obsidian = { Plugin, ItemView, Notice, TFile, TFolder, Vault };
+const obsidian = { Plugin, ItemView, Notice, TFile, TFolder, Vault, Platform: { isIosApp: false } };
 const folders = {
     'Garden-Cells': new TFolder('Garden-Cells', [new TFile('Garden-Cells/From the vault.md')]),
     Notes: new TFolder('Notes', [new TFile('Notes/unrelated.md')]),

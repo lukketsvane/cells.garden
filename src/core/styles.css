@@ -2171,3 +2171,16 @@
     .garden-tiles { gap: 0; }
     .garden-tile { padding-inline: 0; }
 }
+
+/* Light mode: iPhones and iPads (web main.ts, the Obsidian plugin) and any page
+   whose last run died draw the garden without the moving and blurred layers
+   that cost a phone the most memory. */
+:root[data-lite] .garden-cloud-layer { animation: none !important; }
+:root[data-lite] .garden-stars-layer,
+:root[data-lite] .garden-shooting-star-layer,
+:root[data-lite] .garden-satellite-layer,
+:root[data-lite] .garden-firefly-layer { display: none !important; }
+:root[data-lite] .garden-firefly,
+:root[data-lite] .garden-worm-segment { will-change: auto; }
+:root[data-lite] .garden-peek-chip { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--background-primary); }
+:root[data-lite] * { animation-iteration-count: 1 !important; }
