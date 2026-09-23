@@ -34,7 +34,8 @@
     },
     {
       "path": "src/assets/pets/gnome.png",
-      "policy": "repo-source-of-truth"
+      "policy": "repo-source-of-truth",
+      "note": "The original 13x22 image fill of Figma node 56:1008 (Source/Decor/Gnome), at native 1x. The node itself draws it stretched to 20x35, so an export of the node is resampled; take the image fill. Not in the EXPORTS section yet."
     },
     {
       "path": "src/assets/pack/plant_9/flowers/flower_1.png",
