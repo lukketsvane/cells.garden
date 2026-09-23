@@ -61,8 +61,6 @@ export function mountCrowNPC(layer: HTMLElement) {
     crow.style.height = CROW_SIZE + 'px';
     crow.style.backgroundSize =
         (CROW_SIZE * CROW_COLUMNS) + 'px ' + (CROW_SIZE * CROW_ROWS) + 'px';
-    crow.style.backgroundRepeat = 'no-repeat';
-    crow.style.imageRendering = 'pixelated';
 
     const world = layer.parentElement ?? layer;
     const viewport = world.parentElement;
