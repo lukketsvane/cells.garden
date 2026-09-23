@@ -140,7 +140,9 @@ if (vapidPublic) {
 }
 
 const BINARY = /\.(?:png|gif|jpe?g|webp|ico|zip|woff2?|ttf|otf|pdf|mp4|webm)$/i;
-const SKIP_DIRS = new Set(['node_modules', '.git', '.claude', '.vercel', 'dist', 'dist-ext', 'dev-dist']);
+const SKIP_DIRS = new Set(['node_modules', 'dist', 'dist-ext', 'dev-dist']);
+/** Tools' own folders (.git, .vercel, local worktrees) are not the repo; the workflows are. */
+const skipDir = (name) => SKIP_DIRS.has(name) || (name.startsWith('.') && name !== '.github');
 
 /** Every file git tracks or would add (ignored files, such as .env.local, stay out); a plain walk without git. */
 function repoFiles() {
@@ -152,8 +154,9 @@ function repoFiles() {
         const walkAll = (dir) => {
             for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
                 const path = dir ? `${dir}/${entry.name}` : entry.name;
+                if (entry.isSymbolicLink()) continue;
                 if (entry.isDirectory()) {
-                    if (!SKIP_DIRS.has(entry.name)) walkAll(path);
+                    if (!skipDir(entry.name)) walkAll(path);
                 } else if (entry.name !== '.env.local') {
                     files.push(path);
                 }
@@ -203,7 +206,7 @@ function hasServiceRoleJwt(source) {
 const knownSecret = (process.env.VAPID_PRIVATE_KEY
     || (process.env.VAPID_PRIVATE_KEY_FILE && existsSync(process.env.VAPID_PRIVATE_KEY_FILE) ? readFileSync(process.env.VAPID_PRIVATE_KEY_FILE, 'utf8') : '')).trim();
 
-const scanned = [...new Set([...repoFiles(), ...buildFiles()])].filter((path) => !BINARY.test(path) && existsSync(join(ROOT, path)));
+const scanned = [...new Set([...repoFiles(), ...buildFiles()])].filter((path) => !BINARY.test(path) && existsSync(join(ROOT, path)) && statSync(join(ROOT, path)).isFile());
 for (const path of scanned) {
     const source = readFileSync(join(ROOT, path), 'utf8');
     for (const [pattern, label] of secretPatterns) assert(!pattern.test(source), `${path}: ${label}`);
