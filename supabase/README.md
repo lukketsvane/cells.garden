@@ -38,6 +38,8 @@ Run them in order in the SQL editor. Each one is safe to run more than once.
 | `migrations/0009_friends.sql` | `profiles.avatar_seed`, `friends()`, plant offers to friends |
 | `migrations/0010_garden_spaces.sql` | garden spaces: rows with `owner_id` instead of `user_id`; ownership is `coalesce(user_id, owner_id)` everywhere |
 | `migrations/0011_avatar_drawing.sql` | `profiles.avatar_drawing` (a drawn picture, format checked by a constraint); `friends()` and `plant_offers_for_me()` send it in place of the seed |
+| `migrations/0012_notifications.sql` | Private notification inboxes, device subscriptions, account-aware registration and realtime |
+| `migrations/0013_push_keys.sql` | Persistent VAPID signing keys accessible only through a service-only RPC |
 | `migrations/0012_notifications.sql` | `notifications` (written only by the `notify` function; the recipient reads them and sets `read_at`, nothing else; in the realtime publication), `push_subscriptions` (each device's Web Push subscription, its owner's alone), `save_push_subscription(...)` |
 
 ## Shared gardens (M4)
@@ -73,14 +75,9 @@ Until the function is deployed, assigning still works and nobody is notified; un
 
 ### Set up (once)
 
-1. **SQL editor**: run `migrations/0012_notifications.sql`.
-2. **Edge Functions, Secrets** (Project settings, Edge Functions): add
-   - `VAPID_PUBLIC_KEY`: the same value as `VITE_VAPID_PUBLIC_KEY` in the repo's `.env`.
-   - `VAPID_PRIVATE_KEY`: the private half of that pair. It is never in the repo; `node scripts/make-vapid.mjs <file outside the repo>` makes a new pair (then put the new public key in `.env` too, and every device turns notifications on again).
-   - `VAPID_SUBJECT`: `mailto:` and an address that reads mail, for push services to reach you.
-
-   `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by Supabase.
-3. **Deploy `notify`**: Edge Functions, Deploy a new function, Via editor, name it `notify`, paste all of `functions/notify/index.ts`, deploy. Or with the CLI: `npx supabase functions deploy notify --project-ref nsfpvbuqpuxyhisublfy`. It has no imports. Leave "Verify JWT" on; if calls fail with 401 after the project moves to the new JWT signing keys, turn it off: the function checks the token itself.
+1. Apply `migrations/0012_notifications.sql` and `migrations/0013_push_keys.sql` in order.
+2. Deploy `functions/notify/index.ts` as the `notify` Edge Function. It has no imports. Keep JWT verification on; the handler also validates the user token against Supabase Auth before accessing data.
+3. No keys need copying. Supabase provides its server credentials. On first use the function creates a VAPID pair and stores it in `private.push_keys` through a service-only RPC. Concurrent first calls use the same persistent pair. The app requests only the public key before showing the Turn on button. Never delete the stored pair unless intentionally rotating it: existing devices must subscribe again after a rotation.
 4. **Try it on an iPhone** (iOS 16.4+): open `https://cells.garden` (or `dev.cells.garden`) in Safari, Share, Add to Home Screen, open it from the Home Screen and sign in (the Home Screen app keeps its own sign-in). Settings, Notifications, Turn on, Allow. From another account in a garden you both share, right-click (or hold) a cell, Assign, pick the iPhone's account. Lock the phone: the notification arrives with the cell's text, the icon shows the unread count, and tapping it opens the app on the cell. Opening Notifications in the pill menu and tapping it (or Mark all read) clears the count.
 
 If nothing arrives: Edge Functions, `notify`, Logs shows what the function did (`push refused` with the push service's status). `select * from push_subscriptions` shows the devices; `select * from notifications order by created_at desc` the rows.

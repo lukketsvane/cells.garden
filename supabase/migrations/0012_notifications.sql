@@ -122,11 +122,11 @@ begin
     if uid is null then
         raise exception 'sign in first' using errcode = '28000';
     end if;
-    delete from public.push_subscriptions s where s.endpoint = sub_endpoint and s.user_id <> uid;
     insert into public.push_subscriptions (user_id, endpoint, p256dh, auth, user_agent)
     values (uid, sub_endpoint, sub_p256dh, sub_auth, left(sub_user_agent, 400))
     on conflict (endpoint) do update
-        set p256dh = excluded.p256dh, auth = excluded.auth, user_agent = excluded.user_agent;
+        set user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth,
+            user_agent = excluded.user_agent, created_at = now();
     delete from public.push_subscriptions s
     where s.user_id = uid
       and s.id not in (select k.id from public.push_subscriptions k

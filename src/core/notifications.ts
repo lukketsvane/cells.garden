@@ -8,7 +8,7 @@
  * migration there is no table, and the app shows no Notifications at all.
  */
 import './shim';
-import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
+import { REALTIME_SUBSCRIBE_STATES, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
 import type { AssignNotice } from './assign';
 import { avatarEl } from './avatar';
 import { timeAgo, type CellTarget } from './notify-core';
@@ -84,6 +84,9 @@ export class NotificationCenter {
     available = false;
     private channel: RealtimeChannel | null = null;
     private stopped = false;
+    private retry: ReturnType<typeof setTimeout> | null = null;
+    private retryDelay = 1000;
+    private lastRefresh = 0;
     private readonly watchers = new Set<() => void>();
 
     constructor(
@@ -110,8 +113,25 @@ export class NotificationCenter {
     async start() {
         await this.load();
         if (!this.available || this.stopped) return;
+        this.join();
+        window.addEventListener('focus', this.catchUp);
+        window.addEventListener('online', this.catchUp);
+        document.addEventListener('visibilitychange', this.catchUp);
+    }
+
+    private catchUp = () => {
+        if (this.stopped || document.visibilityState === 'hidden' || Date.now() - this.lastRefresh < 1000) return;
+        this.lastRefresh = Date.now();
+        void this.load();
+    };
+
+    private join() {
+        if (this.stopped) return;
+        const previous = this.channel;
+        this.channel = null;
+        if (previous) void this.client.removeChannel(previous);
         const filter = `user_id=eq.${this.userId}`;
-        this.channel = this.client
+        const channel = this.client
             .channel(`notifications:${this.userId}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter }, (payload) => {
                 const row = payload.new as NotificationRow | undefined;
@@ -126,14 +146,31 @@ export class NotificationCenter {
                 if (!row?.id) return;
                 this.list = this.list.map(n => (n.id === row.id ? fromRow(row) : n));
                 this.changed();
-            })
-            .subscribe();
+            });
+        this.channel = channel;
+        channel.subscribe(status => {
+            if (this.stopped || this.channel !== channel) return;
+            if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) {
+                this.retryDelay = 1000;
+                void this.load();
+            } else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status) && this.retry === null) {
+                this.retry = window.setTimeout(() => {
+                    this.retry = null;
+                    this.join();
+                }, this.retryDelay);
+                this.retryDelay = Math.min(30000, this.retryDelay * 2);
+            }
+        });
     }
 
     stop() {
         this.stopped = true;
         this.watchers.clear();
-        void this.channel?.unsubscribe();
+        if (this.retry !== null) window.clearTimeout(this.retry);
+        window.removeEventListener('focus', this.catchUp);
+        window.removeEventListener('online', this.catchUp);
+        document.removeEventListener('visibilitychange', this.catchUp);
+        if (this.channel) void this.client.removeChannel(this.channel);
         this.channel = null;
     }
 
@@ -166,7 +203,11 @@ export class NotificationCenter {
             .update({ read_at: now })
             .eq('user_id', this.userId)
             .in('id', [...unread]);
-        if (error) console.warn('Garden Cells: could not mark notifications read', error.message);
+        if (error && !this.stopped) {
+            this.list = this.list.map(n => unread.has(n.id) && n.readAt === now ? { ...n, readAt: null } : n);
+            this.changed();
+            console.warn('Garden Cells: could not mark notifications read', error.message);
+        }
     }
 
     markAllRead() {

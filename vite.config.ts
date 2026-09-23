@@ -6,19 +6,16 @@ import { VitePWA } from 'vite-plugin-pwa';
  * The public Supabase values from .env* at the repo root plus the real
  * environment, VITE_ prefix optional, so the same env works in dev, Vercel and
  * CI. RLS protects the data. The secret key is never read. Every build uses this.
- * The Web Push public key rides along: public too, and only the web app uses it.
  */
 export function supabaseEnv(mode: string) {
     const env = loadEnv(mode, fileURLToPath(new URL('.', import.meta.url)), '');
     const url = env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
     const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || '';
-    const vapid = env.VITE_VAPID_PUBLIC_KEY || env.VAPID_PUBLIC_KEY || '';
     return {
         url,
         define: {
             'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(url),
             'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(key),
-            'import.meta.env.VITE_VAPID_PUBLIC_KEY': JSON.stringify(vapid),
         },
     };
 }

@@ -104,7 +104,8 @@ test('pushes go to the push services browsers use, and nowhere else', () => {
     for (const ok of ['https://fcm.googleapis.com/fcm/send/abc', 'https://web.push.apple.com/QG', 'https://updates.push.services.mozilla.com/wpush/v2/x',
         'https://wns2-by3p.notify.windows.com/w/?token=x']) assert.equal(allowedPushEndpoint(ok), true, ok);
     for (const bad of ['http://fcm.googleapis.com/x', 'https://evil.example/fcm.googleapis.com', 'https://push.apple.com.evil.example/', 'not a url',
-        'https://169.254.169.254/latest']) assert.equal(allowedPushEndpoint(bad), false, bad);
+        'https://169.254.169.254/latest', 'https://user:pass@web.push.apple.com/x',
+        'https://web.push.apple.com:8443/x']) assert.equal(allowedPushEndpoint(bad), false, bad);
 });
 
 test('the words: who assigned you, then the cell and its plant', () => {
@@ -169,4 +170,111 @@ test('base64url both ways', () => {
     const bytes = new Uint8Array([0, 255, 62, 63, 250]);
     assert.equal(toBase64Url(bytes), Buffer.from(bytes).toString('base64url'));
     assert.deepEqual(fromBase64Url(toBase64Url(bytes)), bytes);
+});
+
+const ACTOR = '11111111-1111-4111-8111-111111111111';
+const RECIPIENT = '22222222-2222-4222-8222-222222222222';
+const OUTSIDER = '33333333-3333-4333-8333-333333333333';
+const GARDEN = '44444444-4444-4444-8444-444444444444';
+const PLANT = '55555555-5555-4555-8555-555555555555';
+const serverEnv = () => ({ url: 'https://example.supabase.co', key: 'server-fixture', anonKey: 'public-fixture', vapid: null });
+const request = (body: unknown, signed = true) => new Request('https://example.supabase.co/functions/v1/notify', {
+    method: 'POST', headers: signed ? { Authorization: 'Bearer user-token' } : {}, body: JSON.stringify(body),
+});
+const response = (body: unknown, status = 200, headers = {}) => new Response(JSON.stringify(body), {
+    status, headers: { 'Content-Type': 'application/json', ...headers },
+});
+
+test('public key requires a user and concurrent initialization returns only the persistent public half', async t => {
+    let stored: { publicKey: string; privateKey: string; subject: string } | null = null;
+    let calls = 0;
+    t.mock.method(globalThis, 'fetch', async (input: string, init?: RequestInit) => {
+        calls++;
+        if (input.endsWith('/auth/v1/user')) return response({ id: ACTOR });
+        assert(input.endsWith('/rpc/service_push_keys'));
+        const body = JSON.parse(String(init?.body)) as { candidate: typeof stored };
+        if (body.candidate && !stored) stored = body.candidate;
+        return response(stored);
+    });
+    assert.equal((await handle(request({ action: 'public-key' }, false), serverEnv())).status, 401);
+    assert.equal(calls, 0, 'no database access without authentication');
+    const results = await Promise.all([handle(request({ action: 'public-key' }), serverEnv()), handle(request({ action: 'public-key' }), serverEnv())]);
+    const bodies = await Promise.all(results.map(r => r.json() as Promise<{ publicKey: string }>));
+    assert(results.every(r => r.status === 200));
+    assert.deepEqual(bodies[0], bodies[1]);
+    assert.deepEqual(Object.keys(bodies[0]), ['publicKey'], 'private signing material never leaves the server');
+    assert.equal(Buffer.from(bodies[0].publicKey, 'base64url').length, 65);
+});
+
+test('assignment delivery verifies recipients, encrypts the saved text and removes expired devices', async t => {
+    const device = createECDH('prime256v1');
+    device.generateKeys();
+    const auth = b64(new Uint8Array(16).fill(5));
+    const keys = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    const vapid = {
+        publicKey: b64(new Uint8Array(await crypto.subtle.exportKey('raw', keys.publicKey))),
+        privateKey: (await crypto.subtle.exportKey('jwk', keys.privateKey)).d!, subject: 'https://cells.garden',
+    };
+    const deliveries: Record<string, unknown>[] = [];
+    let deleted = false;
+    let written: { user_id: string; garden_id: string; title: string; body: string }[] = [];
+    t.mock.method(globalThis, 'fetch', async (input: string, init?: RequestInit) => {
+        const url = new URL(input);
+        const path = url.pathname;
+        if (path === '/auth/v1/user') return response({ id: ACTOR });
+        if (url.host === 'web.push.apple.com') {
+            assert.equal(init?.redirect, 'error');
+            const plain = decrypt(new Uint8Array(init?.body as ArrayBuffer), b64(device.getPrivateKey()), auth);
+            deliveries.push(JSON.parse(plain) as Record<string, unknown>);
+            return new Response(null, { status: 410 });
+        }
+        if (path === '/rest/v1/gardens') return response(url.searchParams.get('select')?.includes('projects')
+            ? [{ projects: [{ id: 'p', seed: 'Beans', stem: [{ id: 'i', content: 'Saved text', assignees: [RECIPIENT, OUTSIDER, ACTOR] }] }] }]
+            : [{ user_id: ACTOR, owner_id: null }]);
+        if (path === '/rest/v1/garden_members') return response([{ user_id: RECIPIENT }]);
+        if (path === '/rest/v1/profiles') return response([{ display_name: 'Ana' }]);
+        if (path === '/rest/v1/notifications') {
+            if (init?.method === 'POST') {
+                written = JSON.parse(String(init.body)) as typeof written;
+                return response(written.map(w => ({ ...w, id: 'notice' })));
+            }
+            return response([], 200, { 'Content-Range': '0-0/0' });
+        }
+        if (path === '/rest/v1/push_subscriptions') {
+            if (init?.method === 'DELETE') { deleted = true; return response(null); }
+            return response([{ id: 'expired', user_id: RECIPIENT, endpoint: 'https://web.push.apple.com/device',
+                p256dh: b64(device.getPublicKey()), auth }]);
+        }
+        throw new Error(`Unexpected request ${input}`);
+    });
+    const result = await handle(request({ recipients: [RECIPIENT, OUTSIDER, ACTOR], gardenId: GARDEN,
+        projectId: 'p', itemId: 'i', text: 'Forged text' }), { ...serverEnv(), vapid });
+    assert.equal(result.status, 200);
+    assert.deepEqual(await result.json(), { notified: 1, pushed: 0 });
+    assert.deepEqual(written.map(w => w.user_id), [RECIPIENT], 'self and outsiders are never notified');
+    assert.equal(deliveries[0].body, 'Saved text · Beans');
+    assert.equal(deleted, true);
+});
+
+test('a forged shared-plant copy cannot notify a plant member', async t => {
+    let inserts = 0;
+    t.mock.method(globalThis, 'fetch', async (input: string, init?: RequestInit) => {
+        const url = new URL(input);
+        if (url.pathname === '/auth/v1/user') return response({ id: ACTOR });
+        if (url.pathname === '/rest/v1/gardens') return response(url.searchParams.get('select')?.includes('projects')
+            ? [{ projects: [{ id: 'p', sharedPlantId: PLANT, stem: [{ id: 'i', assignees: [RECIPIENT] }] }] }]
+            : [{ user_id: ACTOR }]);
+        if (url.pathname === '/rest/v1/garden_members') return response([]);
+        if (url.pathname === '/rest/v1/plant_members') return response([{ user_id: RECIPIENT }]);
+        if (url.pathname === '/rest/v1/plants') return response(url.searchParams.get('select') === 'data'
+            ? [{ data: { stem: [{ id: 'i', assignees: [] }] } }] : [{ owner_id: ACTOR }]);
+        if (url.pathname === '/rest/v1/notifications') {
+            if (init?.method === 'POST') inserts++;
+            return response([], 200, { 'Content-Range': '0-0/0' });
+        }
+        throw new Error(`Unexpected request ${input}`);
+    });
+    const result = await handle(request({ recipients: [RECIPIENT], gardenId: GARDEN, plantId: PLANT, projectId: 'p', itemId: 'i' }), serverEnv());
+    assert.deepEqual(await result.json(), { notified: 0, pushed: 0 });
+    assert.equal(inserts, 0);
 });

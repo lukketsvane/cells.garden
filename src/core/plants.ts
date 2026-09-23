@@ -207,6 +207,14 @@ export class PlantSync {
         }
     }
 
+    /** Assignment notices must wait until the shared cell is visible to its members. */
+    async flush(plantId: string): Promise<void> {
+        if (this.stopped) return;
+        if (!this.tracked.has(plantId)) await this.attach(plantId);
+        this.enqueue(plantId, () => this.write(plantId));
+        await this.tracked.get(plantId)?.queue;
+    }
+
     /** `dirty`: the garden copy was changed by a merge and still needs saving. */
     private async write(plantId: string, dirty = false) {
         for (let round = 0; round < MAX_ROUNDS; round++) {

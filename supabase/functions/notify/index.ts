@@ -14,10 +14,9 @@
  * aes128gcm (RFC 8291), with WebCrypto alone. A device the push service no
  * longer knows (404, 410) is forgotten.
  *
- * Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (a mailto:
- * address). Supabase provides SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.
- * Without the VAPID secrets the rows are still written and the app still lists
- * them; only the pushes wait.
+ * Supabase provides SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. The function
+ * generates its VAPID pair on first use and keeps it in a private database
+ * table (0013). Only the public key is returned to signed-in clients.
  *
  * The pure parts are exported for the unit tests (src/core/notify-server.test.ts),
  * which run this file under Node; it only starts serving under Deno.
@@ -189,7 +188,8 @@ export async function vapidAuthorization(
 export function allowedPushEndpoint(endpoint: string): boolean {
     try {
         const url = new URL(endpoint);
-        return url.protocol === 'https:' && PUSH_HOSTS.some(host => host.test(url.hostname));
+        return url.protocol === 'https:' && !url.username && !url.password && !url.port
+            && PUSH_HOSTS.some(host => host.test(url.hostname));
     } catch {
         return false;
     }
@@ -301,14 +301,11 @@ function readEnv(get: (name: string) => string | undefined): Env | null {
     const url = get('SUPABASE_URL');
     const key = get('SUPABASE_SERVICE_ROLE_KEY');
     if (!url || !key) return null;
-    const publicKey = get('VAPID_PUBLIC_KEY')?.trim();
-    const privateKey = get('VAPID_PRIVATE_KEY')?.trim();
-    const subject = get('VAPID_SUBJECT')?.trim();
     return {
         url: url.replace(/\/+$/, ''),
         key,
         anonKey: get('SUPABASE_ANON_KEY') || key,
-        vapid: publicKey && privateKey && subject ? { publicKey, privateKey, subject } : null,
+        vapid: null,
     };
 }
 
@@ -329,6 +326,28 @@ async function rows<T>(env: Env, path: string): Promise<T[]> {
     const res = await rest(env, path);
     if (!res.ok) throw new Error(`${path.split('?')[0]}: HTTP ${res.status} ${await res.text()}`);
     return (await res.json()) as T[];
+}
+
+/** Fetch the persistent pair; create it atomically if this is the first use. */
+async function pushKeys(env: Env): Promise<NonNullable<Env['vapid']>> {
+    if (env.vapid) return env.vapid;
+    const read = async (candidate: Env['vapid']) => {
+        const res = await rest(env, 'rpc/service_push_keys', { method: 'POST', body: { candidate } });
+        if (!res.ok) throw new Error(`push keys: HTTP ${res.status}`);
+        return await res.json() as Env['vapid'];
+    };
+    let keys = await read(null);
+    if (!keys) {
+        const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+        keys = await read({
+            publicKey: toBase64Url(new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey))),
+            privateKey: (await crypto.subtle.exportKey('jwk', pair.privateKey)).d!,
+            subject: 'https://cells.garden',
+        });
+    }
+    if (!keys?.publicKey || !keys.privateKey) throw new Error('push keys unavailable');
+    env.vapid = keys;
+    return keys;
 }
 
 /** How many rows match, from PostgREST's Content-Range. */
@@ -383,6 +402,7 @@ async function push(env: Env, sub: Subscription, payload: unknown): Promise<numb
             Urgency: 'normal',
         },
         body: src(body),
+        redirect: 'error',
         signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) console.warn('notify: push refused', res.status, new URL(sub.endpoint).host, (await res.text()).slice(0, 200));
@@ -404,7 +424,12 @@ export async function handle(req: Request, env: Env | null): Promise<Response> {
 
     let parsed: NotifyRequest | string;
     try {
-        parsed = parseRequest(await req.json());
+        const body = await req.json() as unknown;
+        if (body && typeof body === 'object' && (body as { action?: unknown }).action === 'public-key') {
+            const keys = await pushKeys(env);
+            return reply(200, { publicKey: keys.publicKey }, cors);
+        }
+        parsed = parseRequest(body);
     } catch {
         parsed = 'expected JSON';
     }
@@ -431,13 +456,21 @@ export async function handle(req: Request, env: Env | null): Promise<Response> {
         const plantPeople = onPlant ? await peopleOf(env, 'plant', onPlant) : new Set<string>();
         const viaPlant = onPlant !== null && plantPeople.has(me);
 
+        // A garden copy can be stale or forged. Only the shared row authorizes
+        // telling someone who can see the plant but cannot see this garden.
+        const sharedRows = viaPlant ? await rows<{ data: Record<string, unknown> }>(env,
+            `plants?id=eq.${q(onPlant!)}&select=data`) : [];
+        const sharedCell = sharedRows[0]?.data
+            ? findCell([{ ...sharedRows[0].data, id: ask.projectId }], ask.projectId, ask.itemId) : null;
+        const sharedAssigned = new Set(sharedCell ? assigneesOf(sharedCell.item) : []);
+
         const assigned = new Set(assigneesOf(cell.item));
         const quietSince = new Date(Date.now() - QUIET_MS).toISOString();
         const recent = await rows<{ user_id: string }>(env,
-            `notifications?actor_id=eq.${me}&item_id=eq.${q(ask.itemId)}&created_at=gte.${q(quietSince)}&select=user_id`);
+            `notifications?actor_id=eq.${me}&item_id=eq.${q(ask.itemId)}&project_id=eq.${q(ask.projectId)}&${onPlant ? `plant_id=eq.${q(onPlant)}` : `garden_id=eq.${q(ask.gardenId)}`}&created_at=gte.${q(quietSince)}&select=user_id`);
         const toldAlready = new Set(recent.map(r => r.user_id));
         const recipients = ask.recipients.filter(r =>
-            r !== me && assigned.has(r) && !toldAlready.has(r) && (gardenPeople.has(r) || (viaPlant && plantPeople.has(r))));
+            r !== me && assigned.has(r) && !toldAlready.has(r) && (gardenPeople.has(r) || (viaPlant && plantPeople.has(r) && sharedAssigned.has(r))));
         if (recipients.length === 0) return reply(200, { notified: 0, pushed: 0 }, cors);
 
         const profiles = await rows<{ display_name: string | null }>(env, `profiles?id=eq.${me}&select=display_name`);
@@ -464,10 +497,9 @@ export async function handle(req: Request, env: Env | null): Promise<Response> {
         if (!inserted.ok) throw new Error(`insert: HTTP ${inserted.status} ${await inserted.text()}`);
         const written = (await inserted.json()) as { id: string; user_id: string; garden_id: string | null }[];
 
-        if (!env.vapid) return reply(200, { notified: written.length, pushed: 0 }, cors);
-
         const subscriptions = await rows<Subscription>(env,
             `push_subscriptions?user_id=in.(${recipients.join(',')})&select=id,user_id,endpoint,p256dh,auth`);
+        if (subscriptions.length) await pushKeys(env);
         const unread = new Map<string, number>();
         await Promise.all([...new Set(subscriptions.map(s => s.user_id))].map(async (r) => {
             unread.set(r, await count(env, `notifications?user_id=eq.${r}&read_at=is.null`).catch(() => 0));

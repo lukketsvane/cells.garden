@@ -186,7 +186,9 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         },
         loadPeopleFor: async (project) => directory.load(await openGardenRow(uid), project.sharedPlantId ?? null),
         assigned: (project, item, added) => {
-            void openGardenRow(uid).then((gardenId) => {
+            void openGardenRow(uid).then(async (gardenId) => {
+                if (project.sharedPlantId) await plants?.flush(project.sharedPlantId);
+                if (currentUser !== uid) return;
                 const notice = assignNotice({
                     me: uid,
                     added,
@@ -198,7 +200,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
                     where: project.seed || project.name,
                 });
                 if (notice) sendAssignNotice(supabase, notice);
-            });
+            }).catch(() => {});
         },
     });
 

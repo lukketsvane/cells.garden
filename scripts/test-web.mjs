@@ -1472,10 +1472,15 @@ async function standInSupabase(ctx) {
         const eq = (name) => url.searchParams.get(name)?.replace(/^eq\./, '') ?? null;
 
         if (path === '/functions/v1/notify') {
+            if (JSON.parse(req.postData() ?? '{}').action === 'public-key') {
+                return json({ publicKey: 'BPCHb90qxxx3fUtzDyS4oiBZC7JYm0GxaRR2eeveuT81Ibi1xvg9rnw_P0jfrqIeS43alrHAQ2rVH0Mce7_Fgag' });
+            }
             state.notified.push(JSON.parse(req.postData() ?? '{}'));
             return json({ notified: 1, pushed: 0 });
         }
         if (path === '/auth/v1/token') return json(session);
+        if (path === '/rest/v1/rpc/save_push_subscription') return json(null);
+        if (path === '/rest/v1/push_subscriptions' && req.method() === 'DELETE') return json(null);
         if (path === '/rest/v1/gardens') {
             if (req.method() === 'PATCH') {
                 state.garden = JSON.parse(req.postData() ?? '{}').data;
@@ -1702,6 +1707,32 @@ async function accountScenario(browser, errors) {
     assert.deepEqual(deskPush, { state: 'off', desc: 'When someone assigns you a cell.', button: 'Turn on' }, 'desktop: notifications can be turned on');
     await page.$eval('.garden-push-setting', (el) => el.scrollIntoView({ block: 'center' }));
     await shot(page, '14-settings-desktop.png');
+    // The permission-sensitive call must happen during the click, after key
+    // discovery. Stand in for the external push service, not for the UI.
+    await page.evaluate(() => {
+        window.__pushTest = { subscription: null, gestures: [], removed: 0 };
+        PushManager.prototype.getSubscription = async function () { return window.__pushTest.subscription; };
+        PushManager.prototype.subscribe = function (options) {
+            window.__pushTest.gestures.push(navigator.userActivation.isActive);
+            const sub = {
+                endpoint: 'https://web.push.apple.com/test-device', options,
+                toJSON: () => ({ keys: { p256dh: 'test-device-key', auth: 'test-auth' } }),
+                unsubscribe: async () => {
+                    window.__pushTest.removed++;
+                    window.__pushTest.subscription = null;
+                    return true;
+                },
+            };
+            window.__pushTest.subscription = sub;
+            return Promise.resolve(sub);
+        };
+    });
+    await page.click('.garden-push-setting button');
+    await page.waitForSelector('.garden-push-setting[data-state="on"]');
+    assert.deepEqual(await page.evaluate(() => window.__pushTest.gestures), [true], 'subscription retains the tap activation');
+    await page.click('.garden-push-setting button');
+    await page.waitForSelector('.garden-push-setting[data-state="off"]');
+    assert.equal(await page.evaluate(() => window.__pushTest.removed), 1, 'turning off revokes the browser subscription');
     await page.keyboard.press('Escape');
     assert.deepEqual(state.unknown, [], 'requests the stand-in did not expect');
     await ctx.close();

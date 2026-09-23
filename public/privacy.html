@@ -20,7 +20,7 @@
 <body>
 <main>
 <h1>Privacy</h1>
-<p class="muted">cells.garden: the web app, the Chrome extension and the Obsidian plugin. Updated 19 September 2026.</p>
+<p class="muted">cells.garden: the web app, the Chrome extension and the Obsidian plugin. Updated 23 September 2026.</p>
 
 <h2>Without an account</h2>
 <p>Your garden stays on your device, in the browser's storage for the site or the extension, or in Obsidian. Garden content is not sent to our sync service unless you choose to sign in.</p>
@@ -29,11 +29,15 @@
 <p>Signing in is optional. It syncs your garden between devices and lets you share gardens and plants. For that we store:</p>
 <ul>
     <li>your email address and authentication information needed to keep you signed in (sign-in is handled by Supabase Auth); if you continue with Google, Google also provides your name and profile picture. cells.garden never receives your Google password, and raw passwords are not stored by the app;</li>
-    <li>a display name and the seed of your generated avatar;</li>
+    <li>a display name and your generated or drawn avatar;</li>
     <li>your gardens and plants: their names, the text in their cells, and their layout;</li>
-    <li>who shares which garden or plant with whom, invite links, and plants offered to friends.</li>
+    <li>who shares which garden or plant with whom, invite links, plants offered to friends, and cell assignments;</li>
+    <li>assignment notifications and whether you have read them.</li>
 </ul>
 <p>Synced account and garden data is kept by <a href="https://supabase.com">Supabase</a> in the EU (Ireland). Garden content is readable only by you and the people you explicitly share that garden or plant with. Google is used only when you choose Google sign-in. The website and static OAuth return pages are hosted by Vercel.</p>
+
+<h2>Optional push notifications</h2>
+<p>If you turn on notifications in the web app, we store this device's push subscription address, encryption keys and browser description. We send encrypted assignment notifications through your browser's push provider (such as Apple, Google or Mozilla). A notification includes the sender's display name and the assigned cell's text, which may appear on your lock screen. Turn notifications off in Settings or sign out to unregister this device. Expired subscriptions are removed when the provider rejects them.</p>
 
 <h2>What we do not do</h2>
 <p>No analytics, no ads, no behavioural tracking and no sale of user data. We do not use garden or account data for advertising. We use user data only to provide, secure, sync and share the cells.garden features the user asks for.</p>

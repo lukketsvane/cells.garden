@@ -126,7 +126,7 @@ export class People {
      */
     cached(gardenId: string | null, plantId: string | null): Person[] | null {
         const lists = keysOf(gardenId, plantId).map(key => this.seeing.get(key));
-        if (lists.some(list => !list)) return null;
+        if (lists.some(list => !list || Date.now() - list.at > SEEING_MS)) return null;
         return this.everyoneOf(lists.flatMap(list => list?.ids ?? []));
     }
 
