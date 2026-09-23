@@ -2947,7 +2947,8 @@ export class GardenView extends View {
         const cloudLayer = world.createDiv("garden-cloud-layer");
         cloudLayer.style.backgroundImage = `url(${cloudUrl})`;
         cloudLayer.style.backgroundSize = `${cloudScaledW}px ${cloudScaledH}px`;
-        cloudLayer.style.animation = `garden-cloud-scroll ${CLOUD_SCROLL_DURATION}s linear infinite`;
+        // Through a variable, so light mode (styles.css) can stop it without !important.
+        cloudLayer.setCssProps({ '--garden-cloud-animation': `garden-cloud-scroll ${CLOUD_SCROLL_DURATION}s linear infinite` });
         // The keyframes scroll by the cloud's own width.
         cloudLayer.setCssProps({ '--garden-cloud-width': `${cloudScaledW}px` });
 
