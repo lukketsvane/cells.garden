@@ -201,7 +201,7 @@ function drawnRect(part: HTMLElement, margin = 0): { left: number; top: number; 
 
 /** How far a peeked part's ring reaches past its pixels, in art pixels: one soft, pale line. */
 const RING = 1;
-const RING_LIGHT = [244, 241, 227, 225];
+const RING_LIGHT = [244, 241, 227, 128];
 /** The ring goes round, not into, a gap of up to twice this many art pixels between two strokes. */
 const RING_BRIDGE = 1;
 
