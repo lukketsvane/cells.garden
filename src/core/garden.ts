@@ -54,6 +54,15 @@ const BASE_SKY = 620;
 const BASE_GROUND = 480;
 /** Comfortable opening scale: enough scene around the plants to breathe. */
 const DEFAULT_GARDEN_ZOOM = 0.34;
+/**
+ * The garden is a finite world with the void around it, as in Max's plugin.
+ * The camera may look past an edge of the garden into the void by at most this
+ * share of the pane, so any plant can be brought to the middle, but the garden
+ * never drifts away.
+ */
+const VOID_REACH = 0.25;
+/** Zoomed all the way out, the whole garden fills this share of the pane. */
+const VOID_FIT = 0.9;
 /** The horizon should open about two thirds down the canvas, across every surface. */
 const DEFAULT_GROUND_SCREEN_RATIO = 0.65;
 /** Legacy/stale cameras outside this band are visibly broken on cold open. */
@@ -115,7 +124,8 @@ export class GardenView extends View {
     private currentTranslateX = 0;
     private currentTranslateY = 0;
     private zoom = DEFAULT_GARDEN_ZOOM;
-    private zoomMin = 0.15;
+    /** An absolute floor: a big garden zooms out as far as it takes to show all of it, down to this. */
+    private zoomMin = 0.05;
     private zoomMax = 3;
 
 
@@ -1189,7 +1199,9 @@ export class GardenView extends View {
 
                         const savedCameraVisible = !!persistedState && this.cameraInView();
                         if (!savedCameraVisible) {
-                            this.zoom = DEFAULT_GARDEN_ZOOM;
+                            // A fresh camera opens with the garden filling the pane from top to
+                            // bottom: the void shows only past the garden's ends, if at all.
+                            this.zoom = Math.max(DEFAULT_GARDEN_ZOOM, this.fillHeightZoom(world, viewport));
                             const middlePlantIndex = Math.floor(this.app.gardenData.length / 2);
                             const middlePlantWorldX = plantCentre(middlePlantIndex);
                             this.currentTranslateX = viewport.offsetWidth / 2 - middlePlantWorldX * this.zoom;
@@ -1199,7 +1211,7 @@ export class GardenView extends View {
                         // translateY, so reject visibly stale top/bottom placements.
                         const currentRatio = this.groundScreenRatio(viewport);
                         const wantedRatio = persistedState?.groundRatio ?? currentRatio;
-                        this.anchorGroundToRatio(viewport, world, this.openingGroundRatio(wantedRatio));
+                        this.anchorGroundToRatio(viewport, world, this.openingGroundRatio(wantedRatio), !savedCameraVisible);
                         this._lastViewportSize = { width: viewport.offsetWidth, height: viewport.offsetHeight };
 
                         if (!persistedState) {
@@ -1428,13 +1440,16 @@ export class GardenView extends View {
             : DEFAULT_GROUND_SCREEN_RATIO;
     }
 
-    /** Keep the horizon at a stable screen ratio without disturbing horizontal pan/zoom. */
-    private anchorGroundToRatio(viewport: HTMLElement, world: HTMLElement, ratio: number) {
+    /**
+     * Keep the horizon at a stable screen ratio without disturbing horizontal pan/zoom.
+     * `closed`: keep the void out of the pane above and below where the garden allows.
+     */
+    private anchorGroundToRatio(viewport: HTMLElement, world: HTMLElement, ratio: number, closed = false) {
         if (this.isPopupSurface() || !viewport.offsetHeight) return;
         // A taller pane may require a larger minimum zoom. Resolve that first.
         this.settleCamera(false);
         const safe = Math.max(0.12, Math.min(0.92, ratio));
-        const bounds = this.cameraBounds(world, viewport);
+        const bounds = this.cameraBounds(world, viewport, this.zoom, closed ? 0 : VOID_REACH);
         const desired = viewport.offsetHeight * safe - this._dynamicGroundLineY * this.zoom;
         this.currentTranslateY = Math.min(bounds.y.max, Math.max(bounds.y.min, desired));
         this.applyWorldTransform(world, viewport);
@@ -1728,18 +1743,37 @@ export class GardenView extends View {
         return this.contentEl.querySelector('.garden-world');
     }
 
-    /** The furthest out the camera goes: the garden fills the pane's height. */
+    /** The furthest out the camera goes: the whole garden in the pane, with a rim of void around it. */
     private minZoomFor(world: HTMLElement, viewport: HTMLElement): number {
-        const fill = viewport.offsetHeight / (world.offsetHeight || 1);
-        return Math.min(this.zoomMax, Math.max(this.zoomMin, fill));
+        const fit = Math.min(
+            viewport.offsetWidth / (world.offsetWidth || 1),
+            viewport.offsetHeight / (world.offsetHeight || 1),
+        ) * VOID_FIT;
+        return Math.min(this.zoomMax, Math.max(this.zoomMin, fit));
     }
 
-    /** The translate range that keeps the garden filling the pane, per axis. */
-    private cameraBounds(world: HTMLElement, viewport: HTMLElement, zoom = this.zoom) {
+    /** The zoom at which the garden fills the pane from top to bottom. */
+    private fillHeightZoom(world: HTMLElement, viewport: HTMLElement): number {
+        return Math.min(this.zoomMax, viewport.offsetHeight / (world.offsetHeight || 1));
+    }
+
+    /**
+     * The translate range per axis. An edge of the garden may come into the pane
+     * by `reach` of it, and no further, so the void shows only as a rim. Once the
+     * garden is too small for that on an axis, it holds the middle. The two cases
+     * meet exactly, so zooming across the change never jumps.
+     */
+    private cameraBounds(world: HTMLElement, viewport: HTMLElement, zoom = this.zoom, reach = VOID_REACH) {
         const axis = (view: number, size: number) => {
-            const min = view - size * zoom;
-            // Zoomed out past the garden: hold it centred.
-            return min > 0 ? { min: min / 2, max: min / 2 } : { min, max: 0 };
+            const span = size * zoom;
+            const rim = view * reach;
+            const min = view - span - rim;
+            const max = rim;
+            if (min >= max) {
+                const centre = (view - span) / 2;
+                return { min: centre, max: centre };
+            }
+            return { min, max };
         };
         return {
             x: axis(viewport.offsetWidth, world.offsetWidth),
@@ -2294,6 +2328,7 @@ export class GardenView extends View {
         this.wormTrailCanvas = trailCanvas;
 
         const wormLayer = world.createDiv("garden-worm-layer");
+
         const plantsLayer = world.createDiv("garden-plants-layer");
 
         const fireflyLayer = world.createDiv("garden-firefly-layer");

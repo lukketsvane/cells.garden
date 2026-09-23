@@ -31,15 +31,14 @@
 
 /* The world's own width and height come from the view: they grow with the
    plants, and with them --sky and --ground, which every layer below is placed
-   against. --bleed is how far past the garden the sky and the ground are
-   painted: the camera never zooms out past the garden filling the pane's
-   height, but a garden of a few plants is narrower than a wide pane, and this
-   covers the sides of it. */
+   against. The garden ends where the world ends; past it is the void, the
+   viewport's own background, as in Max's plugin. The camera keeps the void to
+   a rim around the garden (VOID_REACH in garden.ts). */
 .garden-world {
-    --bleed: 6000px;
     position: absolute;
     top: 0;
     left: 0;
+    overflow: hidden;
 }
 
 /*
@@ -62,8 +61,8 @@
 .garden-bg-layer {
     position: absolute;
     top: 0;
-    left: calc(-1 * var(--bleed));
-    right: calc(-1 * var(--bleed));
+    left: 0;
+    right: 0;
     height: var(--sky);
 }
 
@@ -76,23 +75,9 @@
     pointer-events: none;
 }
 
-/* These three bleed upwards too: there is sky above the world's top edge. */
-.garden-sky-color-layer,
-.garden-stars-layer {
-    top: calc(-1 * var(--bleed));
-    height: calc(var(--sky) + var(--bleed));
-}
-
 .garden-sky-color-layer {
     z-index: 0;
     transition: background-color 30s ease;
-}
-
-/* The shooting stars and the satellites keep to the world, not the bleed. */
-.garden-shooting-star-layer,
-.garden-satellite-layer {
-    left: 0;
-    right: 0;
 }
 
 .garden-shooting-star-layer {
@@ -124,14 +109,14 @@
 .garden-mountains-layer {
     z-index: 1.6;
     background-repeat: repeat-x;
-    background-position: var(--bleed) bottom;
+    background-position: left bottom;
     image-rendering: pixelated;
 }
 
 .garden-bg-layer {
     z-index: 2;
     background-repeat: repeat-x;
-    background-position: var(--bleed) bottom;
+    background-position: left bottom;
     image-rendering: pixelated;
 }
 
@@ -153,16 +138,16 @@
     image-rendering: pixelated;
 }
 
-/* The ground, bleeding down and to the sides. */
+/* The ground, from the horizon to the bottom of the world. */
 .garden-ground-layer {
     position: absolute;
-    bottom: calc(-1 * var(--bleed));
-    left: calc(-1 * var(--bleed));
-    right: calc(-1 * var(--bleed));
-    height: calc(var(--ground) + var(--bleed));
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--ground);
     z-index: 2;
     background-repeat: repeat;
-    background-position: var(--bleed) 0;
+    background-position: 0 0;
     image-rendering: pixelated;
     pointer-events: none;
 }
@@ -1103,8 +1088,8 @@
 /* Your garden in the middle, your friends' plants at its borders (app.ts arrange). */
 .garden-friend-band {
     position: absolute;
-    top: calc(-1 * var(--bleed));
-    bottom: calc(-1 * var(--bleed));
+    top: 0;
+    bottom: 0;
     z-index: 2;
     background: rgba(255, 255, 255, 0.035);
     pointer-events: none;
@@ -1112,8 +1097,8 @@
 
 .garden-section-border {
     position: absolute;
-    top: calc(-1 * var(--bleed));
-    bottom: calc(-1 * var(--bleed));
+    top: 0;
+    bottom: 0;
     width: 0;
     z-index: 4;
     border-left: 4px dashed rgba(255, 255, 255, 0.22);
