@@ -25,6 +25,7 @@ import bgImageUrl from '../assets/bg_image.png';
 import cloudUrl from '../assets/cloud.png';
 import mountainsUrl from '../assets/mountains.png';
 import groundUrl from '../assets/ground_tile.png';
+import grassUrl from '../assets/grass.png';
 import starsPatternUrl from '../assets/stars_pattern.gif';
 import flower1Url from '../assets/pack/plant_1/flowers/flower1.png';
 import flower2Url from '../assets/pack/plant_1/flowers/flower2.png';
@@ -2328,6 +2329,14 @@ export class GardenView extends View {
         this.wormTrailCanvas = trailCanvas;
 
         const wormLayer = world.createDiv("garden-worm-layer");
+
+        // Grass along the horizon, tiled like the tree line: behind the plants,
+        // in front of whatever stands in the garden (its pets and objects).
+        const grassImg = await loadImage(grassUrl);
+        const grassLayer = world.createDiv("garden-grass-layer");
+        grassLayer.style.backgroundImage = `url(${grassUrl})`;
+        grassLayer.style.backgroundSize = `${Math.round(grassImg.naturalWidth * PIXEL_SCALE)}px ${Math.round(grassImg.naturalHeight * PIXEL_SCALE)}px`;
+        grassLayer.setCssProps({ '--grass-height': `${Math.round(grassImg.naturalHeight * PIXEL_SCALE)}px` });
 
         const plantsLayer = world.createDiv("garden-plants-layer");
 
