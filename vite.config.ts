@@ -6,16 +6,19 @@ import { VitePWA } from 'vite-plugin-pwa';
  * The public Supabase values from .env* at the repo root plus the real
  * environment, VITE_ prefix optional, so the same env works in dev, Vercel and
  * CI. RLS protects the data. The secret key is never read. Every build uses this.
+ * The Web Push public key rides along: public too, and only the web app uses it.
  */
 export function supabaseEnv(mode: string) {
     const env = loadEnv(mode, fileURLToPath(new URL('.', import.meta.url)), '');
     const url = env.VITE_SUPABASE_URL || env.SUPABASE_URL || '';
     const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || '';
+    const vapid = env.VITE_VAPID_PUBLIC_KEY || env.VAPID_PUBLIC_KEY || '';
     return {
         url,
         define: {
             'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(url),
             'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(key),
+            'import.meta.env.VITE_VAPID_PUBLIC_KEY': JSON.stringify(vapid),
         },
     };
 }
@@ -47,6 +50,8 @@ export default defineConfig(({ command, mode }) => {
             __CELLS_BROWSER_STORAGE__: 'true',
             __CELLS_SYSTEM_CLIPBOARD__: 'true',
             __CELLS_EXTRAS__: extrasFlag(command, true),
+            // Only the web app has a service worker to receive a push.
+            __CELLS_WEB_PUSH__: 'true',
         },
         plugins: [
             // PWA: web manifest + Workbox service worker, so the garden installs on
@@ -108,6 +113,9 @@ export default defineConfig(({ command, mode }) => {
                     maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
                     // One self-contained sw.js instead of sw.js + workbox-<hash>.js.
                     inlineWorkboxRuntime: true,
+                    // Web Push: showing a push and opening its cell (public/push-sw.js).
+                    // Loaded by the worker itself, beside the precache, which it leaves alone.
+                    importScripts: ['push-sw.js'],
                 },
             }),
         ],

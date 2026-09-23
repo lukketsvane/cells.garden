@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -94,9 +95,13 @@ for (const name of migrations) {
     }
 }
 const allSql = migrations.map((n) => read(join('supabase','migrations',n))).join('\n');
-for (const table of ['profiles','gardens','garden_members','garden_invites','plants','plant_members','plant_invites','plant_offers']) {
+for (const table of ['profiles','gardens','garden_members','garden_invites','plants','plant_members','plant_invites','plant_offers','notifications','push_subscriptions']) {
     assert(new RegExp('alter\\s+table\\s+public\\.' + table + '\\s+enable\\s+row\\s+level\\s+security','i').test(allSql), 'RLS missing: ' + table);
 }
+// Notifications (0012): only the notify function writes them; a client may change read_at and nothing else.
+assert(!/create\s+policy[^;]*on\s+public\.notifications\s+for\s+(?:insert|delete|all)\b/i.test(allSql), 'notifications: clients must not insert or delete');
+assert(/grant\s+update\s*\(\s*read_at\s*\)\s+on\s+public\.notifications\s+to\s+authenticated/i.test(allSql), 'notifications: update limited to read_at');
+assert(/revoke\s+all\s+on\s+public\.notifications\s+from\s+public,\s*anon,\s*authenticated/i.test(allSql), 'notifications: default grants not revoked');
 
 // Drawn pictures (0011): the database accepts exactly the format the client
 // draws from (DRAWING_FORMAT, anchored, fixed length), nothing looser.
@@ -122,10 +127,94 @@ for (const [fn, body] of latestFunctions) {
     }
 }
 
+// --- Web Push keys and server keys --------------------------------------------------
+// The VAPID public key is public by design (.env, like the publishable key). The
+// private key and the service role key live only in the notify function's
+// secrets: never in a tracked file, an untracked one about to be, or a build.
+
+const dotenv = read('.env');
+const vapidPublic = /^VITE_VAPID_PUBLIC_KEY=(.*)$/m.exec(dotenv)?.[1]?.trim() ?? '';
+if (vapidPublic) {
+    const point = Buffer.from(vapidPublic, 'base64url');
+    assert(point.length === 65 && point[0] === 4, '.env: VITE_VAPID_PUBLIC_KEY must be the 65-byte public key, never the private one');
+}
+
+const BINARY = /\.(?:png|gif|jpe?g|webp|ico|zip|woff2?|ttf|otf|pdf|mp4|webm)$/i;
+const SKIP_DIRS = new Set(['node_modules', '.git', '.claude', '.vercel', 'dist', 'dist-ext', 'dev-dist']);
+
+/** Every file git tracks or would add (ignored files, such as .env.local, stay out); a plain walk without git. */
+function repoFiles() {
+    try {
+        const out = execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        return out.split('\0').filter(Boolean);
+    } catch {
+        const files = [];
+        const walkAll = (dir) => {
+            for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+                const path = dir ? `${dir}/${entry.name}` : entry.name;
+                if (entry.isDirectory()) {
+                    if (!SKIP_DIRS.has(entry.name)) walkAll(path);
+                } else if (entry.name !== '.env.local') {
+                    files.push(path);
+                }
+            }
+        };
+        walkAll('');
+        return files;
+    }
+}
+
+/** What the builds wrote, when they are there: scanned after "npm run build" too. */
+function buildFiles() {
+    const files = [];
+    const walkBuild = (dir) => {
+        if (!existsSync(join(ROOT, dir))) return;
+        for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+            const path = `${dir}/${entry.name}`;
+            if (entry.isDirectory()) walkBuild(path);
+            else files.push(path);
+        }
+    };
+    walkBuild('dist');
+    walkBuild('dist-ext');
+    for (const path of ['obsidian-plugin/main.js', 'main.js']) if (existsSync(join(ROOT, path))) files.push(path);
+    return files;
+}
+
+const secretPatterns = [
+    [/-----BEGIN (?:EC |ENCRYPTED )?PRIVATE KEY-----/, 'a PEM private key'],
+    [/"d"\s*:\s*"[A-Za-z0-9_-]{43}"/, 'a JWK private key'],
+    [/VAPID_PRIVATE_KEY\s*[=:]\s*["']?[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/, 'the VAPID private key'],
+    [/\bprivateKey\s*[=:]\s*["'][A-Za-z0-9_-]{43}["']/, 'a private key literal'],
+    [new RegExp('sb_' + 'secret_[A-Za-z0-9_-]{16,}'), 'a secret Supabase key'],
+];
+/** A JWT whose claims say service_role: the legacy service key. */
+function hasServiceRoleJwt(source) {
+    for (const m of source.matchAll(/eyJ[A-Za-z0-9_-]{8,}\.(eyJ[A-Za-z0-9_-]{8,})\.[A-Za-z0-9_-]*/g)) {
+        try {
+            if (JSON.parse(Buffer.from(m[1], 'base64url').toString('utf8')).role === 'service' + '_role') return true;
+        } catch {
+            // Not JSON: not a token.
+        }
+    }
+    return false;
+}
+// The exact private key, when the one checking has it at hand (VAPID_PRIVATE_KEY, or a file named by VAPID_PRIVATE_KEY_FILE).
+const knownSecret = (process.env.VAPID_PRIVATE_KEY
+    || (process.env.VAPID_PRIVATE_KEY_FILE && existsSync(process.env.VAPID_PRIVATE_KEY_FILE) ? readFileSync(process.env.VAPID_PRIVATE_KEY_FILE, 'utf8') : '')).trim();
+
+const scanned = [...new Set([...repoFiles(), ...buildFiles()])].filter((path) => !BINARY.test(path) && existsSync(join(ROOT, path)));
+for (const path of scanned) {
+    const source = readFileSync(join(ROOT, path), 'utf8');
+    for (const [pattern, label] of secretPatterns) assert(!pattern.test(source), `${path}: ${label}`);
+    assert(!hasServiceRoleJwt(source), `${path}: a service role key`);
+    if (knownSecret.length >= 32) assert(!source.includes(knownSecret), `${path}: the VAPID private key`);
+}
+
 for (const name of readdirSync(join(ROOT,'.github','workflows')).filter((n) => /\.ya?ml$/.test(n))) {
     const wf = read(join('.github','workflows',name));
     for (const m of wf.matchAll(/uses:\s*(actions\/[A-Za-z0-9_.-]+)@([^\s#]+)/g)) {
         assert(/^[0-9a-f]{40}$/.test(m[2]), name + ': mutable action ref ' + m[1]);
     }
 }
-console.log('Security invariants passed:', runtimeFiles.length, 'runtime files,', migrations.length, 'migrations.');
+console.log('Security invariants passed:', runtimeFiles.length, 'runtime files,', migrations.length, 'migrations,', scanned.length, 'files scanned for keys.');

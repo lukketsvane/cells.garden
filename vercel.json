@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "installCommand": "npm ci --ignore-scripts",
-  "buildCommand": "npm run test:security && npm run build:web",
+  "buildCommand": "npm run test:security && npm run build:web && npm run test:security",
   "outputDirectory": "dist",
   "headers": [
     {

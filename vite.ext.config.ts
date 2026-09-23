@@ -40,6 +40,8 @@ export default defineConfig(({ command, mode }) => {
             __CELLS_SYSTEM_CLIPBOARD__: 'true',
             // The extension ships from main, never from Vercel's dev build.
             __CELLS_EXTRAS__: extrasFlag(command, false),
+            // No service worker of the app's own: notifications stay in the app.
+            __CELLS_WEB_PUSH__: 'false',
         },
         plugins: [
             extensionManifest({ version: pkg.version, description: pkg.description, supabaseUrl }),

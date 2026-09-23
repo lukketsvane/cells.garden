@@ -6,6 +6,10 @@
 //   ext/public/icons/icon-{16,32,48,128}.png   rounded corners, transparent outside
 //   public/icon-{180,192,512}.png             square, full-bleed (180 is the iOS home screen icon)
 //   public/icon-maskable-512.png               full-bleed, artwork in the central 80%
+//   public/badge-96.png                        the plant alone, white on nothing: the
+//                                              status bar badge of a notification (push-sw.js)
+//
+// "npm run icons -- --badge" renders the badge alone.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
@@ -31,12 +35,29 @@ async function render(file, size, { radius = 0, inset = 0 } = {}) {
     console.log(`wrote ${relative(ROOT, file)}`);
 }
 
-for (const size of [16, 32, 48, 128]) {
-    await render(join(ROOT, 'ext', 'public', 'icons', `icon-${size}.png`), size, { radius: Math.round(size * 3 / 16) });
+/** A monochrome badge: the background gone, everything else white. Only its shape is shown. */
+async function renderBadge(file, size) {
+    const shape = svg.toString()
+        .replace(/<rect width="\d+" height="\d+" fill="#[0-9a-f]{6}"\/>/i, '')
+        .replace(/fill="#[0-9a-f]{6}"/gi, 'fill="#ffffff"');
+    const shapeSrc = `data:image/svg+xml;base64,${Buffer.from(shape).toString('base64')}`;
+    await page.setViewportSize({ width: size, height: size });
+    await page.setContent(`<body style="margin:0;background:transparent">
+        <img src="${shapeSrc}" style="width:${size}px;height:${size}px;display:block"></body>`);
+    await page.locator('img').evaluate((img) => img.decode());
+    writeFileSync(file, await page.screenshot({ omitBackground: true, clip: { x: 0, y: 0, width: size, height: size } }));
+    console.log(`wrote ${relative(ROOT, file)}`);
 }
-for (const size of [180, 192, 512]) {
-    await render(join(ROOT, 'public', `icon-${size}.png`), size);
+
+if (!process.argv.includes('--badge')) {
+    for (const size of [16, 32, 48, 128]) {
+        await render(join(ROOT, 'ext', 'public', 'icons', `icon-${size}.png`), size, { radius: Math.round(size * 3 / 16) });
+    }
+    for (const size of [180, 192, 512]) {
+        await render(join(ROOT, 'public', `icon-${size}.png`), size);
+    }
+    await render(join(ROOT, 'public', 'icon-maskable-512.png'), 512, { inset: 512 * 0.1 });
 }
-await render(join(ROOT, 'public', 'icon-maskable-512.png'), 512, { inset: 512 * 0.1 });
+await renderBadge(join(ROOT, 'public', 'badge-96.png'), 96);
 
 await browser.close();
