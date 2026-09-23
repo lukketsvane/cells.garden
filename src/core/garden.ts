@@ -2926,6 +2926,9 @@ export class GardenView extends View {
 
         cell.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
         cell.addClass('is-focus-highlighted');
+        // Tapped again mid-flash, it flashes again.
+        cell.removeClass('is-click-flash');
+        void cell.offsetWidth;
         cell.addClass('is-click-flash');
 
         // A later tap on the same cell owns the highlight timer.

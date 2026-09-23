@@ -5,8 +5,8 @@
 // checkouts can test at once) against dist/ (building first when dist/
 // is missing) and drives the garden with Playwright: plants seeds, adds cells
 // to every zone, context menus, pan/zoom, reload persistence, one part's chip
-// with the board hidden (hover, click and tap), a mobile viewport with pan view.
-// Then the PWA: the manifest and sw.js are served, the service
+// with the board hidden (hover, click and tap), a mobile viewport with pan view
+// and the calm click flash. Then the PWA: the manifest and sw.js are served, the service
 // worker takes control of the page, and the garden still renders offline.
 //
 // Console errors that are exactly network failures to Supabase/Google are
@@ -219,6 +219,43 @@ async function peekGone(page, label) {
         }));
         throw new Error(`${label}: the chip should be gone: ${JSON.stringify(left)}`);
     }
+}
+
+// Watch a board cell through its click flash, frame by frame: it must never
+// grow past its own box (a scaled cell was clipped by its card).
+function watchFlash(page, itemId) {
+    return page.evaluate((id) => {
+        window.__flash = [];
+        const start = performance.now();
+        const tick = () => {
+            const cell = [...document.querySelectorAll('.kanban-scroll-container .garden-item, .kanban-scroll-container .seed-content')]
+                .find((el) => el.dataset.id === id);
+            if (cell?.classList.contains('is-click-flash')) {
+                const r = cell.getBoundingClientRect();
+                const card = cell.closest('.column-card').getBoundingClientRect();
+                const style = getComputedStyle(cell);
+                window.__flash.push({
+                    transform: style.transform,
+                    background: style.backgroundColor,
+                    animation: style.animationName,
+                    inside: r.left >= card.left - 0.5 && r.right <= card.right + 0.5 && r.top >= card.top - 0.5 && r.bottom <= card.bottom + 0.5,
+                });
+            }
+            if (performance.now() - start < 1100) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }, itemId);
+}
+
+async function checkFlash(page, label) {
+    await page.waitForTimeout(1200);
+    const samples = await page.evaluate(() => window.__flash);
+    const colours = new Set(samples.map((s) => s.background));
+    console.log(`${label} click flash:`, samples.length, 'frames,', colours.size, 'colours, transforms', [...new Set(samples.map((s) => s.transform))]);
+    assert(samples.length > 0, `${label}: the cell never flashed`);
+    assert(samples.every((s) => s.transform === 'none'), `${label}: the flash transformed the cell: ${JSON.stringify(samples)}`);
+    assert(samples.every((s) => s.inside), `${label}: the flash reached past the cell's card: ${JSON.stringify(samples)}`);
+    assert(samples.some((s) => s.animation === 'garden-cell-click-flash') && colours.size > 1, `${label}: the flash should tint the cell: ${JSON.stringify(samples)}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -849,6 +886,7 @@ async function scenario(browser, errors) {
     await gardenSettled(mpage);
     const plantPartTap = await partSpot(mpage, '.garden-stem-part');
     assert(plantPartTap, 'no tappable plant part was found on mobile');
+    await watchFlash(mpage, plantPartTap.itemId);
     await touch('touchStart', plantPartTap.x, plantPartTap.y);
     await touch('touchEnd', plantPartTap.x, plantPartTap.y);
     await mpage.waitForTimeout(180);
@@ -867,6 +905,8 @@ async function scenario(browser, errors) {
     console.log('mobile plant-part focus:', plantPartTap.itemId, focusedPartCell);
     assert(focusedPartCell?.focused && focusedPartCell?.flashed, `tapping a plant part did not highlight its board cell: ${JSON.stringify(focusedPartCell)}`);
     assert(focusedPartCell.visible, 'tapping a plant part did not bring its board cell into view');
+    // The flash stays in the cell: a tint, no growing past the card.
+    await checkFlash(mpage, 'mobile');
 
     // Tap selects, a second tap edits, at 16px so iOS does not zoom.
     await tapAt('.garden-item >> nth=0');

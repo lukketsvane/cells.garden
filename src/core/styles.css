@@ -685,13 +685,18 @@
 
 
 /* Highlight the matching board cell while hovering a plant part, or briefly
-   after tapping that part on a touch screen. */
+   after clicking or tapping that part: a ring on the cell's own edge, inside
+   its box, so the card around it never clips it. */
 .garden-item.is-hover-highlighted,
+.garden-item.is-focus-highlighted {
+    border-color: var(--interactive-accent);
+    box-shadow: inset 0 0 0 1px var(--interactive-accent);
+}
+
 .seed-content.is-hover-highlighted,
-.garden-item.is-focus-highlighted,
 .seed-content.is-focus-highlighted {
-    outline: 2px solid var(--interactive-accent);
     border-radius: 4px;
+    box-shadow: inset 0 0 0 2px var(--interactive-accent);
 }
 
 /* Above the ghost and every other state, and the flash keeps the same colour. */
@@ -704,16 +709,31 @@
     background: var(--background-modifier-hover);
 }
 
-/* Flash when clicking plant part to center it */
+/* The cell of a part just clicked or tapped: a tint of the accent comes up once. */
+.garden-item.is-focus-highlighted:not(#_),
+.seed-content.is-focus-highlighted:not(#_) {
+    --garden-cell-flash-peak: color-mix(in srgb, var(--interactive-accent) 32%, transparent);
+}
+
+/* Colour only, inside the cell: a cell that grew reached past its card and
+   was clipped by it. */
 @keyframes garden-cell-click-flash {
-    0% { transform: scale(1); background: var(--garden-cell-flash-rest, var(--background-modifier-hover)); }
-    50% { transform: scale(1.08); background: var(--garden-cell-flash-peak, var(--interactive-accent)); color: var(--text-on-accent); }
-    100% { transform: scale(1); background: var(--garden-cell-flash-rest, var(--background-modifier-hover)); }
+    0% { background: var(--garden-cell-flash-rest, var(--background-modifier-hover)); }
+    30% { background: var(--garden-cell-flash-peak, color-mix(in srgb, var(--interactive-accent) 32%, transparent)); }
+    100% { background: var(--garden-cell-flash-rest, var(--background-modifier-hover)); }
 }
 
 .garden-item.is-click-flash,
 .seed-content.is-click-flash {
-    animation: garden-cell-click-flash 0.8s ease;
+    animation: garden-cell-click-flash 0.45s ease-out;
+}
+
+/* Held still: the ring says it without the flash. */
+@media (prefers-reduced-motion: reduce) {
+    .garden-item.is-click-flash,
+    .seed-content.is-click-flash {
+        animation: none;
+    }
 }
 
 /* --- Worm Hover Glow --- */
