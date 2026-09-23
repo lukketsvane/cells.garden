@@ -382,33 +382,38 @@ try {
         `side panel resize moved the plants vertically: ${resizedGround}`);
     await panel.setViewportSize({ width: 360, height: 900 });
 
-    // The shared plant-type picker must stay visual and three columns wide in the extension side panel.
+    // The plant's menu in the side panel: the type list opens inside it, as wide as it, one stem per type.
     await panel.click('.seed-content', { button: 'right' });
-    await panel.waitForSelector('.plant-type-grid');
+    await panel.waitForSelector('.garden-context-menu');
+    await panel.click('.garden-context-menu > .garden-menu-item:has-text("Plant type")');
     const sidePicker = await panel.evaluate(() => {
-        const grid = document.querySelector('.plant-type-grid');
-        const tiles = [...grid.querySelectorAll('.plant-type-tile')];
+        const menu = document.querySelector('.garden-context-menu');
+        const list = menu.querySelector('.garden-menu-panel.is-open');
+        const rows = list ? [...list.querySelectorAll('.garden-menu-item')] : [];
+        const rect = menu.getBoundingClientRect();
         return {
-            columns: getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
-            tiles: tiles.length,
-            withPixelArt: tiles.filter((tile) => tile.querySelector('.plant-type-preview img')).length,
-            right: grid.getBoundingClientRect().right,
+            rows: rows.length,
+            withOneStem: rows.filter((row) => row.querySelectorAll('img').length === 1).length,
+            current: rows.filter((row) => row.classList.contains('is-active')).length,
+            asWideAsMenu: !!list && Math.abs(list.getBoundingClientRect().width - menu.clientWidth) <= 1,
+            right: rect.right,
+            bottom: rect.bottom,
         };
     });
-    assert(sidePicker.columns === 3 && sidePicker.tiles >= 3 && sidePicker.withPixelArt === sidePicker.tiles,
-        `side-panel plant picker is not a 3-column pixel-art grid: ${JSON.stringify(sidePicker)}`);
-    assert(sidePicker.right <= 360 + 1, `side-panel plant picker overflows: ${JSON.stringify(sidePicker)}`);
+    assert(sidePicker.rows >= 3 && sidePicker.withOneStem === sidePicker.rows && sidePicker.current === 1 && sidePicker.asWideAsMenu,
+        `side-panel plant type list is not one stem per type inside the menu: ${JSON.stringify(sidePicker)}`);
+    assert(sidePicker.right <= 360 + 1 && sidePicker.bottom <= 900 + 1, `side-panel plant menu leaves the panel: ${JSON.stringify(sidePicker)}`);
 
     const typeChoice = await panel.evaluate(() => {
-        const tile = [...document.querySelectorAll('.plant-type-tile')]
-            .find((el) => !el.classList.contains('is-selected'));
-        const stem = tile?.querySelector('.plant-type-preview img[data-kind="stem"]');
-        return tile && stem
-            ? { type: tile.dataset.plantType, path: stem.dataset.path }
+        const row = [...document.querySelectorAll('.garden-menu-panel.is-open .garden-menu-item')]
+            .find((el) => !el.classList.contains('is-active'));
+        const stem = row?.querySelector('img');
+        return row && stem
+            ? { type: row.dataset.plantType, path: stem.dataset.path }
             : null;
     });
-    assert(typeChoice?.type && typeChoice?.path, `could not find a selectable plant preview: ${JSON.stringify(typeChoice)}`);
-    await panel.click(`.plant-type-tile[data-plant-type="${typeChoice.type}"]`);
+    assert(typeChoice?.type && typeChoice?.path, `could not find a selectable plant type: ${JSON.stringify(typeChoice)}`);
+    await panel.click(`.garden-menu-panel.is-open .garden-menu-item[data-plant-type="${typeChoice.type}"]`);
     await panel.waitForFunction(({ type, path }) => {
         const garden = JSON.parse(localStorage.getItem('cells.garden/v1') || '{}');
         const project = garden.projects?.[0];

@@ -5,7 +5,8 @@
 // Notice, the workspace and the vault). It checks that the plugin
 // loads, the Open garden command puts the garden in a tab with the sign-in pill, the vault
 // import command brings a Garden-Cells/ plant in, the garden keeps its device
-// storage in the vault's storage (copying the old shared keys once), and Obsidian
+// storage in the vault's storage (copying the old shared keys once), a plant's
+// menu changes its hue, and Obsidian
 // closing the tab tears the garden down without errors. Run with "npm run test:obsidian".
 
 import assert from 'node:assert/strict';
@@ -216,6 +217,18 @@ try {
     const stored = await page.evaluate(() => window.__pluginData?.local?.['cells.garden/v1'] ?? '');
     assert(stored.includes('From the vault'), 'the garden should be kept with Plugin.saveData');
     assert(await page.evaluate(() => document.documentElement.dataset.scene) === 'mountains', 'the copied scene should apply');
+
+    // The plant's menu runs in the plugin build too: its hue field writes through to Plugin.saveData.
+    const hueRow = '.garden-context-menu > .garden-menu-item:has-text("Plant hue")';
+    await page.click('.seed-content:text-is("From the vault")', { button: 'right' });
+    await page.waitForSelector('.garden-context-menu');
+    await page.click(hueRow);
+    assert(await page.getAttribute(hueRow, 'aria-expanded') === 'true', 'the hue row should open its field in the menu');
+    await page.fill('.garden-menu-hue-field', '120');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => /"hue":120\b/.test(window.__pluginData?.local?.['cells.garden/v1'] ?? ''));
+    assert((await page.$('.garden-context-menu')) === null, 'Enter should close the plant menu');
+    console.log('test-obsidian: plant hue saved from the menu');
 
     // Obsidian closes the tab (the plugin must not detach it itself on unload).
     assert(await page.evaluate(() => typeof window.__plugin.onunload !== 'function' || !/detachLeaves/.test(String(window.__plugin.onunload))), 'onunload must not detach leaves');

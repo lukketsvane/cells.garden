@@ -15,7 +15,7 @@
 
 import assert from 'node:assert/strict';
 import { execSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -26,6 +26,12 @@ const BASE = `http://127.0.0.1:${PORT}/`;
 const VITE = join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js');
 const SHOTS = process.env.SCREENSHOTS || '';
 const ICONS = ['icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
+// The plant types in the pack, found the way assets.ts finds them: a folder with stem/ or flowers/ in it.
+const PACK = join(ROOT, 'src', 'assets', 'pack');
+const PLANT_TYPES = readdirSync(PACK, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && (existsSync(join(PACK, d.name, 'stem')) || existsSync(join(PACK, d.name, 'flowers'))))
+    .map((d) => d.name)
+    .sort();
 
 // Hosts the app talks to that a sandbox may block; failures to them are noise.
 const BLOCKED_HOSTS = /supabase\.co|google\.com/;
@@ -228,34 +234,126 @@ async function scenario(browser, errors) {
     await page.click('.garden-context-menu button:has-text("Highlight")');
     await page.waitForTimeout(300);
 
-    // Seed context menu: plant type is a real pixel-art picker, three columns wide.
-    await page.click('.seed-content >> nth=1', { button: 'right' });
-    await page.waitForSelector('.plant-type-grid');
-    const picker = await page.evaluate(() => {
-        const grid = document.querySelector('.plant-type-grid');
-        const tiles = [...grid.querySelectorAll('.plant-type-tile')];
-        const columns = getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length;
-        return {
-            columns,
-            tiles: tiles.length,
-            selected: tiles.filter((tile) => tile.classList.contains('is-selected')).length,
-            withPixelArt: tiles.filter((tile) => tile.querySelectorAll('.plant-type-preview img').length > 0).length,
-        };
-    });
-    console.log('plant type picker:', picker);
-    assert(picker.columns === 3, `plant picker must be exactly 3 columns: ${JSON.stringify(picker)}`);
-    assert(picker.tiles >= 3 && picker.withPixelArt === picker.tiles, `every plant type must show actual pixel art: ${JSON.stringify(picker)}`);
-    assert(picker.selected === 1, `plant picker must show exactly one selected type: ${JSON.stringify(picker)}`);
-    const typeBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')).projects[1].plantType);
-    await page.click('.plant-type-tile:not(.is-selected) >> nth=0');
-    await page.waitForFunction((before) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects[1].plantType !== before, typeBefore);
-    assert(await page.$('.garden-context-menu') === null, 'plant picker should close after selection');
-    // Changing type redraws the whole garden; wait for the replacement canvas to
-    // be attached and measurable before the next interaction.
-    await page.waitForFunction(() => {
+    // The plant's menu: Plant type, Seed and Plant hue open their lists in the menu itself.
+    const plantId = await page.$eval('.seed-content >> nth=1', (el) => el.dataset.id);
+    const stored = (id) => page.evaluate((pid) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === pid), id);
+    const menuRow = (label) => `.garden-context-menu > .garden-menu-item:has-text("${label}")`;
+    const openPlantMenu = async () => {
+        await page.click('.seed-content >> nth=1', { button: 'right' });
+        await page.waitForSelector('.garden-context-menu');
+    };
+    // Choosing redraws the whole garden; wait for the replacement to be attached and measurable.
+    const settled = () => page.waitForFunction(() => {
         const viewport = document.querySelector('.garden-canvas-viewport');
         return viewport?.isConnected && viewport.getBoundingClientRect().width > 0;
     });
+    // What an open panel holds, measured against its row and the menu.
+    const openPanel = (label) => page.evaluate((text) => {
+        const menu = document.querySelector('.garden-context-menu');
+        const row = [...menu.querySelectorAll(':scope > .garden-menu-item')].find((el) => el.querySelector('.garden-menu-label').textContent === text);
+        const panel = document.getElementById(row.getAttribute('aria-controls'));
+        const options = [...panel.querySelectorAll('.garden-menu-item')];
+        const rect = menu.getBoundingClientRect();
+        return {
+            expanded: row.getAttribute('aria-expanded'),
+            open: panel.classList.contains('is-open'),
+            openPanels: menu.querySelectorAll('.garden-menu-panel.is-open').length,
+            sub: row.querySelector('.garden-menu-sub')?.textContent ?? null,
+            underRow: row.nextElementSibling === panel,
+            asWideAsMenu: Math.abs(panel.getBoundingClientRect().width - menu.clientWidth) <= 1,
+            inView: rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight,
+            scrolls: panel.scrollHeight > panel.clientHeight,
+            active: options.filter((o) => o.classList.contains('is-active')).map((o) => o.dataset.plantType ?? o.dataset.seed),
+            types: options.map((o) => o.dataset.plantType).filter(Boolean),
+            seeds: options.map((o) => o.dataset.seed).filter(Boolean),
+        };
+    }, label);
+
+    await openPlantMenu();
+    const plantMenu = await page.$$eval('.garden-context-menu > .garden-menu-item .garden-menu-label', (els) => els.map((e) => e.textContent));
+    console.log('plant menu:', plantMenu);
+    assert.deepEqual(plantMenu, ['Standby', 'Plant type', 'Seed', 'Plant hue', 'Recycle plant']);
+
+    // Plant type: every type, one stem each, the very sprite the plant's first stem becomes.
+    await page.click(menuRow('Plant type'));
+    const types = await openPanel('Plant type');
+    console.log('plant type panel:', types);
+    assert(types.expanded === 'true' && types.open && types.openPanels === 1 && types.underRow, `the type list should open under its row: ${JSON.stringify(types)}`);
+    assert(types.asWideAsMenu && types.inView, `the type list must be as wide as the menu and on screen: ${JSON.stringify(types)}`);
+    assert.deepEqual(types.types, PLANT_TYPES, 'the type list must hold every plant type in the pack');
+    assert(types.active.length === 1, `exactly one type is the current one: ${JSON.stringify(types.active)}`);
+    const stemsTrue = await page.evaluate(() => [...document.querySelectorAll('.garden-menu-panel.is-open .garden-menu-item')].every((row) => {
+        const assets = window.garden.assetManager;
+        const imgs = row.querySelectorAll('img');
+        const path = assets.getPlantTypeImagePath('stem', row.dataset.plantType, 0);
+        return imgs.length === 1 && imgs[0].dataset.path === path && imgs[0].getAttribute('src') === assets.getImageUrlSync(path)
+            && getComputedStyle(imgs[0]).imageRendering !== 'auto';
+    }));
+    assert(stemsTrue, 'each type must show exactly one crisp stem: the first stem that type gives a plant');
+    await shot(page, '02b-plant-type-menu.png');
+    const typeChoice = await page.evaluate(() => {
+        const row = [...document.querySelectorAll('.garden-menu-panel.is-open .garden-menu-item')].find((el) => !el.classList.contains('is-active'));
+        return { type: row.dataset.plantType, stem: row.querySelector('img').dataset.path };
+    });
+    await page.click(`.garden-menu-panel.is-open .garden-menu-item[data-plant-type="${typeChoice.type}"]`);
+    await page.waitForFunction(({ id, type }) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === id).plantType === type, { id: plantId, type: typeChoice.type });
+    assert(await page.$('.garden-context-menu') === null, 'choosing a type should close the menu');
+    assert((await stored(plantId)).stem[0].imagePath === typeChoice.stem, 'the plant took another stem than the menu showed');
+    await settled();
+
+    // Seed: the 27 icons in number order; choosing one plants seeds/seed<n>.png, which the garden draws.
+    await openPlantMenu();
+    await page.click(menuRow('Plant type'));
+    await page.click(menuRow('Seed'));
+    const seeds = await openPanel('Seed');
+    console.log('seed panel:', { ...seeds, seeds: seeds.seeds.length });
+    assert(seeds.open && seeds.openPanels === 1 && seeds.asWideAsMenu && seeds.inView && seeds.scrolls, `the seed list should replace the type list and scroll inside the menu: ${JSON.stringify(seeds)}`);
+    assert.deepEqual(seeds.seeds, Array.from({ length: 27 }, (_, i) => `seeds/seed${i + 1}.png`));
+    assert(await page.$$eval('.garden-menu-panel.is-open .garden-menu-seed-icon', (els) => els.length) === 27, 'every seed shows its icon');
+    const seedChoice = seeds.seeds.find((path) => !seeds.active.includes(path));
+    await page.click(`.garden-menu-panel.is-open .garden-menu-item[data-seed="${seedChoice}"]`);
+    await page.waitForFunction(({ id, path }) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === id).seedImagePath === path, { id: plantId, path: seedChoice });
+    assert(await page.$('.garden-context-menu') === null, 'choosing a seed should close the menu');
+    await page.waitForFunction(({ id, path }) => {
+        const part = [...document.querySelectorAll('.garden-plant-wrapper')].find((w) => w.dataset.projectId === id)?.querySelector('.garden-seed-part');
+        return part?.style.backgroundImage.includes(window.garden.assetManager.getImageUrlSync(path));
+    }, { id: plantId, path: seedChoice });
+    await settled();
+
+    // Plant hue: the garden and the board follow every keystroke without being drawn again.
+    const hueTargets = () => page.evaluate((id) => {
+        const sprite = [...document.querySelectorAll('.garden-plant-wrapper')].find((w) => w.dataset.projectId === id).querySelector('.garden-stem-container');
+        const seed = [...document.querySelectorAll('.kanban-scroll-container .project-column')].find((c) => c.dataset.projectId === id).querySelector('.seed-content');
+        window.__hueSprite ??= sprite;
+        return { sprite: sprite.style.filter, seed: seed.style.filter, same: window.__hueSprite === sprite };
+    }, plantId);
+    await openPlantMenu();
+    await hueTargets();
+    await page.click(menuRow('Plant hue'));
+    assert(await page.evaluate(() => document.activeElement?.classList.contains('garden-menu-hue-field')), 'the hue field should take the focus');
+    await page.fill('.garden-menu-hue-field', '200');
+    let hue = await hueTargets();
+    console.log('hue preview:', hue);
+    assert(hue.sprite === 'hue-rotate(200deg)' && hue.seed === 'hue-rotate(200deg)' && hue.same, `the hue should show live on the plant and its card: ${JSON.stringify(hue)}`);
+    assert((await openPanel('Plant hue')).sub === '200°', 'the row shows the hue being picked');
+    assert(await page.$eval('.garden-menu-hue-slider', (el) => el.value) === '200', 'the slider follows the field');
+    await shot(page, '02c-plant-hue.png');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction((id) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === id).hue === 200, plantId);
+    assert(await page.$('.garden-context-menu') === null, 'Enter keeps the hue and closes the menu');
+    // Past the end a number is held there; the arrows go round; Escape puts the hue back.
+    await openPlantMenu();
+    await page.click(menuRow('Plant hue'));
+    await page.fill('.garden-menu-hue-field', '400');
+    assert(await page.$eval('.garden-menu-hue-field', (el) => el.value) === '359', 'a hue past 359 is held at 359');
+    await page.keyboard.press('ArrowUp');
+    assert(await page.$eval('.garden-menu-hue-field', (el) => el.value) === '0', 'up from 359 goes round to 0');
+    assert((await hueTargets()).sprite === 'hue-rotate(0deg)', 'the arrows preview too');
+    await page.keyboard.press('Escape');
+    hue = await hueTargets();
+    assert(await page.$('.garden-context-menu') === null && hue.sprite === 'hue-rotate(200deg)' && hue.seed === 'hue-rotate(200deg)',
+        `Escape should put the hue back: ${JSON.stringify(hue)}`);
+    assert((await stored(plantId)).hue === 200, 'Escape must not keep the previewed hue');
 
     // Pan + zoom on the canvas
     const viewport = await page.$('.garden-canvas-viewport');
@@ -550,27 +648,51 @@ async function scenario(browser, errors) {
     assert(menu.some((t) => /highlight/i.test(t)), 'holding a cell should open its menu');
     await mpage.evaluate(() => document.querySelector('.garden-context-menu')?.remove());
 
-    // Hold the seed: same three-column pixel-art picker on iPhone.
+    // Hold the seed: the plant's menu. Its lists open by tap, one at a time, and stay on the phone's screen.
     await holdAt('.seed-content');
-    await mpage.waitForSelector('.plant-type-grid', { timeout: 3000 });
-    const seedMenu = await mpage.$$eval('.garden-context-menu button', (els) => els.map((e) => e.textContent));
+    await mpage.waitForSelector('.garden-context-menu', { timeout: 3000 });
+    const seedMenu = await mpage.$$eval('.garden-context-menu > .garden-menu-item', (els) => els.map((e) => e.textContent));
     assert(seedMenu.some((t) => /standby|wake/i.test(t)), `holding the seed should open the seed menu: ${JSON.stringify(seedMenu)}`);
-    const mobilePicker = await mpage.evaluate(() => {
-        const grid = document.querySelector('.plant-type-grid');
-        const tiles = [...grid.querySelectorAll('.plant-type-tile')];
+    const phonePanel = () => mpage.evaluate(() => {
+        const menu = document.querySelector('.garden-context-menu');
+        const rect = menu.getBoundingClientRect();
+        const open = [...menu.querySelectorAll('.garden-menu-panel.is-open')];
         return {
-            columns: getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length,
-            tiles: tiles.length,
-            images: grid.querySelectorAll('.plant-type-preview img').length,
-            right: grid.getBoundingClientRect().right,
-            viewport: innerWidth,
+            open: open.map((p) => menu.querySelector(`[aria-controls="${p.id}"] .garden-menu-label`).textContent),
+            expanded: [...menu.querySelectorAll('[aria-expanded="true"] .garden-menu-label')].map((l) => l.textContent),
+            rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
+            inView: rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight,
+            scrolls: open[0] ? open[0].scrollHeight > open[0].clientHeight : false,
+            fieldFont: parseFloat(getComputedStyle(menu.querySelector('.garden-menu-hue-field')).fontSize),
         };
     });
-    assert(mobilePicker.columns === 3 && mobilePicker.images >= mobilePicker.tiles,
-        `mobile plant picker is not a 3-column sprite grid: ${JSON.stringify(mobilePicker)}`);
-    assert(mobilePicker.right <= mobilePicker.viewport + 1,
-        `mobile plant picker overflows the viewport: ${JSON.stringify(mobilePicker)}`);
-    await mpage.evaluate(() => document.querySelector('.garden-context-menu')?.remove());
+    for (const label of ['Plant type', 'Seed', 'Plant hue']) {
+        await tapAt(`.garden-context-menu > .garden-menu-item:has-text("${label}")`);
+        const state = await phonePanel();
+        console.log('phone panel:', label, state);
+        assert(state.open.length === 1 && state.open[0] === label && state.expanded.join() === label, `tapping ${label} should open its list alone: ${JSON.stringify(state)}`);
+        assert(state.inView, `the menu with ${label} open leaves the phone's screen: ${JSON.stringify(state)}`);
+        if (label === 'Seed') assert(state.scrolls, 'the seed list should scroll inside the menu');
+    }
+    assert((await phonePanel()).fieldFont >= 16, 'iOS zooms into a hue field under 16px');
+    await tapAt('.garden-context-menu > .garden-menu-item:has-text("Plant hue")');
+    assert((await phonePanel()).open.length === 0, 'tapping the open row closes its list');
+    // A seed chosen by tap, from the part of the list on screen.
+    await tapAt('.garden-context-menu > .garden-menu-item:has-text("Seed")');
+    const phoneSeed = await mpage.evaluate(() => {
+        const list = document.querySelector('.garden-menu-panel.is-open');
+        const box = list.getBoundingClientRect();
+        const row = [...list.querySelectorAll('.garden-menu-item')].find((el) => {
+            const r = el.getBoundingClientRect();
+            return !el.classList.contains('is-active') && r.top >= box.top && r.bottom <= box.bottom;
+        });
+        const r = row.getBoundingClientRect();
+        return { path: row.dataset.seed, x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
+    await touch('touchStart', phoneSeed.x, phoneSeed.y);
+    await touch('touchEnd', phoneSeed.x, phoneSeed.y);
+    await mpage.waitForFunction((path) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects[0].seedImagePath === path, phoneSeed.path);
+    assert(await mpage.$('.garden-context-menu') === null, 'choosing a seed by tap should close the menu');
 
     // Drag the divider with a finger.
     const before = await mpage.$eval('.garden-canvas-area', (el) => el.getBoundingClientRect().height);

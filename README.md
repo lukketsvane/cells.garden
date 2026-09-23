@@ -109,6 +109,8 @@ pack/seeds/seed_icons/seed<n>.png               27
 
 `PLANT_TYPES` in `assets.ts` is whatever the pack holds, so a new plant folder is a new plant type with no code change. Sprite sizes are per plant (35×7 for `plant_1`, roots, minerals and seeds; 45×7 for `plant_3`; down to 15×8 for a `plant_7` stem) and the view reads each one's natural size before scaling it by `PIXEL_SCALE`, so a folder can hold whatever the drawing needs.
 
+A plant's menu names each type from `PLANT_TYPE_NAMES` in `assets.ts` (Bell, Branch, Vine, Spray, Arch, Fork, Starburst and Cluster come from Figma; `plant_9` is Plume); a folder without a name goes by its own. Its seed list shows `seeds/seed_icons/seed<n>.png` for the seed `seeds/seed<n>.png`.
+
 ### Figma handoff
 
 The production Figma library keeps source sprites at exact native 1x size. Its `EXPORTS` section maps export frames to repo destinations; `figma/exports.json` is the machine-readable copy of that contract. Run `npm run verify:figma-assets` after changing sprites or the Figma export surface. It checks all mapped PNG paths and native dimensions, and requires every file under `src/assets/**` to be represented either by a Figma export or an explicit repo-source-only reference. With `FIGMA_TOKEN` in the environment or ignored `.env.local`, `npm run sync:figma-assets` reads the original image fill from each of the 277 mapped atomic source components and writes it to the manifest destination. It does not render or resample the pixel art, and it preserves the existing repo PNG when Figma differs only by ancillary metadata while the PNG IDAT pixel stream is identical. `stars_pattern.gif` and the original brand PNGs remain repo-source-of-truth rather than Figma round-trips.

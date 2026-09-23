@@ -46,10 +46,31 @@ export const PLANT_TYPES: string[] = Array.from(
     )
 ).sort();
 
-export interface PlantPreviewPart {
-    kind: 'stem' | 'flower';
+/** What each plant type is called, from the Figma file. plant_9 has no name there; its leaves are plumes. */
+export const PLANT_TYPE_NAMES: Readonly<Record<string, string>> = {
+    plant_1: 'Bell',
+    plant_2: 'Branch',
+    plant_3: 'Vine',
+    plant_4: 'Spray',
+    plant_5: 'Arch',
+    plant_6: 'Fork',
+    plant_7: 'Starburst',
+    plant_8: 'Cluster',
+    plant_9: 'Plume',
+};
+
+/** A plant type's name. A folder new to the pack goes by its own, "plant_10" as "Plant 10". */
+export function plantTypeName(plantType: string): string {
+    return PLANT_TYPE_NAMES[plantType] ?? plantType.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/** One seed a plant can be given: the sprite the garden draws and the icon a menu shows for it. */
+export interface SeedChoice {
+    /** What `seedImagePath` holds, e.g. "seeds/seed7.png". */
     path: string;
-    url: string;
+    /** "Seed 7", for whoever cannot see the icon. */
+    name: string;
+    iconUrl: string;
 }
 
 export class AssetManager {
@@ -74,8 +95,8 @@ export class AssetManager {
 
     /**
      * The exact sprite path used when a plant is switched to a type.
-     * Keeping this deterministic makes the picker truthful: the art shown in
-     * a tile is the art written into the selected plant.
+     * Keeping this deterministic makes the plant menu truthful: the stem it
+     * shows for a type is the first stem the plant gets.
      */
     getPlantTypeImagePath(category: 'stem' | 'flowers', plantType: string, index: number): string | null {
         const paths = this.sortedFolder(`${plantType}/${category}`);
@@ -83,23 +104,17 @@ export class AssetManager {
     }
 
     /**
-     * Preview the exact above-ground composition the selected plant will get.
-     * Empty plants still get a representative 3-stem + 1-flower tile.
+     * The seeds in the pack, in number order. Each icon in seeds/seed_icons/
+     * stands for the seed sprite of the same name one folder up; an icon
+     * without its sprite is left out.
      */
-    getPlantPreview(plantType: string, stemCount = 3, flowerCount = 1): PlantPreviewPart[] {
-        const stems = Array.from({ length: Math.max(0, stemCount) }, (_, index) => {
-            const path = this.getPlantTypeImagePath('stem', plantType, index);
-            return path ? { kind: 'stem' as const, path } : null;
-        }).filter((part): part is { kind: 'stem'; path: string } => part !== null);
-
-        const flowers = Array.from({ length: Math.max(0, flowerCount) }, (_, index) => {
-            const path = this.getPlantTypeImagePath('flowers', plantType, index);
-            return path ? { kind: 'flower' as const, path } : null;
-        }).filter((part): part is { kind: 'flower'; path: string } => part !== null);
-
-        const parts = [...stems.reverse(), ...flowers.reverse()];
-        return parts.flatMap(part => {
-            const url = PACK.get(part.path);
-            return url ? [{ ...part, url }] : [];
+    getSeedChoices(): SeedChoice[] {
+        return this.sortedFolder('seeds/seed_icons').flatMap(icon => {
+            const file = icon.slice(icon.lastIndexOf('/') + 1);
+            const path = `seeds/${file}`;
+            const name = file.replace(/\.\w+$/, '').replace(/(\D)(\d)/, '$1 $2').replace(/^\w/, c => c.toUpperCase());
+            const iconUrl = PACK.get(icon);
+            return PACK.has(path) && iconUrl ? [{ path, name, iconUrl }] : [];
         });
-    }}
+    }
+}

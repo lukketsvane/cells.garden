@@ -1156,6 +1156,12 @@
     position: fixed;
     z-index: 10000;
     min-width: 160px;
+    /* Taller than the window (a panel open on a small screen), it scrolls. */
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 4px 0;
     background: var(--background-primary);
     border: 1px solid var(--background-modifier-border);
@@ -1163,22 +1169,36 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.garden-menu-item {
+/* Obsidian draws every button as a raised, centred control of a fixed height;
+   a menu row is none of those, hence the resets and the menu in the selector. */
+.garden-context-menu .garden-menu-item {
     display: flex;
     align-items: baseline;
+    justify-content: flex-start;
     gap: 8px;
     width: 100%;
+    height: auto;
     padding: 6px 16px;
     background: none;
     border: none;
+    border-radius: 0;
+    box-shadow: none;
     text-align: left;
     font-size: 14px;
+    font-weight: normal;
     color: var(--text-normal);
     cursor: pointer;
 }
 
 .garden-menu-item:hover:not(:disabled) {
     background: var(--background-modifier-hover);
+    box-shadow: none;
+}
+
+/* Inset, so the scrolling menu does not cut it off at its edges. */
+.garden-context-menu .garden-menu-item:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -2px;
 }
 
 .garden-menu-item.is-danger {
@@ -1218,6 +1238,156 @@
 .garden-context-menu > .garden-menu-heading:first-child {
     margin-top: 0;
     border-top: none;
+}
+
+/* A row that opens a panel: its value at the far end, then a chevron that turns up while open. */
+.garden-menu-item.has-panel .garden-menu-label {
+    flex: 1 1 auto;
+}
+
+.garden-menu-item.has-panel::after {
+    content: '';
+    flex: 0 0 auto;
+    align-self: center;
+    width: 5px;
+    height: 5px;
+    margin: -3px 1px 0 2px;
+    border-right: 1.5px solid var(--text-faint);
+    border-bottom: 1.5px solid var(--text-faint);
+    transform: rotate(45deg);
+    transition: transform 0.15s ease, margin 0.15s ease;
+}
+
+.garden-menu-item.has-panel.is-open::after {
+    margin-top: 3px;
+    transform: rotate(-135deg);
+}
+
+/* A row's panel, right under it and exactly as wide as the menu. A closed one
+   takes no height but keeps its width in the menu, so the menu is as wide as
+   its widest panel from the start and never changes width as panels open. */
+.garden-menu-panel {
+    position: relative; /* the scroll of a long list is measured from here */
+    background: var(--background-secondary);
+    border-top: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.garden-menu-panel:not(.is-open) {
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    border-width: 0;
+}
+
+.garden-menu-panel .garden-menu-item {
+    align-items: center;
+}
+
+.garden-menu-media {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+/* Both lists put their pictures in one column, as wide as the widest stem
+   (45 art pixels, twice over), so the names line up and the seeds sit under the stems. */
+.garden-menu-plant-types .garden-menu-media,
+.garden-menu-seeds .garden-menu-media {
+    min-width: 90px;
+}
+
+.garden-menu-plant-types .garden-menu-media {
+    height: 24px;
+}
+
+/* One stem, in whole art pixels at twice their size, in the plant's hue. */
+.garden-menu-sprite {
+    display: block;
+    max-width: none;
+    zoom: 2;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    filter: var(--plant-filter, none);
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Twenty-seven seeds: six and a half rows show, the half row says there is more. */
+.garden-menu-seeds {
+    max-height: 208px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* The icons are 5 by 4 art pixels, white on clear. Five times over, and as a
+   mask, so they take the text colour, on a light theme too. */
+.garden-menu-seed-icon {
+    display: block;
+    width: 25px;
+    height: 20px;
+    background-color: currentColor;
+    mask-image: var(--seed-icon);
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.garden-menu-hue {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+}
+
+/* Obsidian styles number fields and sliders too; these win over it. */
+.garden-menu-hue .garden-menu-hue-field {
+    flex: 0 0 auto;
+    width: 56px;
+    height: auto;
+    margin: 0;
+    padding: 4px 6px;
+    font: inherit;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-normal);
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    box-shadow: none;
+    appearance: textfield;
+}
+
+/* The slider and the arrow keys do the stepping; spinners would only crowd the field. */
+.garden-menu-hue .garden-menu-hue-field::-webkit-inner-spin-button,
+.garden-menu-hue .garden-menu-hue-field::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+}
+
+.garden-menu-hue .garden-menu-hue-field:focus {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -1px;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+/* No width of its own: the menu's widest panel decides, the slider takes what is left. */
+.garden-menu-hue .garden-menu-hue-slider {
+    flex: 1 1 auto;
+    width: 0;
+    min-width: 0;
+    margin: 0;
+    accent-color: var(--interactive-accent);
+}
+
+/* iOS zooms into any field under 16px when it gains focus. */
+@media (pointer: coarse) {
+    .garden-menu-hue .garden-menu-hue-field {
+        font-size: 16px;
+    }
 }
 
 
@@ -1267,85 +1437,6 @@
     white-space: nowrap;
     user-select: none;
 }
-
-/* --- Visual plant-type picker: actual pack sprites, three columns --- */
-.plant-type-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 5px;
-    width: min(252px, calc(100vw - 24px));
-    max-height: min(270px, 58vh);
-    overflow-y: auto;
-    padding: 4px 8px 8px;
-}
-
-.plant-type-tile {
-    position: relative;
-    display: block;
-    min-width: 0;
-    height: 72px;
-    padding: 0;
-    overflow: hidden;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 5px;
-    background: var(--background-secondary);
-    color: var(--text-normal);
-    cursor: pointer;
-}
-
-.plant-type-tile:hover {
-    background: var(--background-modifier-hover);
-    border-color: var(--background-modifier-border-hover, var(--text-faint));
-}
-
-.plant-type-tile:focus-visible {
-    outline: 2px solid var(--interactive-accent, #7c5cff);
-    outline-offset: 1px;
-}
-
-.plant-type-tile.is-selected {
-    border-color: var(--interactive-accent, #7c5cff);
-    box-shadow: inset 0 0 0 1px var(--interactive-accent, #7c5cff);
-    background: var(--background-modifier-active-hover, var(--background-modifier-hover));
-}
-
-.plant-type-tile.is-selected::after {
-    content: '✓';
-    position: absolute;
-    top: 4px;
-    right: 5px;
-    z-index: 2;
-    font-size: 11px;
-    line-height: 1;
-    color: var(--interactive-accent, #7c5cff);
-}
-
-.plant-type-preview {
-    position: absolute;
-    inset: 4px;
-    overflow: hidden;
-    pointer-events: none;
-}
-
-.plant-type-preview img {
-    position: absolute;
-    left: 50%;
-    width: auto;
-    height: 14px;
-    max-width: none;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    transform: translateX(-50%);
-    transform-origin: 50% 100%;
-    pointer-events: none;
-    user-select: none;
-}
-
-.plant-type-preview img[data-level='0'] { bottom: 5px; }
-.plant-type-preview img[data-level='1'] { bottom: 16px; transform: translateX(-50%) scaleX(-1); }
-.plant-type-preview img[data-level='2'] { bottom: 27px; }
-.plant-type-preview img[data-level='3'] { bottom: 39px; }
-
 
 /* --- Pets: opt-in scene NPCs --- */
 .garden-pets-layer {

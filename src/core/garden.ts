@@ -1,10 +1,10 @@
 import './shim';
 import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
-import { PLANT_TYPES } from './assets';
+import { PLANT_TYPES, plantTypeName } from './assets';
 import { ICONS, setIcon, ZONE_ICONS } from './icons';
 import { local } from './local';
-import { openMenu, type MenuItem } from './menu';
+import { menuRow, openMenu, type MenuItem } from './menu';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
 import { mineralOpacity, skyAt } from './garden-settings';
@@ -91,6 +91,14 @@ function loadImage(url: string): Promise<HTMLImageElement> {
         img.onerror = () => resolve(img);
         img.src = url;
     });
+}
+
+/**
+ * A plant's hue on its sprites. Standby paints the whole plant one colour, so a
+ * hue on top of it would fight it. (The board's seed takes the hue either way.)
+ */
+function spriteFilter(standby: boolean, hue: number): string {
+    return standby ? 'none' : `hue-rotate(${hue}deg)`;
 }
 
 const ZONE_LABELS: Record<LayerName, string> = {
@@ -2547,8 +2555,7 @@ export class GardenView extends View {
      */
     private async renderPlantSprite(parent: HTMLElement, project: ProjectData) {
         const stemContainer = parent.createDiv("garden-stem-container");
-        // Standby paints the whole plant one colour, so a hue on top of it would fight it.
-        stemContainer.style.filter = project.standby ? 'none' : `hue-rotate(${project.hue ?? 0}deg)`;
+        stemContainer.style.filter = spriteFilter(project.standby, project.hue ?? 0);
         stemContainer.toggleClass('is-standby-plant', !!project.standby);
         const settings = this.app.settings;
         if (project.standby && settings.silhouetteOpacity !== 100) {
@@ -2675,7 +2682,7 @@ export class GardenView extends View {
 
     // --- Keyboard shortcuts ---
     // On the document, so they work wherever focus is, and ignored while
-    // typing into a field or a cell, or while a dialog is open.
+    // typing into a field or a cell, in a menu, or while a dialog is open.
 
     private _shortcutsInstalled = false;
     /** Cells copied or cut here, so a paste keeps their art and state. */
@@ -2707,7 +2714,8 @@ export class GardenView extends View {
         if (document.querySelector('.modal-container')) return true;
         const el = target as HTMLElement | null;
         if (!el || !el.closest) return false;
-        return !!el.closest('input, textarea, select, [contenteditable="true"]');
+        // A menu's arrows walk its rows; Escape there closes the menu alone.
+        return !!el.closest('input, textarea, select, [contenteditable="true"], .garden-context-menu');
     }
 
     /** Where a cell element lives in the garden. */
@@ -3007,91 +3015,199 @@ export class GardenView extends View {
 private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
 
 
+    /**
+     * A plant's menu, from its dots or a right-click or hold on its seed. Plant
+     * type, seed and hue open their lists in the menu itself, under their rows.
+     */
     private showSeedContextMenu(e: MouseEvent, project: ProjectData) {
-        const rename = (type: string) => type.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const assets = this.app.assetManager;
+        const live = this.live(project);
+        // The type list's stems wear the hue being picked, so it is kept at hand.
+        let typeList: HTMLElement | null = null;
+
         const items: MenuItem[] = [
             {
-                label: project.standby ? 'Wake up' : 'Standby',
+                label: live.standby ? 'Wake up' : 'Standby',
                 onClick: () => {
-                    const live = this.live(project);
-                    live.standby = project.standby = !live.standby;
+                    const target = this.live(project);
+                    target.standby = project.standby = !target.standby;
                     void this.save();
                 },
             },
-            { label: 'Recycle plant', danger: true, onClick: () => this.confirmRecycle(project) },
         ];
-        if (PLANT_TYPES.length > 1) items.push({ label: 'Change plant type', heading: true });
 
-        openMenu(
-            items,
-            { x: e.clientX, y: e.clientY },
-            this.containerEl.ownerDocument,
-            (menu) => {
-                if (PLANT_TYPES.length <= 1) return;
-                const grid = menu.createDiv('plant-type-grid');
-                grid.setAttribute('role', 'group');
-                grid.setAttribute('aria-label', 'Plant type');
-
-                for (const pt of PLANT_TYPES) {
-                    const label = rename(pt);
-                    const tile = grid.createEl('button', {
-                        cls: 'plant-type-tile',
-                        attr: {
-                            type: 'button',
-                            'aria-label': label,
-                            title: label,
-                        },
-                    });
-                    const selected = pt === project.plantType;
-                    tile.toggleClass('is-selected', selected);
-                    tile.setAttribute('aria-pressed', selected ? 'true' : 'false');
-
-                    tile.dataset.plantType = pt;
-                    const preview = tile.createDiv('plant-type-preview');
-                    const emptyAboveGround = project.stem.length === 0 && project.flowers.length === 0;
-                    const parts = this.app.assetManager.getPlantPreview(
-                        pt,
-                        emptyAboveGround ? 3 : project.stem.length,
-                        emptyAboveGround ? 1 : project.flowers.length,
-                    );
-                    preview.style.filter = project.standby ? 'none' : `hue-rotate(${project.hue ?? 0}deg)`;
-                    const step = parts.length > 1 ? Math.min(11, 48 / (parts.length - 1)) : 0;
-                    const previewHeight = parts.length > 7 ? Math.max(9, 14 - (parts.length - 7) * 0.7) : 14;
-                    for (const [level, part] of parts.entries()) {
-                        const img = preview.createEl('img', {
-                            attr: {
-                                src: part.url,
-                                alt: '',
-                                draggable: 'false',
-                            },
+        if (PLANT_TYPES.length > 1) {
+            items.push({
+                label: 'Plant type',
+                sub: plantTypeName(live.plantType),
+                panel: (panel, menu) => {
+                    typeList = panel;
+                    panel.addClass('garden-menu-plant-types');
+                    panel.setCssProps({ '--plant-filter': spriteFilter(live.standby, live.hue ?? 0) });
+                    for (const type of PLANT_TYPES) {
+                        // One stem, the very one the plant's first stem becomes.
+                        const path = assets.getPlantTypeImagePath('stem', type, 0);
+                        const url = path ? assets.getImageUrlSync(path) : null;
+                        const row = menuRow(panel, { label: plantTypeName(type), active: type === live.plantType }, (slot) => {
+                            if (!path || !url) return;
+                            slot.createEl('img', {
+                                cls: 'garden-menu-sprite',
+                                attr: { src: url, alt: '', draggable: 'false', 'data-path': path },
+                            });
                         });
-                        img.dataset.kind = part.kind;
-                        img.dataset.level = String(level);
-                        img.dataset.path = part.path;
-                        img.style.height = `${previewHeight}px`;
-                        img.style.bottom = `${4 + level * step}px`;
-                        img.style.transform = level % 2
-                            ? 'translateX(-50%) scaleX(-1)'
-                            : 'translateX(-50%)';
+                        row.dataset.plantType = type;
+                        row.onclick = (event) => {
+                            event.stopPropagation();
+                            menu.close();
+                            void this.changePlantType(project, type);
+                        };
                     }
+                },
+            });
+        }
 
-                    tile.onclick = (event) => {
-                        event.stopPropagation();
-                        menu.remove();
-                        if (pt === project.plantType) return;
+        const seeds = assets.getSeedChoices();
+        if (seeds.length) {
+            items.push({
+                label: 'Seed',
+                panel: (panel, menu) => {
+                    panel.addClass('garden-menu-seeds');
+                    for (const seed of seeds) {
+                        const row = menuRow(panel, { label: '', active: seed.path === live.seedImagePath }, (slot) => {
+                            slot.createSpan('garden-menu-seed-icon').setCssProps({ '--seed-icon': `url("${seed.iconUrl}")` });
+                        });
+                        row.setAttribute('aria-label', seed.name);
+                        row.dataset.seed = seed.path;
+                        row.onclick = (event) => {
+                            event.stopPropagation();
+                            menu.close();
+                            void this.changeSeed(project, seed.path);
+                        };
+                    }
+                },
+            });
+        }
 
-                        const live = this.live(project);
-                        live.plantType = pt;
-                        for (const layer of ['stem', 'flowers'] as const) {
-                            for (const [index, item] of live[layer].entries()) {
-                                item.imagePath = this.app.assetManager.getPlantTypeImagePath(layer, pt, index) || undefined;
-                            }
-                        }
-                        void this.save();
+        items.push(
+            {
+                label: 'Plant hue',
+                sub: `${live.hue ?? 0}°`,
+                panel: (panel, menu) => {
+                    // The garden shows every hue as it is picked; the store gets it on
+                    // Enter, on leaving the field, on letting go of the slider or on the
+                    // menu closing. Escape puts back the hue the menu opened with.
+                    const start = live.hue ?? 0;
+                    const row = panel.createDiv('garden-menu-hue');
+                    const field = row.createEl('input', {
+                        cls: 'garden-menu-hue-field',
+                        type: 'number',
+                        attr: { min: '0', max: '359', step: '1', inputmode: 'numeric', 'aria-label': 'Hue' },
+                    });
+                    const slider = row.createEl('input', {
+                        cls: 'garden-menu-hue-slider',
+                        type: 'range',
+                        attr: { min: '0', max: '359', step: '1', 'aria-label': 'Hue' },
+                    });
+                    field.value = slider.value = String(start);
+
+                    let shown = start;
+                    let kept = start;
+                    /** Paint `hue` everywhere it shows. The field is left alone while it is being typed in. */
+                    const show = (hue: number, typing = false) => {
+                        shown = hue;
+                        if (!typing) field.value = String(hue);
+                        slider.value = String(hue);
+                        this.paintHue(project, hue);
+                        typeList?.setCssProps({ '--plant-filter': spriteFilter(this.live(project).standby, hue) });
+                        menu.setSub(`${hue}°`);
                     };
-                }
+                    const keep = () => {
+                        if (shown === kept) return;
+                        kept = shown;
+                        const target = this.live(project);
+                        target.hue = project.hue = shown;
+                        void this.app.saveGardenData();
+                    };
+
+                    // A number past either end is held at that end; a half-typed one waits.
+                    field.addEventListener('input', () => {
+                        const typed = Math.round(Number(field.value));
+                        if (field.value === '' || !Number.isFinite(typed)) return;
+                        const hue = Math.min(359, Math.max(0, typed));
+                        show(hue, hue === typed);
+                    });
+                    // The arrows go round the colour wheel, 359 up to 0; with Shift in tens.
+                    field.addEventListener('keydown', (event) => {
+                        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+                        event.preventDefault();
+                        const step = (event.shiftKey ? 10 : 1) * (event.key === 'ArrowUp' ? 1 : -1);
+                        show((((shown + step) % 360) + 360) % 360);
+                    });
+                    field.addEventListener('blur', () => {
+                        field.value = String(shown);
+                        keep();
+                    });
+                    slider.addEventListener('input', () => show(Number(slider.value)));
+                    slider.addEventListener('change', keep);
+                    row.addEventListener('keydown', (event) => {
+                        if (event.key !== 'Enter') return;
+                        event.preventDefault();
+                        menu.close();
+                    });
+
+                    return (cancelled) => {
+                        if (cancelled) show(start);
+                        keep();
+                    };
+                },
             },
+            { label: 'Recycle plant', danger: true, onClick: () => this.confirmRecycle(project) },
         );
+
+        // Opened from the keyboard (Enter on the dots) the click has no point: the menu
+        // opens under the dots and takes the focus, so the arrows work in it.
+        const dots = e.type === 'click' && e.detail === 0 && e.currentTarget instanceof HTMLElement ? e.currentTarget : null;
+        const menu = openMenu(items, dots ?? { x: e.clientX, y: e.clientY }, this.containerEl.ownerDocument);
+        if (dots) menu.querySelector<HTMLElement>('.garden-menu-item')?.focus();
+    }
+
+    /** Give a plant another type: its stems and flowers take that type's sprites, the ones its menu shows. */
+    private async changePlantType(project: ProjectData, type: string) {
+        const live = this.live(project);
+        if (type === live.plantType) return;
+        live.plantType = project.plantType = type;
+        for (const layer of ['stem', 'flowers'] as const) {
+            for (const [index, item] of live[layer].entries()) {
+                item.imagePath = this.app.assetManager.getPlantTypeImagePath(layer, type, index) || undefined;
+            }
+        }
+        await this.save();
+    }
+
+    /** Plant another seed: the sprite on the horizon the plant grows from. */
+    private async changeSeed(project: ProjectData, path: string) {
+        const live = this.live(project);
+        if (path === live.seedImagePath) return;
+        live.seedImagePath = project.seedImagePath = path;
+        await this.save();
+    }
+
+    /**
+     * Show a plant in another hue on what is on screen, its sprite and its board
+     * cards, without drawing the garden again: the hue field previews with this.
+     */
+    private paintHue(project: ProjectData, hue: number) {
+        const standby = this.live(project).standby;
+        for (const wrapper of Array.from(this.contentEl.querySelectorAll<HTMLElement>('.garden-plant-wrapper'))) {
+            if (wrapper.dataset.projectId !== project.id) continue;
+            const sprite = wrapper.querySelector<HTMLElement>('.garden-stem-container');
+            if (sprite) sprite.style.filter = spriteFilter(standby, hue);
+        }
+        for (const column of Array.from(this.contentEl.querySelectorAll<HTMLElement>('.project-column'))) {
+            if (column.dataset.projectId !== project.id) continue;
+            const seed = column.querySelector<HTMLElement>('.seed-content');
+            if (seed) seed.style.filter = `hue-rotate(${hue}deg)`;
+        }
     }
 
     /** The menu on a cell, acting on the whole selection when there is one. */
