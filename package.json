@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run test:security && npm run verify:figma-assets && npm run build:web && npm run build:ext && npm run build:obsidian",
+    "build": "npm run test:security && npm run verify:figma-assets && npm run build:web && npm run build:ext && npm run build:obsidian && npm run test:security",
     "build:web": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

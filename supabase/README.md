@@ -38,6 +38,7 @@ Run them in order in the SQL editor. Each one is safe to run more than once.
 | `migrations/0009_friends.sql` | `profiles.avatar_seed`, `friends()`, plant offers to friends |
 | `migrations/0010_garden_spaces.sql` | garden spaces: rows with `owner_id` instead of `user_id`; ownership is `coalesce(user_id, owner_id)` everywhere |
 | `migrations/0011_avatar_drawing.sql` | `profiles.avatar_drawing` (a drawn picture, format checked by a constraint); `friends()` and `plant_offers_for_me()` send it in place of the seed |
+| `migrations/0012_notifications.sql` | `notifications` (written only by the `notify` function; the recipient reads them and sets `read_at`, nothing else; in the realtime publication), `push_subscriptions` (each device's Web Push subscription, its owner's alone), `save_push_subscription(...)` |
 
 ## Shared gardens (M4)
 
@@ -59,6 +60,30 @@ Saves are compare-and-swap on `rev`. When someone wrote first, the client fetche
 One plant shared by link (`https://cells.garden/#plant=<token>`) into other people's own gardens. The plant keeps its cells in a `plants` row; each garden that holds it keeps a copy in its blob, marked with `sharedPlantId`, so it still works offline. Everyone who has it edits the same row: compare-and-swap on `rev`, merged by cell id, pushed to the others over realtime. Where the plant stands is each garden's own.
 
 In the app: the share icon on a plant's card. The owner gets a link, sees who has the plant, can remove people or stop sharing. Someone who joined can leave. Leaving or stopping keeps every copy.
+
+## Assigning people and notifications
+
+A cell can be assigned to anyone who can see it: the owner and members of its garden, and for a shared plant everyone who has the plant. Their ids sit on the cell (`assignees`) in the garden blob and the plant row, so they sync and merge like any field; their pictures show at the cell's edge. Nothing new in the database is needed for that.
+
+Being assigned by someone else notifies you. The app saves the cell, then calls the Edge Function `notify` (`functions/notify/index.ts`) with the user's token. The function trusts nothing in the request: with the service role it checks that the caller can open the garden, that the saved cell names each recipient, and that each recipient can see the cell (garden owner or member, or on the shared plant). It takes the text from the saved garden and the name from the caller's profile, writes one `notifications` row per person, and sends a Web Push to each of their devices (VAPID, aes128gcm, WebCrypto only, no dependencies). A device whose push service answers 404 or 410 is forgotten. At most 30 notifications per sender per minute, and the same cell from the same person once per ten minutes.
+
+Every build lists notifications in the app (pill menu, Notifications, with the unread count on the pill) and hears new ones over realtime. Only the web app (and the installed PWA) gets pushes. On iPhone and iPad that needs iOS 16.4 or later and the app added to the Home Screen and opened from there: Safari tabs never get pushes. Tapping a notification opens the app on that cell (`#cell=...&project=...&garden=...`).
+
+Until the function is deployed, assigning still works and nobody is notified; until 0012 is run, the app shows no Notifications at all.
+
+### Set up (once)
+
+1. **SQL editor**: run `migrations/0012_notifications.sql`.
+2. **Edge Functions, Secrets** (Project settings, Edge Functions): add
+   - `VAPID_PUBLIC_KEY`: the same value as `VITE_VAPID_PUBLIC_KEY` in the repo's `.env`.
+   - `VAPID_PRIVATE_KEY`: the private half of that pair. It is never in the repo; `node scripts/make-vapid.mjs <file outside the repo>` makes a new pair (then put the new public key in `.env` too, and every device turns notifications on again).
+   - `VAPID_SUBJECT`: `mailto:` and an address that reads mail, for push services to reach you.
+
+   `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by Supabase.
+3. **Deploy `notify`**: Edge Functions, Deploy a new function, Via editor, name it `notify`, paste all of `functions/notify/index.ts`, deploy. Or with the CLI: `npx supabase functions deploy notify --project-ref nsfpvbuqpuxyhisublfy`. It has no imports. Leave "Verify JWT" on; if calls fail with 401 after the project moves to the new JWT signing keys, turn it off: the function checks the token itself.
+4. **Try it on an iPhone** (iOS 16.4+): open `https://cells.garden` (or `dev.cells.garden`) in Safari, Share, Add to Home Screen, open it from the Home Screen and sign in (the Home Screen app keeps its own sign-in). Settings, Notifications, Turn on, Allow. From another account in a garden you both share, right-click (or hold) a cell, Assign, pick the iPhone's account. Lock the phone: the notification arrives with the cell's text, the icon shows the unread count, and tapping it opens the app on the cell. Opening Notifications in the pill menu and tapping it (or Mark all read) clears the count.
+
+If nothing arrives: Edge Functions, `notify`, Logs shows what the function did (`push refused` with the push service's status). `select * from push_subscriptions` shows the devices; `select * from notifications order by created_at desc` the rows.
 
 ## Sync model
 

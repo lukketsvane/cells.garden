@@ -6,9 +6,13 @@
  * their own garden and shared ones from the pill menu.
  */
 import './shim';
-import { GardenApp } from './app';
+import { GardenApp, type Account } from './app';
+import { assignNotice } from './assign';
 import { AuthPill, type AuthOptions } from './auth';
 import type { MenuItem } from './menu';
+import { NotificationCenter, NotificationsModal, sendAssignNotice } from './notifications';
+import { cellTargetFromHash, type CellTarget } from './notify-core';
+import { People } from './people';
 import { PlantSync } from './plants';
 import { GardenQuestionModal, NewSpaceModal, ShareGardenModal } from './share';
 import { SharePlantModal } from './share-plant';
@@ -47,6 +51,7 @@ import {
 import { createSupabase, SupabaseStore } from './supabase';
 import { installTouchAdapter } from './touch';
 import { BoardToggleButton, GardenFilesButton, openGardenFiles } from './transfer';
+import { forgetDevice, listenForOpenedCells, setAppBadge, syncPush } from './web-push';
 
 declare global {
     /** The mounted app, handy in the console while developing. */
@@ -79,6 +84,16 @@ function stashInviteFromUrl() {
     history.replaceState(null, '', location.pathname + location.search);
 }
 
+/**
+ * A notification's cell from the address (`#cell=`, notify-core.ts), taken
+ * out of it at once so a reload does not open it again.
+ */
+function takeCellFromUrl(): CellTarget | null {
+    const target = cellTargetFromHash(location.hash);
+    if (target) history.replaceState(null, '', location.pathname + location.search);
+    return target;
+}
+
 function peekPendingJoin(): { token: string; kind: InviteKind } | null {
     const pending = readJson<{ token?: string; kind?: InviteKind; at?: number }>(PENDING_JOIN_KEY);
     if (!pending?.token || typeof pending.at !== 'number') return null;
@@ -102,6 +117,8 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
     // Extension pages never receive a link, so only the web app looks.
     const inExtension = !!(window as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
     if (!inExtension) stashInviteFromUrl();
+    /** A notification's cell to open once someone is signed in and their garden is on screen. */
+    let pendingCell: CellTarget | null = inExtension ? null : takeCellFromUrl();
 
     // Always start local so the garden shows instantly, signed in or not.
     const anonymous = new LocalStore();
@@ -138,12 +155,59 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
     options.onClient?.(supabase);
     const pill = new AuthPill(supabase, host, options);
     app.onSyncState = (state) => pill.setSyncState(state);
+    app.accounts = true;
 
     let currentUser: string | null = null;
     /** The shared garden on screen, or null for the user's own. */
     let shared: OpenGarden | null = null;
     /** Keeps collaborative plants in step while someone is signed in. */
     let plants: PlantSync | null = null;
+    /** Who people are and who can see what, while someone is signed in. */
+    let people: People | null = null;
+    /** The signed-in user's notifications. */
+    let center: NotificationCenter | null = null;
+    /** The row id of the signed-in user's own garden, once asked; it never changes. */
+    let ownId: string | null = null;
+
+    const ownGardenRow = async (uid: string): Promise<string | null> => {
+        ownId ??= (await ownGardenId(supabase, uid).catch(() => null))?.id ?? null;
+        return ownId;
+    };
+
+    /** The row of the garden on screen: the shared one, or the user's own. */
+    const openGardenRow = async (uid: string): Promise<string | null> => shared?.id ?? ownGardenRow(uid);
+
+    const makeAccount = (uid: string, directory: People): Account => ({
+        userId: uid,
+        person: (id) => directory.get(id) ?? (id === uid ? directory.me() : undefined),
+        peopleFor: (project) => {
+            const gardenId = shared?.id ?? ownId;
+            return gardenId ? directory.cached(gardenId, project.sharedPlantId ?? null) : null;
+        },
+        loadPeopleFor: async (project) => directory.load(await openGardenRow(uid), project.sharedPlantId ?? null),
+        assigned: (project, item, added) => {
+            void openGardenRow(uid).then((gardenId) => {
+                const notice = assignNotice({
+                    me: uid,
+                    added,
+                    gardenId,
+                    plantId: project.sharedPlantId,
+                    projectId: project.id,
+                    itemId: item.id,
+                    text: item.content,
+                    where: project.seed || project.name,
+                });
+                if (notice) sendAssignNotice(supabase, notice);
+            });
+        },
+    });
+
+    /** Who can see the garden now on screen, asked before the first cell menu needs it. */
+    const knowWhoSees = (uid: string) => {
+        const directory = people;
+        if (!directory) return;
+        void openGardenRow(uid).then((gardenId) => (gardenId ? directory.load(gardenId, null) : null)).catch(() => {});
+    };
 
     const openGarden = async (uid: string, target: OpenGarden | null): Promise<void> => {
         shared = target;
@@ -154,6 +218,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
                 await app.useStore(new SupabaseStore(supabase, uid, target.id), {
                     mirror: new LocalStore(`${LOCAL_KEY}/garden/${target.id}`),
                 });
+                knowWhoSees(uid);
             } catch (e) {
                 if (!(e instanceof GardenGoneError)) throw e;
                 notify(host, `You no longer have access to ${target.name}. Showing your garden.`);
@@ -170,6 +235,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
             seed,
             onSeedUsed: () => claimAnonymousGarden(uid),
         });
+        knowWhoSees(uid);
     };
 
     const fail = (e: unknown) => {
@@ -189,6 +255,61 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         if (!uid || !shared) return;
         notify(host, `You no longer have access to ${shared.name}. Showing your garden.`);
         openGarden(uid, null).catch(fail);
+    };
+
+    /**
+     * Open a notification's cell: its garden first, when another one is on
+     * screen. A cell on a shared plant alone is in the user's own garden, where
+     * everyone who has the plant keeps it.
+     */
+    const openCell = async (target: CellTarget): Promise<void> => {
+        const uid = currentUser;
+        if (!uid) {
+            pendingCell = target;
+            pill.signIn('Sign in to open that cell.');
+            return;
+        }
+        try {
+            let want: OpenGarden | null = shared;
+            if (!target.gardenId) {
+                want = null;
+            } else if (target.gardenId !== shared?.id) {
+                if ((await ownGardenRow(uid)) === target.gardenId) {
+                    want = null;
+                } else {
+                    const [gardens, spaces] = await Promise.all([listSharedGardens(supabase, uid), listOwnSpaces(supabase, uid)]);
+                    const found = [...spaces, ...gardens].find(g => g.id === target.gardenId);
+                    if (!found) {
+                        notify(host, 'That garden is not shared with you anymore.');
+                        return;
+                    }
+                    want = { id: found.id, name: found.name };
+                }
+            }
+            if ((want?.id ?? null) !== (shared?.id ?? null)) await openGarden(uid, want);
+            if (!(await app.view?.revealCell(target))) notify(host, 'That cell is not there anymore.');
+        } catch (e) {
+            fail(e);
+        }
+    };
+    // A tapped notification while the app is open (web-push.ts), and a cell's link followed in it.
+    listenForOpenedCells((target) => void openCell(target));
+    if (!inExtension) {
+        window.addEventListener('hashchange', () => {
+            const target = takeCellFromUrl();
+            if (target) void openCell(target);
+        });
+    }
+
+    /** The count on the pill and on the app's icon. */
+    const showUnread = () => {
+        const unread = center?.unread ?? 0;
+        pill.setUnread(unread);
+        setAppBadge(unread);
+    };
+
+    pill.beforeSignOut = async () => {
+        if (currentUser) await forgetDevice(supabase, currentUser);
     };
 
     /** Use a waiting invite, if there is one. Returns the garden it opened. */
@@ -286,7 +407,15 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
             },
             {
                 label: 'Settings',
-                onClick: () => new SettingsModal(uid ? { client: supabase, userId: uid, onAvatar: (avatar) => pill.setAvatar(avatar) } : null, app).open(),
+                onClick: () => new SettingsModal(uid ? {
+                    client: supabase,
+                    userId: uid,
+                    onAvatar: (avatar) => {
+                        pill.setAvatar(avatar);
+                        people?.updateMe({ avatar });
+                    },
+                    onName: (name) => people?.updateMe({ name }),
+                } : null, app).open(),
             },
         ];
         if (!uid || !(await sharingAvailable(supabase))) return common;
@@ -308,6 +437,14 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
             }
         }
         const offers = await listPlantOffers(supabase).catch(() => []);
+        const inbox = center;
+        if (inbox?.available) {
+            items.push({
+                label: 'Notifications',
+                sub: inbox.unread ? `${inbox.unread} new` : undefined,
+                onClick: () => new NotificationsModal(inbox, (id) => people?.get(id), (target) => void openCell(target)).open(),
+            });
+        }
         items.push({
             label: 'Friends',
             sub: offers.length ? `${offers.length} new` : undefined,
@@ -389,6 +526,10 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         if (!uid && !askedToSignIn && peekPendingJoin()) {
             askedToSignIn = true;
             window.setTimeout(() => pill.signIn('Sign in to open the garden you were invited to.'), 0);
+        } else if (!uid && !askedToSignIn && pendingCell) {
+            // A notification opened the app, and nobody is signed in here.
+            askedToSignIn = true;
+            window.setTimeout(() => pill.signIn('Sign in to open that cell.'), 0);
         }
         if (uid === currentUser) return; // token refresh, same user
         currentUser = uid;
@@ -396,9 +537,23 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         window.setTimeout(() => {
             plants?.stop();
             plants = null;
+            center?.stop();
+            center = null;
+            people = null;
+            ownId = null;
+            app.account = null;
+            showUnread();
             if (uid) {
                 const sync = new PlantSync(supabase, uid, app);
                 plants = sync;
+                // The people on cells: known from the last visit at once, brought up to date below.
+                const directory = new People(supabase, uid, () => app.view?.refreshAssignees());
+                people = directory;
+                app.account = makeAccount(uid, directory);
+                app.view?.refreshAssignees();
+                const inbox = new NotificationCenter(supabase, uid, (n) => notify(host, n.title));
+                center = inbox;
+                inbox.watch(showUnread);
                 void (async () => {
                     const joined = await joinPending(uid);
                     const remembered = joined ?? readJson<OpenGarden>(activeKey(uid));
@@ -406,6 +561,14 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
                     sync.start();
                     await joinPendingPlant(uid, sync);
                     getProfile(supabase, uid).then((p) => pill.setAvatar(p.avatar)).catch(() => {});
+                    void directory.refresh();
+                    void inbox.start();
+                    void syncPush(supabase, uid).catch(() => {});
+                    if (pendingCell) {
+                        const target = pendingCell;
+                        pendingCell = null;
+                        await openCell(target);
+                    }
                     const offers = await listPlantOffers(supabase).catch(() => []);
                     if (offers.length === 1) notify(host, `${offers[0].fromName} sent you ${offers[0].seed}. Open Friends to plant it.`);
                     else if (offers.length > 1) notify(host, `${offers.length} plants are waiting for you in Friends.`);

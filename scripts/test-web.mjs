@@ -17,7 +17,7 @@
 
 import assert from 'node:assert/strict';
 import { execSync, spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -59,6 +59,12 @@ function watchErrors(page, label, errors) {
         if (isBlockedNetworkNoise(m.text(), m.location()?.url)) return;
         errors.push(`${label} console: ${m.text()}`);
     });
+}
+
+/** A cell's menu: in a build with accounts, Assign follows the highlight. */
+async function cellMenu(page, highlight) {
+    const accounts = (await page.$('.auth-pill')) !== null;
+    return ['Delete', highlight, ...(accounts ? ['Assign'] : []), 'Convert to stem'];
 }
 
 // The zone icons are pixel art: crisp edges, no stroke, and a whole number of
@@ -689,7 +695,7 @@ async function scenario(browser, errors) {
     await page.waitForSelector('.garden-context-menu');
     const chipMenu = await page.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
     // The flower was highlighted from its menu on the board, earlier.
-    assert.deepEqual(chipMenu, ['Delete', 'Remove highlight', 'Convert to stem'], 'the chip should open its cell\'s menu');
+    assert.deepEqual(chipMenu, await cellMenu(page, 'Remove highlight'), 'the chip should open its cell\'s menu');
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !document.querySelector('.garden-context-menu'));
     const afterMenu = await chipState(page);
@@ -1251,7 +1257,7 @@ async function scenario(browser, errors) {
     await holdAt('.garden-peek-chip.is-visible');
     await mpage.waitForSelector('.garden-context-menu', { timeout: 3000 });
     const phoneChipMenu = await mpage.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
-    assert.deepEqual(phoneChipMenu, ['Delete', 'Highlight', 'Convert to stem'], 'holding the chip should open its cell\'s menu');
+    assert.deepEqual(phoneChipMenu, await cellMenu(mpage, 'Highlight'), 'holding the chip should open its cell\'s menu');
     const phoneEmpty = await emptySpot(mpage);
     assert(phoneEmpty, 'no empty garden to tap');
     await touch('touchStart', phoneEmpty.x, phoneEmpty.y);
@@ -1266,7 +1272,7 @@ async function scenario(browser, errors) {
     const heldChip = await chipState(mpage);
     const heldMenu = await mpage.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
     assert(heldChip.count === 1 && heldChip.pinned && heldChip.id === phoneFlower.itemId, `holding a part should pin its chip: ${JSON.stringify(heldChip)}`);
-    assert.deepEqual(heldMenu, ['Delete', 'Highlight', 'Convert to stem'], 'holding a part should open its cell\'s menu');
+    assert.deepEqual(heldMenu, await cellMenu(mpage, 'Highlight'), 'holding a part should open its cell\'s menu');
     await touch('touchStart', phoneEmpty.x, phoneEmpty.y);
     await touch('touchEnd', phoneEmpty.x, phoneEmpty.y);
     await peekGone(mpage, 'a tap on the empty garden after a hold');
@@ -1353,6 +1359,377 @@ async function scenario(browser, errors) {
 }
 
 // ---------------------------------------------------------------------------
+// Signed in, against a stand-in for Supabase
+// ---------------------------------------------------------------------------
+// Every request to the Supabase host is answered here and never goes out: a
+// session in storage, a garden whose cells have people on them, the people,
+// two notifications and the notify function's door. Realtime is a socket that
+// never answers. Then: the pictures on the board and on the chip, the Assign
+// panel and what it saves and sends, the Notifications list and where a tap on
+// one leads, a cell's address, and the Notifications row in Settings on a
+// desktop and on an iPhone that has not added the app to its Home Screen.
+
+const ME = '0b9c3a52-6f1e-4c7a-9d10-000000000001';
+const ANA = '0b9c3a52-6f1e-4c7a-9d10-00000000000a';
+const BO = '0b9c3a52-6f1e-4c7a-9d10-00000000000b';
+const CY = '0b9c3a52-6f1e-4c7a-9d10-00000000000c';
+const DEE = '0b9c3a52-6f1e-4c7a-9d10-00000000000d';
+/** Someone who left: nobody knows them any more. */
+const GONE = '0b9c3a52-6f1e-4c7a-9d10-0000000000ff';
+const OWN_GARDEN = '5d1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b';
+const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+
+function supabaseUrl() {
+    const env = existsSync(join(ROOT, '.env')) ? readFileSync(join(ROOT, '.env'), 'utf8') : '';
+    return /^VITE_SUPABASE_URL=(.*)$/m.exec(env)?.[1]?.trim() ?? '';
+}
+
+function accountGarden() {
+    const cell = (id, content, assignees) => ({ id, content, isComplete: false, ...(assignees ? { assignees } : {}) });
+    const plant = (id, seed, order, zones) => ({ id, name: seed, seed, standby: false, hue: 0, order, plantType: 'plant_1', flowers: [], stem: [], roots: [], minerals: [], ...zones });
+    return {
+        version: 1,
+        updatedAt: '2026-09-23T10:00:00.000Z',
+        settings: {},
+        projects: [
+            plant('proj_a', 'Tomatoes', 0, {
+                flowers: [cell('f_one', 'Water the tomatoes', [ANA])],
+                stem: [
+                    cell('s_four', 'Build the trellis', [ANA, BO, CY, DEE]),
+                    cell('s_plain', 'Build the trellis'),
+                    cell('s_long', 'Tie the vines to the trellis along the south fence before the rain comes', [BO, CY]),
+                ],
+                roots: [cell('r_gone', 'Ask about the soil', [GONE])],
+                minerals: [cell('m_me', 'Buy stakes', [ME])],
+            }),
+            plant('proj_b', 'Beans', 1, { stem: [cell('s_free', 'Plant the beans')] }),
+        ],
+    };
+}
+
+/** A token shaped like Supabase's; nothing checks its signature here. */
+function fakeJwt(claims) {
+    const part = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+    return `${part({ alg: 'HS256', typ: 'JWT' })}.${part(claims)}.stand-in`;
+}
+
+async function standInSupabase(ctx) {
+    const exp = Math.floor(Date.now() / 1000) + 30 * 24 * 3600;
+    const session = {
+        access_token: fakeJwt({ sub: ME, role: 'authenticated', aud: 'authenticated', exp, email: 'iver@example.com' }),
+        token_type: 'bearer',
+        expires_in: 30 * 24 * 3600,
+        expires_at: exp,
+        refresh_token: 'stand-in',
+        user: { id: ME, aud: 'authenticated', role: 'authenticated', email: 'iver@example.com', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' },
+    };
+    const profiles = {
+        [ME]: { id: ME, display_name: 'Iver', avatar_seed: 'iver-seed', avatar_drawing: null },
+        [ANA]: { id: ANA, display_name: 'Ana', avatar_seed: 'ana-seed', avatar_drawing: null },
+        [BO]: { id: BO, display_name: 'Bo', avatar_seed: 'bo-seed', avatar_drawing: 'd1:e' + '0000000' + '0055500' + '0555550' + '0505050' + '0555550' + '0055500' + '0000000' },
+        [CY]: { id: CY, display_name: 'Cy', avatar_seed: 'cy-seed', avatar_drawing: null },
+        [DEE]: { id: DEE, display_name: 'Dee', avatar_seed: 'dee-seed', avatar_drawing: null },
+    };
+    const ago = (minutes) => new Date(Date.now() - minutes * 60_000).toISOString();
+    const state = {
+        garden: accountGarden(),
+        rev: 1,
+        saves: 0,
+        notified: [],
+        marked: [],
+        unknown: [],
+        notifications: [
+            { id: 'aaaaaaaa-0000-4000-8000-000000000001', actor_id: ANA, garden_id: OWN_GARDEN, plant_id: null, project_id: 'proj_b', item_id: 's_free',
+                title: 'Ana assigned you', body: 'Plant the beans · Beans', created_at: ago(5), read_at: null },
+            { id: 'aaaaaaaa-0000-4000-8000-000000000002', actor_id: BO, garden_id: OWN_GARDEN, plant_id: null, project_id: 'proj_a', item_id: 'f_one',
+                title: 'Bo assigned you', body: 'Water the tomatoes · Tomatoes', created_at: ago(180), read_at: ago(120) },
+        ],
+    };
+    const host = new URL(supabaseUrl()).host;
+    const storageKey = `cells.garden/auth/sb-${host.split('.')[0]}-auth-token`;
+    await ctx.addInitScript(({ key, value }) => {
+        if (!localStorage.getItem(key)) localStorage.setItem(key, value);
+        localStorage.setItem('cells.garden/board', localStorage.getItem('cells.garden/board') ?? 'shown');
+    }, { key: storageKey, value: JSON.stringify(session) });
+
+    // Realtime: a socket that opens and never answers.
+    await ctx.routeWebSocket((url) => url.host === host, () => {});
+    await ctx.route((url) => url.host === host, async (route) => {
+        const req = route.request();
+        const url = new URL(req.url());
+        const origin = req.headers().origin ?? '*';
+        const headers = {
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+            'Access-Control-Expose-Headers': 'Content-Range',
+            'Content-Type': 'application/json',
+        };
+        const json = (body, status = 200) => route.fulfill({ status, headers, body: JSON.stringify(body) });
+        if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
+        const path = url.pathname;
+        const select = url.searchParams.get('select') ?? '';
+        const eq = (name) => url.searchParams.get(name)?.replace(/^eq\./, '') ?? null;
+
+        if (path === '/functions/v1/notify') {
+            state.notified.push(JSON.parse(req.postData() ?? '{}'));
+            return json({ notified: 1, pushed: 0 });
+        }
+        if (path === '/auth/v1/token') return json(session);
+        if (path === '/rest/v1/gardens') {
+            if (req.method() === 'PATCH') {
+                state.garden = JSON.parse(req.postData() ?? '{}').data;
+                state.rev += 1;
+                state.saves += 1;
+                return json([{ rev: state.rev }]);
+            }
+            if (select === 'id,data,updated_at,rev') return json([{ id: OWN_GARDEN, data: state.garden, updated_at: state.garden.updatedAt, rev: state.rev }]);
+            if (select === 'id,name') return json(eq('user_id') === ME ? [{ id: OWN_GARDEN, name: 'My garden' }] : []);
+            if (select === 'user_id,owner_id') return json(eq('id') === OWN_GARDEN ? [{ user_id: ME, owner_id: null }] : []);
+        }
+        if (path === '/rest/v1/garden_members') {
+            if (select.startsWith('user_id,created_at,profiles')) {
+                return json(eq('garden_id') === OWN_GARDEN ? [ANA, BO, CY, DEE].map((id, i) => ({ user_id: id, created_at: ago(1000 - i), profiles: profiles[id] })) : []);
+            }
+            return json([]);
+        }
+        if (path === '/rest/v1/profiles') return json(profiles[eq('id')] ? [profiles[eq('id')]] : []);
+        if (path === '/rest/v1/rpc/friends') {
+            return json([ANA, BO, CY, DEE].map((id) => ({ user_id: id, display_name: profiles[id].display_name, avatar_seed: profiles[id].avatar_drawing ?? profiles[id].avatar_seed, gardens: 1, plants: 0 })));
+        }
+        if (path === '/rest/v1/notifications') {
+            if (req.method() === 'PATCH') {
+                const ids = /^in\.\((.*)\)$/.exec(url.searchParams.get('id') ?? '')?.[1]?.split(',') ?? [];
+                const { read_at } = JSON.parse(req.postData() ?? '{}');
+                state.marked.push(...ids);
+                for (const n of state.notifications) if (ids.includes(n.id)) n.read_at = read_at;
+                return route.fulfill({ status: 204, headers });
+            }
+            return json(state.notifications);
+        }
+        if (req.method() === 'GET' || path.startsWith('/rest/v1/rpc/')) {
+            if (!/^\/rest\/v1\/(push_subscriptions|plant_offers|rpc\/plant_offers_for_me)/.test(path)) state.unknown.push(`${req.method()} ${path}?${url.search}`);
+            return json([]);
+        }
+        state.unknown.push(`${req.method()} ${path}`);
+        return json({});
+    });
+    return state;
+}
+
+/** Where a cell's text ends and its pictures begin, and what the pictures say. */
+function assigneeGeometry(page, ids) {
+    return page.evaluate((ids) => Object.fromEntries(ids.map((id) => {
+        const el = [...document.querySelectorAll('.kanban-scroll-container .garden-item')].find((c) => c.dataset.id === id);
+        if (!el) return [id, null];
+        const stack = el.querySelector(':scope > .garden-assignees');
+        const text = [...el.childNodes].find((n) => n.nodeType === Node.TEXT_NODE);
+        const range = document.createRange();
+        if (text) range.selectNodeContents(text);
+        const textRight = text ? Math.max(...[...range.getClientRects()].map((r) => r.right)) : 0;
+        const box = el.getBoundingClientRect();
+        const s = stack?.getBoundingClientRect();
+        return [id, {
+            height: Math.round(box.height),
+            pictures: stack ? stack.querySelectorAll('svg').length : 0,
+            more: stack?.querySelector('.garden-assignees-more')?.dataset.more ?? null,
+            label: stack?.getAttribute('aria-label') ?? null,
+            text: el.textContent,
+            textRight,
+            stack: s ? { left: s.left, right: s.right, top: s.top, bottom: s.bottom, width: s.width } : null,
+            cell: { left: box.left, right: box.right, top: box.top, bottom: box.bottom },
+        }];
+    })), ids);
+}
+
+function checkAssignees(geometry, label) {
+    const { f_one: one, s_four: four, s_plain: plain, s_long: long, r_gone: gone, m_me: me } = geometry;
+    assert(one && four && plain && long && gone && me, `${label}: cells missing ${JSON.stringify(geometry)}`);
+    assert(one.pictures === 1 && one.label === 'Assigned to Ana', `${label}: one person: ${JSON.stringify(one)}`);
+    assert(four.pictures === 3 && four.more === '+1' && four.label === 'Assigned to Ana, Bo, Cy and Dee', `${label}: four people: ${JSON.stringify(four)}`);
+    assert(gone.pictures === 1 && gone.label === 'Assigned to someone', `${label}: someone who left: ${JSON.stringify(gone)}`);
+    assert(me.label === 'Assigned to you', `${label}: yourself: ${JSON.stringify(me)}`);
+    assert(plain.pictures === 0 && plain.stack === null, `${label}: a cell with nobody has no pictures`);
+    assert(four.height === plain.height, `${label}: pictures must not make a cell taller: ${four.height} vs ${plain.height}`);
+    assert(four.text === 'Build the trellis', `${label}: the count must not be part of the cell's text: ${JSON.stringify(four.text)}`);
+    for (const [id, g] of Object.entries(geometry)) {
+        if (!g.stack) continue;
+        assert(g.textRight <= g.stack.left + 0.5, `${label}: ${id}'s text runs under its pictures: ${JSON.stringify(g)}`);
+        assert(g.stack.right <= g.cell.right && g.stack.top >= g.cell.top && g.stack.bottom <= g.cell.bottom, `${label}: ${id}'s pictures leave the cell: ${JSON.stringify(g)}`);
+    }
+}
+
+const rowOf = (label) => `.garden-context-menu .garden-menu-item:has(.garden-menu-label:text-is("${label}"))`;
+
+async function accountScenario(browser, errors) {
+    // --- Desktop ------------------------------------------------------------------
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx.grantPermissions(['notifications'], { origin: new URL(BASE).origin });
+    const state = await standInSupabase(ctx);
+    const page = await ctx.newPage();
+    watchErrors(page, 'account', errors);
+    await page.goto(BASE, { waitUntil: 'load' });
+    await page.waitForSelector('.kanban-scroll-container .garden-item[data-id="s_four"] .garden-assignees');
+    // The directory arrives a moment after the garden: the names, then the pictures.
+    await page.waitForFunction(() => document.querySelector('.garden-item[data-id="s_four"] .garden-assignees')?.getAttribute('aria-label') === 'Assigned to Ana, Bo, Cy and Dee');
+    const desk = await assigneeGeometry(page, ['f_one', 's_four', 's_plain', 's_long', 'r_gone', 'm_me', 's_free']);
+    console.log('assignees on the board:', JSON.stringify(Object.fromEntries(Object.entries(desk).map(([id, g]) => [id, g && { pictures: g.pictures, more: g.more, height: g.height }]))));
+    checkAssignees(desk, 'desktop');
+    // Each picture is cut to its own circle: with one id for all, hiding the first hid them all.
+    const clipIds = await page.$$eval('clipPath', (els) => els.map((e) => e.id));
+    assert(clipIds.length > 5 && new Set(clipIds).size === clipIds.length, `pictures share a clip id: ${JSON.stringify(clipIds)}`);
+    await shot(page, '10-assignees-desktop.png');
+
+    // The pill counts the unread notification.
+    await page.waitForSelector('.auth-pill .auth-pill-badge');
+    assert.equal(await page.textContent('.auth-pill .auth-pill-badge'), '1', 'one unread notification on the pill');
+
+    // Assign: everyone who can see the cell, you first.
+    await page.click('.kanban-scroll-container .garden-item[data-id="s_free"]', { button: 'right' });
+    await page.waitForSelector(rowOf('Assign'));
+    assert(await page.isEnabled(rowOf('Assign')), 'Assign is open in a shared garden');
+    await page.click(rowOf('Assign'));
+    await page.waitForSelector('.garden-assign-panel.is-open .garden-assign-person');
+    const people = await page.$$eval('.garden-assign-panel .garden-assign-person', (els) => els.map((e) => [
+        e.querySelector('.garden-menu-label').textContent, e.querySelector('.garden-menu-sub')?.textContent ?? '', e.classList.contains('is-active'), !!e.querySelector('svg'),
+    ]));
+    assert.deepEqual(people, [['Iver', 'you', false, true], ['Ana', '', false, true], ['Bo', '', false, true], ['Cy', '', false, true], ['Dee', '', false, true]],
+        'the Assign panel lists everyone who can see the cell');
+    await shot(page, '11-assign-panel.png');
+    const savesBefore = state.saves;
+    await page.click(`.garden-assign-person[data-user-id="${ANA}"]`);
+    await page.waitForFunction(() => document.querySelector('.kanban-scroll-container .garden-item[data-id="s_free"] .garden-assignees')?.getAttribute('aria-label') === 'Assigned to Ana');
+    assert(await page.$eval(`.garden-assign-person[data-user-id="${ANA}"]`, (e) => e.classList.contains('is-active') && e.textContent.includes('✓')), 'Ana is checked');
+    for (let i = 0; i < 50 && state.notified.length === 0; i++) await page.waitForTimeout(100);
+    assert.deepEqual(state.notified, [{ recipients: [ANA], gardenId: OWN_GARDEN, projectId: 'proj_b', itemId: 's_free', text: 'Plant the beans', where: 'Beans' }],
+        'assigning Ana tells her, once');
+    assert(state.saves > savesBefore && state.garden.projects[1].stem[0].assignees?.[0] === ANA, 'the assignment is saved at once');
+    // Yourself: saved, nobody told.
+    await page.click(`.garden-assign-person[data-user-id="${ME}"]`);
+    await page.waitForFunction(() => document.querySelector('.kanban-scroll-container .garden-item[data-id="s_free"] .garden-assignees')?.getAttribute('aria-label') === 'Assigned to Ana and you');
+    await page.waitForTimeout(600);
+    assert.equal(state.notified.length, 1, 'assigning yourself tells nobody');
+    // Ana again: taken off, nobody told.
+    await page.click(`.garden-assign-person[data-user-id="${ANA}"]`);
+    await page.waitForFunction(() => document.querySelector('.kanban-scroll-container .garden-item[data-id="s_free"] .garden-assignees')?.getAttribute('aria-label') === 'Assigned to you');
+    await page.waitForTimeout(400);
+    assert.equal(state.notified.length, 1, 'taking someone off tells nobody');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.garden-context-menu'));
+
+    // Notifications: the list, and a tap opens the cell.
+    await page.click('.auth-pill');
+    await page.waitForSelector(rowOf('Notifications'));
+    assert.equal(await page.textContent(`${rowOf('Notifications')} .garden-menu-sub`), '1 new');
+    await page.click(rowOf('Notifications'));
+    await page.waitForSelector('.modal .garden-notification');
+    const list = await page.$$eval('.modal .garden-notification', (els) => els.map((e) => [
+        e.querySelector('.garden-notification-title').textContent, e.querySelector('.garden-notification-body').textContent, e.classList.contains('is-unread'),
+        e.querySelector('.garden-notification-time').textContent,
+    ]));
+    assert.deepEqual(list, [['Ana assigned you', 'Plant the beans · Beans', true, '5m'], ['Bo assigned you', 'Water the tomatoes · Tomatoes', false, '3h']]);
+    await shot(page, '12-notifications.png');
+    await page.click('.modal .garden-notification.is-unread');
+    await page.waitForFunction(() => !document.querySelector('.modal-container'));
+    await page.waitForSelector('.kanban-scroll-container .garden-item[data-id="s_free"].is-selected');
+    assert.deepEqual(state.marked, ['aaaaaaaa-0000-4000-8000-000000000001'], 'the tapped notification is marked read');
+    await page.waitForFunction(() => !document.querySelector('.auth-pill .auth-pill-badge'));
+
+    // A cell's address, followed with the app open, and at a cold start.
+    await page.evaluate(() => { location.hash = '#cell=m_me&project=proj_a'; });
+    await page.waitForSelector('.kanban-scroll-container .garden-item[data-id="m_me"].is-selected');
+    assert.equal(new URL(page.url()).hash, '', 'the cell leaves the address');
+    const cold = await ctx.newPage();
+    watchErrors(cold, 'account cold start', errors);
+    await cold.goto(`${BASE}#cell=r_gone&project=proj_a`, { waitUntil: 'load' });
+    await cold.waitForSelector('.kanban-scroll-container .garden-item[data-id="r_gone"].is-selected', { timeout: 10000 });
+    assert.equal(new URL(cold.url()).hash, '', 'the cell leaves the address at a cold start too');
+    await cold.close();
+
+    // With the board hidden, the cell's chip over the garden wears the same pictures.
+    await page.click('.garden-board-toggle');
+    await page.waitForFunction(() => document.documentElement.dataset.board === 'hidden');
+    await page.evaluate(() => { location.hash = '#cell=s_four&project=proj_a'; });
+    await page.waitForSelector('.garden-peek-chip.is-visible .garden-assignees');
+    const chip = await page.$eval('.garden-peek-chip.is-visible', (el) => ({
+        pictures: el.querySelectorAll('.garden-assignees svg').length,
+        more: el.querySelector('.garden-assignees-more')?.dataset.more,
+        text: el.querySelector('.garden-peek-text')?.textContent,
+        whole: el.textContent,
+    }));
+    assert.deepEqual(chip, { pictures: 3, more: '+1', text: 'Build the trellis', whole: 'Build the trellis' }, 'the chip shows the cell\'s people');
+    await shot(page, '13-chip-assignees.png');
+    await page.keyboard.press('Escape');
+    await page.click('.garden-board-toggle');
+
+    // A push, as a push service delivers it: the worker shows it with the cell's address.
+    const cdp = await ctx.newCDPSession(page);
+    const registrations = [];
+    cdp.on('ServiceWorker.workerRegistrationUpdated', (e) => registrations.push(...e.registrations));
+    await cdp.send('ServiceWorker.enable');
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    for (let i = 0; i < 50 && !registrations.some((r) => !r.isDeleted); i++) await page.waitForTimeout(100);
+    const registration = registrations.find((r) => !r.isDeleted);
+    assert(registration, 'no service worker registration to push to');
+    await cdp.send('ServiceWorker.deliverPushMessage', {
+        origin: new URL(BASE).origin,
+        registrationId: registration.registrationId,
+        data: JSON.stringify({ title: 'Ana assigned you', body: 'Plant the beans · Beans', url: './#cell=s_free&project=proj_b', tag: 'cell:s_free', badge: 2 }),
+    });
+    let shown = [];
+    for (let i = 0; i < 50 && shown.length === 0; i++) {
+        await page.waitForTimeout(100);
+        shown = await page.evaluate(async () => {
+            const reg = await navigator.serviceWorker.ready;
+            return (await reg.getNotifications()).map((n) => ({ title: n.title, body: n.body, tag: n.tag, url: n.data?.url, icon: n.icon }));
+        });
+    }
+    assert.equal(shown.length, 1, 'the worker shows every push');
+    assert.equal(shown[0].title, 'Ana assigned you');
+    assert.equal(shown[0].body, 'Plant the beans · Beans');
+    assert.equal(shown[0].tag, 'cell:s_free');
+    assert.equal(shown[0].url, `${BASE}#cell=s_free&project=proj_b`, 'the push opens the cell, on this origin');
+    console.log('push shown by the worker:', shown[0]);
+    // The worker's message when that notification is tapped with the app open.
+    await page.evaluate((url) => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { type: 'cells-garden:open', url } })), shown[0].url);
+    await page.waitForSelector('.kanban-scroll-container .garden-item[data-id="s_free"].is-selected');
+
+    // Settings: notifications can be turned on here.
+    await page.click('.auth-pill');
+    await page.click(rowOf('Settings'));
+    await page.waitForSelector('.garden-push-setting[data-state]');
+    const deskPush = await page.$eval('.garden-push-setting', (el) => ({ state: el.dataset.state, desc: el.querySelector('.setting-item-description')?.textContent, button: el.querySelector('button')?.textContent }));
+    assert.deepEqual(deskPush, { state: 'off', desc: 'When someone assigns you a cell.', button: 'Turn on' }, 'desktop: notifications can be turned on');
+    await page.$eval('.garden-push-setting', (el) => el.scrollIntoView({ block: 'center' }));
+    await shot(page, '14-settings-desktop.png');
+    await page.keyboard.press('Escape');
+    assert.deepEqual(state.unknown, [], 'requests the stand-in did not expect');
+    await ctx.close();
+
+    // --- iPhone in Safari, not added to the Home Screen -------------------------------
+    const ictx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3, userAgent: IPHONE_UA, colorScheme: 'dark' });
+    await standInSupabase(ictx);
+    const phone = await ictx.newPage();
+    watchErrors(phone, 'account iphone', errors);
+    await phone.goto(BASE, { waitUntil: 'load' });
+    await phone.waitForFunction(() => document.querySelector('.garden-item[data-id="s_four"] .garden-assignees')?.getAttribute('aria-label') === 'Assigned to Ana, Bo, Cy and Dee');
+    await phone.$eval('.kanban-scroll-container .garden-item[data-id="s_long"]', (el) => el.scrollIntoView({ block: 'center' }));
+    await phone.waitForTimeout(300);
+    const iphone = await assigneeGeometry(phone, ['f_one', 's_four', 's_plain', 's_long', 'r_gone', 'm_me']);
+    checkAssignees(iphone, 'iPhone');
+    await shot(phone, '15-assignees-iphone.png');
+    await phone.click('.auth-pill');
+    await phone.click(rowOf('Settings'));
+    await phone.waitForSelector('.garden-push-setting[data-state]');
+    const phonePush = await phone.$eval('.garden-push-setting', (el) => ({ state: el.dataset.state, desc: el.querySelector('.setting-item-description')?.textContent, buttons: el.querySelectorAll('button').length }));
+    assert.equal(phonePush.state, 'install', `iPhone in Safari: add to the Home Screen first: ${JSON.stringify(phonePush)}`);
+    assert(/Home Screen/.test(phonePush.desc) && phonePush.buttons === 0, `iPhone in Safari: says how, offers no button: ${JSON.stringify(phonePush)}`);
+    await phone.$eval('.garden-push-setting', (el) => el.scrollIntoView({ block: 'center' }));
+    await shot(phone, '16-settings-iphone.png');
+    await ictx.close();
+}
+
+// ---------------------------------------------------------------------------
 // Run
 // ---------------------------------------------------------------------------
 
@@ -1369,6 +1746,15 @@ try {
     preview = await startPreview();
     browser = await chromium.launch();
     await scenario(browser, errors);
+    if (supabaseUrl()) {
+        // The full Chromium in headless mode: the lighter headless shell has no notifications to show a push with.
+        const full = await chromium.launch({ channel: 'chromium' });
+        try {
+            await accountScenario(full, errors);
+        } finally {
+            await full.close().catch(() => {});
+        }
+    }
     if (errors.length) throw new Error(`unexpected page/console errors:\n - ${errors.join('\n - ')}`);
     console.log('test:web passed');
 } catch (e) {

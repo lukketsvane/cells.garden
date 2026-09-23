@@ -58,6 +58,9 @@ function fail(error: PgError): never {
     throw new Error(error.message ?? 'Request failed');
 }
 
+/** True when the error says a table or function is not there yet: its migration has not been run. */
+export const notThereYet = (error: PgError | null | undefined): boolean => !!error && MISSING.has(error.code ?? '');
+
 /** Joining says the same two things whether it is a garden or a plant. */
 function failJoin(error: PgError): never {
     if (error.code === 'P0002') throw linkGone();
@@ -209,6 +212,28 @@ async function removeFrom(client: SupabaseClient, of: Shared, id: string, userId
     const { error } = await client.from(of.members).delete().eq(of.key, id).eq('user_id', userId);
     if (error) fail(error);
 }
+
+/** A garden's owner (user_id for an own garden, owner_id for a space), or a plant's. */
+async function ownerOf(client: SupabaseClient, of: Shared, id: string): Promise<string | null> {
+    const table = of === GARDEN ? 'gardens' : 'plants';
+    const { data, error } = await client.from(table).select(of === GARDEN ? 'user_id, owner_id' : 'owner_id').eq('id', id).limit(1);
+    if (error) fail(error);
+    const row = ((data ?? []) as unknown as { user_id?: string | null; owner_id?: string | null }[])[0];
+    return row?.user_id ?? row?.owner_id ?? null;
+}
+
+/** Everyone who sees a garden's or a plant's cells: its owner first, then its members. */
+async function everyone(client: SupabaseClient, of: Shared, id: string): Promise<GardenMember[]> {
+    const [owner, rest] = await Promise.all([ownerOf(client, of, id), members(client, of, id)]);
+    if (!owner) return rest;
+    const { data } = await client.from('profiles').select('*').eq('id', owner).limit(1);
+    const row = ((data ?? []) as ProfileRow[])[0];
+    const first = { userId: owner, name: row?.display_name || 'someone', avatar: shownAvatar(row, owner) };
+    return [first, ...rest.filter(m => m.userId !== owner)];
+}
+
+export const gardenPeople = (c: SupabaseClient, gardenId: string) => everyone(c, GARDEN, gardenId);
+export const plantPeople = (c: SupabaseClient, plantId: string) => everyone(c, PLANT, plantId);
 
 export const getInvite = (c: SupabaseClient, gardenId: string) => invite(c, GARDEN, gardenId);
 export const renewInvite = (c: SupabaseClient, gardenId: string) => renew(c, GARDEN, gardenId);

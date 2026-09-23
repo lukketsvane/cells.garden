@@ -744,6 +744,74 @@
     }
 }
 
+/* A cell's people (garden.ts, paintAssignees): their pictures at its trailing
+   edge, a little over each other. Only a cell that has any keeps room for them,
+   so its text never runs under them; they take no height, so no cell grows. */
+.garden-item.draggable-cell.has-assignees {
+    position: relative;
+    padding-right: calc(12px + var(--garden-assignee-room, 18px));
+}
+
+.garden-item > .garden-assignees {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+}
+
+.garden-assignees {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.garden-assignee {
+    display: block;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    /* A thin ring in the cell's colour keeps each circle whole where they overlap. */
+    box-shadow: 0 0 0 1.5px var(--background-primary);
+}
+
+.garden-assignees .garden-assignee + .garden-assignee {
+    margin-left: -6px;
+}
+
+.garden-assignee svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+/* "+2": drawn from its attribute, so it is never part of the cell's text. */
+.garden-assignees-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.garden-assignees-more::after {
+    content: attr(data-more);
+}
+
+@media (pointer: coarse) {
+    .garden-item.draggable-cell.has-assignees {
+        padding-right: calc(14px + var(--garden-assignee-room, 18px));
+    }
+
+    .garden-item > .garden-assignees {
+        right: 8px;
+    }
+}
+
 /* --- Worm Hover Glow --- */
 .garden-worm-pulsing {
     animation: garden-worm-pulse 2s ease-in-out infinite;
@@ -1341,6 +1409,12 @@
     -webkit-user-select: text;
 }
 
+/* The cell's people on its chip: after the text, on its middle. */
+.garden-peek-chip > .garden-assignees {
+    align-self: center;
+    margin-left: 3px;
+}
+
 /* Pan view keeps every touch for the garden: there the chip only shows, and
    looks it. */
 .garden-pan-layer .garden-peek-chip,
@@ -1573,6 +1647,156 @@
     flex: 0 0 auto;
     align-items: flex-end;
     justify-content: center;
+}
+
+/* A line of text in a panel instead of choices: loading, or why there are none. */
+.garden-menu-note {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* --- Notifications (notifications.ts): the count on the pill, and the list --- */
+.auth-pill-badge {
+    flex-shrink: 0;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    background: #E91E63;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+}
+
+.garden-notifications-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    /* Clear of the modal's close button. */
+    padding-right: 28px;
+}
+
+.garden-notifications-head .garden-notifications-read {
+    flex-shrink: 0;
+    height: auto;
+    padding: 4px;
+    background: none;
+    border: none;
+    box-shadow: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.garden-notifications {
+    display: flex;
+    flex-direction: column;
+    margin: 4px -8px 0;
+}
+
+/* Scoped to the list so it outranks the button look (ui.css, and Obsidian's). */
+.garden-notifications .garden-notification {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 10px 8px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    box-shadow: none;
+    color: var(--text-normal);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.garden-notifications .garden-notification:hover {
+    background: var(--background-modifier-hover);
+}
+
+.garden-notification-avatar {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+}
+
+.garden-notification-avatar svg {
+    display: block;
+    border-radius: 50%;
+}
+
+.garden-notification-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.garden-notification-title {
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+.garden-notification.is-unread .garden-notification-title {
+    font-weight: 600;
+}
+
+.garden-notification-body {
+    display: -webkit-box;
+    margin-top: 2px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--text-muted);
+    word-break: break-word;
+}
+
+.garden-notification-time {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+/* Unread: a dot under its time. */
+.garden-notification.is-unread .garden-notification-time::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--interactive-accent);
+}
+
+/* Assign: everyone who can see the cell, a picture and a name each. */
+.garden-assign-panel {
+    max-height: min(320px, 50vh);
+    overflow-y: auto;
+}
+
+.garden-assign-person .garden-menu-media .garden-assignee {
+    width: 18px;
+    height: 18px;
+    box-shadow: none;
+}
+
+.garden-assign-person .garden-menu-label {
+    min-width: 0;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Both lists put their pictures in one column, as wide as the widest stem

@@ -1,10 +1,14 @@
 import './shim';
 import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
+import { allAssigned, assigneesOf, toggleAssignee } from './assign';
 import { PLANT_TYPES, plantTypeName } from './assets';
+import { avatarEl } from './avatar';
 import { ICONS, setIcon, ZONE_ICONS } from './icons';
 import { local } from './local';
-import { menuRow, openMenu, type MenuItem } from './menu';
+import { menuRow, openMenu, type MenuControls, type MenuItem } from './menu';
+import type { CellTarget } from './notify-core';
+import { assigneeRoom, assigneeStack, type Person } from './people';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
 import { mineralOpacity, skyAt } from './garden-settings';
@@ -2380,6 +2384,9 @@ export class GardenView extends View {
         const text = chip.createSpan({ cls: 'garden-peek-text', text: cell.text });
         // The seed wears its plant's hue, as on the board.
         if (!cell.zone) text.style.filter = `hue-rotate(${cell.project.hue ?? 0}deg)`;
+        // Its people, as on the board: after the text, never in it.
+        const people = assigneesOf(cell.item);
+        if (people.length > 0) chip.appendChild(this.assigneesEl(people));
     }
 
     /**
@@ -2507,7 +2514,11 @@ export class GardenView extends View {
             if (cell.item) this.keepText(cell.item, text);
             else this.renameSeed(cell.project, text);
             // The board under the garden says the same.
-            this.kanbanCell(peek.itemId, peek.projectId)?.setText(text);
+            const boardCell = this.kanbanCell(peek.itemId, peek.projectId);
+            if (boardCell) {
+                boardCell.setText(text);
+                if (cell.item) this.paintAssignees(boardCell, cell.item);
+            }
         }
         if (field && this.containerEl.ownerDocument.activeElement === field) field.blur();
         const now = peek ? this.peekCell(peek.itemId, peek.projectId) : null;
@@ -3178,6 +3189,48 @@ export class GardenView extends View {
     }
 
     /**
+     * Bring a notification's cell into view, as tapping its part does: on the
+     * board, selected, or with the board hidden, its part's chip, pinned. A
+     * shared plant is found by its row, which has another id in each garden.
+     * The garden may still be drawing, or the plant still merging in the change
+     * that made the cell: it waits a few seconds for the cell to be there.
+     */
+    async revealCell(target: CellTarget): Promise<boolean> {
+        const deadline = Date.now() + 8000;
+        const win = this.containerEl.ownerDocument.defaultView || window;
+        for (;;) {
+            const project = (target.plantId ? this.app.gardenData.find(p => p.sharedPlantId === target.plantId) : undefined)
+                ?? this.app.gardenData.find(p => p.id === target.projectId);
+            const there = !!project && (['flowers', 'stem', 'roots', 'minerals'] as const).some(z => project[z].some(i => i.id === target.itemId));
+            if (project && there && this.showCell(target.itemId, project.id)) return true;
+            if (Date.now() > deadline) return false;
+            await new Promise(resolve => win.setTimeout(resolve, 250));
+        }
+    }
+
+    private showCell(itemId: string, projectId: string): boolean {
+        if (this.panView.active) this.panView.exit();
+        if (this.boardHidden()) {
+            const viewport = this.viewport;
+            const part = viewport ? this.findPart(viewport, itemId, projectId) : null;
+            if (!part || !viewport) return false;
+            const frame = viewport.getBoundingClientRect();
+            const box = part.getBoundingClientRect();
+            if (box.right > frame.left && box.left < frame.right && box.bottom > frame.top && box.top < frame.bottom) {
+                this.showPeek(part, true);
+                return true;
+            }
+            // Out of sight in the garden: the board shows it instead.
+            this.containerEl.ownerDocument.querySelector<HTMLElement>('.garden-board-toggle')?.click();
+            return false;
+        }
+        const cell = this.kanbanCell(itemId, projectId);
+        if (!cell) return false;
+        this.selectSingleCell(cell);
+        return this.focusKanbanCell(itemId, projectId);
+    }
+
+    /**
      * A part's click and double-click. Hovering it is the garden's own
      * (handleGardenMouseMove), by the same pixels a click goes by.
      */
@@ -3642,6 +3695,8 @@ export class GardenView extends View {
 
     private startEditing(el: HTMLElement) {
         el.removeClass('is-selected');
+        // Only the text is written in: the pictures of its people wait outside until it is kept.
+        el.querySelector(':scope > .garden-assignees')?.remove();
         el.addClass('is-editing');
         el.contentEditable = "true";
         el.focus();
@@ -3656,6 +3711,149 @@ export class GardenView extends View {
         el.removeClass('is-editing');
         el.contentEditable = "false";
         this.keepText(item, el.getText().trim());
+        this.paintAssignees(el, this.liveItem(item.id) ?? item);
+    }
+
+    /**
+     * A cell's people: their pictures at its trailing edge, and room kept for
+     * them so its text never runs under them. Nobody assigned, no room. The
+     * pictures take no height, so the cell is as tall as its text alone.
+     */
+    private paintAssignees(el: HTMLElement, item: LayerItem | null) {
+        el.querySelector(':scope > .garden-assignees')?.remove();
+        const ids = assigneesOf(item);
+        el.toggleClass('has-assignees', ids.length > 0);
+        if (ids.length === 0) {
+            el.style.removeProperty('--garden-assignee-room');
+            return;
+        }
+        el.setCssProps({ '--garden-assignee-room': `${assigneeRoom(ids.length)}px` });
+        el.appendChild(this.assigneesEl(ids));
+    }
+
+    private assigneesEl(ids: string[]): HTMLElement {
+        const account = this.app.account;
+        return assigneeStack(ids, (id) => account?.person(id), account?.userId ?? null);
+    }
+
+    /** Draw the people again on the cells with these ids, and on the chip when it shows one of them. */
+    private repaintAssignees(itemIds: string[], projectId: string) {
+        for (const id of itemIds) {
+            const cell = this.kanbanCell(id, projectId);
+            if (cell && !cell.hasClass('is-editing')) this.paintAssignees(cell, this.liveItem(id));
+        }
+        const chip = this._peekEl;
+        const peek = this._peek;
+        if (!chip || !peek || !itemIds.includes(peek.itemId) || chip.hasClass('is-editing')) return;
+        const cell = this.peekCell(peek.itemId, peek.projectId);
+        if (!cell) return;
+        this.fillPeekChip(chip, cell);
+        this.placePeek();
+    }
+
+    /**
+     * Someone's name or picture became known or changed: draw the people on
+     * every cell again, and on the chip, and nothing else of the garden.
+     */
+    refreshAssignees() {
+        const cells = Array.from(this.contentEl.querySelectorAll<HTMLElement>('.garden-item.has-assignees'));
+        for (const cell of cells) {
+            if (!cell.hasClass('is-editing') && cell.dataset.id) this.paintAssignees(cell, this.liveItem(cell.dataset.id));
+        }
+        const peek = this._peek;
+        if (peek) this.repaintAssignees([peek.itemId], peek.projectId);
+    }
+
+    /**
+     * The Assign row of a cell's menu: everyone who can see the cell, each a
+     * row that assigns them to the whole selection, or takes them off it again.
+     * Saved at once, and the people just added are told. A build without
+     * accounts has no row; when nobody else can see the cell, the row says so.
+     */
+    private assignMenuItem(project: ProjectData, itemIds: string[]): MenuItem | null {
+        if (!this.app.accounts) return null;
+        const account = this.app.account;
+        if (!account) return { label: 'Assign', sub: 'Sign in to assign', disabled: true };
+        const known = account.peopleFor(project);
+        if (known && known.length < 2) return { label: 'Assign', sub: 'Share to assign', disabled: true };
+        const one = itemIds.length === 1 ? this.liveItem(itemIds[0]) : null;
+        const count = one ? assigneesOf(one).length : 0;
+        return {
+            label: 'Assign',
+            sub: count ? String(count) : undefined,
+            panel: (panel, menu) => this.fillAssignPanel(panel, menu, project, itemIds, known),
+        };
+    }
+
+    private fillAssignPanel(panel: HTMLElement, menu: MenuControls, project: ProjectData, itemIds: string[], known: Person[] | null) {
+        const account = this.app.account;
+        if (!account) return;
+        panel.addClass('garden-assign-panel');
+        const items = () => itemIds.map(id => this.liveItem(id)).filter((i): i is LayerItem => i !== null);
+        const note = (text: string) => {
+            panel.empty();
+            panel.createDiv({ cls: 'garden-menu-note', text });
+            menu.refit();
+        };
+        const mark = () => {
+            const now = items();
+            for (const row of Array.from(panel.querySelectorAll<HTMLElement>('.garden-assign-person'))) {
+                const on = allAssigned(now, row.dataset.userId ?? '');
+                row.toggleClass('is-active', on);
+                row.setAttribute('aria-pressed', String(on));
+                row.querySelector('.garden-menu-check')?.setText(on ? '✓' : '');
+            }
+            const one = itemIds.length === 1 ? now[0] : null;
+            const count = one ? assigneesOf(one).length : 0;
+            menu.setSub(count ? String(count) : '');
+        };
+        let shown = '';
+        const draw = (people: Person[]) => {
+            const key = people.map(p => `${p.id}:${p.name}:${p.avatar}`).join('|');
+            if (key === shown) return;
+            shown = key;
+            if (people.length < 2) return note('Share this garden or plant to assign.');
+            panel.empty();
+            for (const person of people) {
+                const row = menuRow(
+                    panel,
+                    { label: person.name, sub: person.id === account.userId ? 'you' : undefined, active: false },
+                    (slot) => slot.appendChild(avatarEl(person.avatar, 18, 'garden-assignee')),
+                );
+                row.addClass('garden-assign-person');
+                row.dataset.userId = person.id;
+                row.onclick = (e) => {
+                    e.stopPropagation();
+                    void this.toggleAssignment(project, itemIds, person.id, mark);
+                };
+            }
+            mark();
+            menu.refit();
+        };
+        if (known) draw(known);
+        else note('Loading…');
+        // Answered from memory within a minute of the last time; after that the list is checked again.
+        account.loadPeopleFor(project)
+            .then((people) => {
+                if (panel.isConnected) draw(people);
+            })
+            .catch(() => {
+                if (!known && panel.isConnected) note('Could not load people.');
+            });
+    }
+
+    /** One tap in the Assign panel: saved at once, and whoever was just added is told. */
+    private async toggleAssignment(project: ProjectData, itemIds: string[], userId: string, marked: () => void) {
+        const account = this.app.account;
+        const items = itemIds.map(id => this.liveItem(id)).filter((i): i is LayerItem => i !== null);
+        if (!account || items.length === 0) return;
+        const gained = toggleAssignee(items, userId);
+        marked();
+        this.repaintAssignees(itemIds, this.live(project).id);
+        const saved = await this.app.saveGardenData();
+        if (!saved || userId === account.userId) return;
+        const live = this.live(project);
+        for (const item of gained) account.assigned(live, item, [userId]);
     }
 
     /** Keep a cell's new text: how a board cell and the garden's chip both write it. */
@@ -3893,6 +4091,8 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         const locations = () => cells.map(c => this.locateCell(c)).filter((l): l is NonNullable<typeof l> => l !== null);
         const highlighted = cells.every(c => c.hasClass('garden-item-highlighted'));
         const allMinerals = cells.every(c => c.parentElement?.dataset.array === 'minerals');
+        // A selection never spans two plants, so its people are the one plant's.
+        const assign = this.assignMenuItem(one.project, locations().map(l => l.item.id));
 
         openMenu([
             {
@@ -3909,6 +4109,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                     await this.save();
                 },
             },
+            ...(assign ? [assign] : []),
             {
                 label: 'Convert to stem',
                 disabled: !allMinerals,
@@ -4083,6 +4284,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
             const el = listContainer.createDiv({ cls: "garden-item draggable-cell", attr: { tabindex: "0" } });
             el.dataset.id = item.id;
             el.setText(item.content);
+            this.paintAssignees(el, item);
             if (item.highlighted) {
                 el.setCssStyles({ fontWeight: 'bold' });
                 el.addClass('garden-item-highlighted');

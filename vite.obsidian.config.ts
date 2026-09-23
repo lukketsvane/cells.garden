@@ -31,6 +31,8 @@ export default defineConfig(({ command, mode }) => {
             __CELLS_SYSTEM_CLIPBOARD__: 'false',
             // The plugin ships from main, never from Vercel's dev build.
             __CELLS_EXTRAS__: extrasFlag(command, false),
+            // No service worker in Obsidian: notifications stay in the app.
+            __CELLS_WEB_PUSH__: 'false',
         },
         build: {
             outDir: 'obsidian-plugin',

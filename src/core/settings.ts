@@ -16,12 +16,15 @@ import { currentScene, setScene, type Scene } from './scene';
 import { attempt } from './share-ui';
 import { getProfile, updateProfile } from './sharing';
 import { Modal, Setting } from './ui';
+import { pushSetting } from './web-push';
 
 export interface SettingsAccount {
     client: SupabaseClient;
     userId: string;
     /** Tell the rest of the app the picture changed: a drawing or a seed. */
     onAvatar: (avatar: string) => void;
+    /** And the name, which is how others see you on the cells they assign you. */
+    onName?: (name: string) => void;
 }
 
 const randomSeed = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2, '0')).join('');
@@ -106,6 +109,7 @@ export class SettingsModal extends Modal {
                             void attempt(say, 'save the name', async () => {
                                 await updateProfile(client, userId, { name: trimmed });
                                 profile.name = trimmed;
+                                this.account?.onName?.(trimmed);
                                 say('Name saved.');
                             });
                         });
@@ -113,6 +117,8 @@ export class SettingsModal extends Modal {
             } catch (e) {
                 say(`Could not load your profile: ${(e as Error).message}`);
             }
+            // Pushes to this device; the web app alone has them.
+            pushSetting(contentEl, client, userId);
         }
 
         const scene = new Setting(contentEl).setName('Scene').setDesc('On this device.');
