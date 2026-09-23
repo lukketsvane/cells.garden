@@ -19,6 +19,7 @@ import { avatarEl } from './avatar';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { ICONS, setIcon } from './icons';
 import { openMenu, type MenuItem } from './menu';
+import { badgeText } from './notify-core';
 import { Modal, Setting } from './ui';
 
 export interface AuthOptions {
@@ -257,11 +258,30 @@ export class AuthPill {
     }
 
     private avatar: string | null = null;
+    private unread = 0;
+    /** Runs before signing out, while the account can still tidy up after itself (web-push.ts). */
+    beforeSignOut: (() => Promise<void>) | null = null;
 
     /** The signed-in user's picture, a drawing or a seed, once the profile is loaded. */
     setAvatar(avatar: string | null) {
         this.avatar = avatar;
         this.render();
+    }
+
+    /** How many notifications are unread: a count on the pill, gone at none. */
+    setUnread(count: number) {
+        if (count === this.unread) return;
+        this.unread = count;
+        this.render();
+    }
+
+    private async signOut() {
+        try {
+            await this.beforeSignOut?.();
+        } catch (e) {
+            console.warn('Garden Cells: could not tidy up before signing out', e);
+        }
+        await this.client.auth.signOut();
     }
 
     /** Shown instead of the email, e.g. the name of a shared garden. null: the email. */
@@ -287,6 +307,13 @@ export class AuthPill {
             this.el.appendChild(avatarEl(this.avatar ?? this.session.user.id, 18, 'auth-pill-avatar'));
             this.el.createSpan({ cls: 'auth-pill-label', text: this.label ?? email });
             this.el.toggleClass('is-shared', this.label !== null);
+            const count = badgeText(this.unread);
+            if (count) {
+                this.el.createSpan({ cls: 'auth-pill-badge', text: count });
+                this.el.setAttribute('aria-label', `${this.label ?? email}, ${this.unread} unread`);
+            } else {
+                this.el.removeAttribute('aria-label');
+            }
         } else {
             this.el.createSpan({ cls: 'auth-pill-label', text: 'Sign in' });
         }
@@ -303,7 +330,7 @@ export class AuthPill {
             openMenu([{ label: 'Sign in', onClick: () => this.signIn() }, ...items], this.el);
             return;
         }
-        const menu = openMenu([...items, { label: 'Sign out', onClick: () => void this.client.auth.signOut() }], this.el);
+        const menu = openMenu([...items, { label: 'Sign out', onClick: () => void this.signOut() }], this.el);
         const who = menu.createDiv({ cls: 'garden-menu-heading', text: this.session.user.email ?? '' });
         menu.prepend(who);
     }

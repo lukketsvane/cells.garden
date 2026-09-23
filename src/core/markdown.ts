@@ -19,6 +19,7 @@
  *    is flattened to spaces, as the plugin already does for the seed.
  */
 import { parseDocument } from 'yaml';
+import { assigneesOf } from './assign';
 import type { LayerItem, ProjectData } from './model';
 import { simpleHash } from './model';
 
@@ -78,6 +79,19 @@ function stringifyProjectFrontmatter(p: ProjectData): string {
     yaml += `  roots: [${imgArr(p.roots)}]\n`;
     yaml += `  minerals: [${imgArr(p.minerals)}]\n`;
 
+    // The people cells are assigned to, the same way, and only when there are
+    // any: every other plant keeps the plugin's bytes. The plugin ignores the key.
+    const zones = [p.flowers, p.stem, p.roots, p.minerals];
+    if (zones.some(zone => zone.some(item => assigneesOf(item).length > 0))) {
+        const peopleArr = (arr: LayerItem[]) =>
+            arr.map(item => `[${assigneesOf(item).map(yamlString).join(', ')}]`).join(', ');
+        yaml += `assignees:\n`;
+        yaml += `  flowers: [${peopleArr(p.flowers)}]\n`;
+        yaml += `  stem: [${peopleArr(p.stem)}]\n`;
+        yaml += `  roots: [${peopleArr(p.roots)}]\n`;
+        yaml += `  minerals: [${peopleArr(p.minerals)}]\n`;
+    }
+
     return yaml;
 }
 
@@ -127,6 +141,8 @@ interface Frontmatter {
     order?: number;
     plantType?: string;
     images?: Record<string, string[]>;
+    /** Per zone, per cell: the account ids it is assigned to. Ours; absent from the plugin's files. */
+    assignees?: Record<string, unknown>;
     // Old format: items in frontmatter YAML arrays
     flowers?: unknown[];
     stem?: unknown[];
@@ -206,9 +222,12 @@ export function markdownToProject(contents: string, basename: string): ProjectDa
         }
         if (currentSection) sections[currentSection] = currentLines.join('\n');
 
+        const people = fm.assignees && typeof fm.assignees === 'object' ? fm.assignees : {};
+
         const parseListItems = (sectionName: string, category: string): LayerItem[] => {
             const sectionBody = sections[sectionName] || '';
             const imgPaths = Array.isArray(images[category]) ? images[category] : [];
+            const zonePeople: unknown[] = Array.isArray(people[category]) ? people[category] : [];
             return sectionBody.split('\n')
                 .map(line => line.trim())
                 // "- x" and a bare "-" (an emptied cell); "---" and "-- x" are not list items.
@@ -221,13 +240,15 @@ export function markdownToProject(contents: string, basename: string): ProjectDa
                     const content = isHighlighted ? stripped.replace(/^\*\*(.+)\*\*$/, '$1') : stripped;
                     const raw = imgPaths[idx];
                     const imgPath: string | undefined = raw ? fromVaultAssetPath(String(raw)) : undefined;
+                    const assignees = assigneesOf({ assignees: zonePeople[idx] });
 
                     return {
                         id: 'item_' + simpleHash(content) + '_' + idx,
                         content: content,
                         isComplete: false,
                         highlighted: isHighlighted || undefined,
-                        imagePath: imgPath
+                        imagePath: imgPath,
+                        ...(assignees.length > 0 ? { assignees } : {}),
                     };
                 });
         };
@@ -242,11 +263,13 @@ export function markdownToProject(contents: string, basename: string): ProjectDa
             if (!arr) return [];
             return arr.map((raw) => {
                 const i = (raw ?? {}) as Partial<LayerItem>;
+                const assignees = assigneesOf(i);
                 return {
                     id: i.id || 'unknown',
                     content: i.content || '',
                     isComplete: i.isComplete || false,
-                    imagePath: i.imagePath ? fromVaultAssetPath(i.imagePath) : undefined
+                    imagePath: i.imagePath ? fromVaultAssetPath(i.imagePath) : undefined,
+                    ...(assignees.length > 0 ? { assignees } : {}),
                 };
             });
         };

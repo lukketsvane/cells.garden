@@ -36,6 +36,8 @@ export interface MenuControls {
     close(): void;
     /** Change the smaller text on the panel's row, to show the value being picked. */
     setSub(text: string): void;
+    /** The panel's contents changed after it opened (they came from the network): fit the menu to them. */
+    refit(): void;
 }
 
 type Point = { x: number; y: number };
@@ -183,6 +185,9 @@ export function openMenu(
                 setSub: (text) => {
                     const sub = row.querySelector('.garden-menu-sub') ?? row.createSpan({ cls: 'garden-menu-sub' });
                     sub.setText(text);
+                },
+                refit: () => {
+                    if (!closed) place(menu, at, win);
                 },
             });
             if (end) endings.push(end);

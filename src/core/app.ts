@@ -2,11 +2,28 @@ import './shim';
 import { AssetManager } from './assets';
 import { GardenView } from './garden';
 import { mergeGardens } from './merge';
-import type { Garden, GardenSettings, ProjectData } from './model';
+import type { Garden, GardenSettings, LayerItem, ProjectData } from './model';
 import { defaultSettings, emptyGarden, settingsFrom } from './model';
+import type { Person } from './people';
 import { GardenGoneError, readJson, snapshot, writeJson, type GardenStore } from './store';
 
 export type SyncState = 'local' | 'syncing' | 'synced' | 'error';
+
+/**
+ * The signed-in account, as the garden needs it to assign people to cells
+ * (boot.ts sets it). Null while nobody is signed in.
+ */
+export interface Account {
+    userId: string;
+    /** Who someone is, for their picture on a cell; undefined for someone unknown. */
+    person(id: string): Person | undefined;
+    /** Everyone who can see the cells of `project` in the open garden, you first; null until first asked. */
+    peopleFor(project: ProjectData): Person[] | null;
+    /** The same, asked of the server when the answer is more than a minute old. */
+    loadPeopleFor(project: ProjectData): Promise<Person[]>;
+    /** An assignment was saved: tell the people just added. Quiet when that fails. */
+    assigned(project: ProjectData, item: LayerItem, added: string[]): void;
+}
 
 export interface UseStoreOptions {
     /** When the primary store is remote, every save is mirrored here too (offline copy). */
@@ -48,6 +65,10 @@ export class GardenApp {
     readonly settingsWatchers = new Set<() => void>();
     /** Called after a save of this device's edits has been handed to the store. */
     onPersisted: (() => void) | null = null;
+    /** True when the build can sign in at all, so the cell menu offers Assign. */
+    accounts = false;
+    /** Set while someone is signed in. */
+    account: Account | null = null;
 
     private mirror: GardenStore | null = null;
     /**
@@ -278,10 +299,13 @@ export class GardenApp {
         await this.saveGardenData();
     }
 
-    /** Persist projects + settings. Serialised so saves never interleave. */
-    saveGardenData(): Promise<void> {
+    /**
+     * Persist projects + settings. Serialised so saves never interleave.
+     * Resolves true once the store holds them, false when it could not take them.
+     */
+    saveGardenData(): Promise<boolean> {
         this.updatedAt = new Date().toISOString();
-        const run = async () => {
+        const run = async (): Promise<boolean> => {
             // Read the garden when this save runs, not when it was queued: a merge that
             // landed in between is then part of what gets written.
             const garden = snapshot(this.toGarden());
@@ -290,7 +314,7 @@ export class GardenApp {
             this.onSyncState?.(this.mirror ? 'syncing' : 'local');
             try {
                 const written = await store.save(garden);
-                if (store !== this.store) return; // switched gardens while saving
+                if (store !== this.store) return false; // switched gardens while saving
                 if (written) {
                     // The store merged in someone else's work. Keep anything edited here since.
                     const current = mergeGardens(garden, this.toGarden(), written);
@@ -303,18 +327,21 @@ export class GardenApp {
                 }
                 this.onSyncState?.(this.mirror ? 'synced' : 'local');
                 this.onPersisted?.();
+                return true;
             } catch (e) {
                 if (e instanceof GardenGoneError) {
                     this.onSyncState?.('error');
                     this.onGone?.();
-                    return;
+                    return false;
                 }
                 console.error('Garden Cells: save failed', e);
                 this.onSyncState?.('error');
+                return false;
             }
         };
-        this._persistQueue = this._persistQueue.then(run, run);
-        return this._persistQueue;
+        const saved = this._persistQueue.then(run, run);
+        this._persistQueue = saved.then(() => {});
+        return saved;
     }
 
     private flush = () => {

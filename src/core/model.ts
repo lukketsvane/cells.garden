@@ -8,6 +8,13 @@ export interface LayerItem {
     /** Key into the asset pack, e.g. "plant_1/stem/plant_1_part3.png". */
     imagePath?: string;
     highlighted?: boolean;
+    /**
+     * The people this cell is assigned to, by account id, in the order they
+     * were added. Absent when nobody is. A plain field of the cell: it syncs,
+     * merges and travels like the others, and a client that predates it keeps
+     * it as it keeps any field it does not know.
+     */
+    assignees?: string[];
 }
 
 export interface ProjectData {
