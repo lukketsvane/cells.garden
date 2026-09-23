@@ -11,7 +11,7 @@
  * merges it with ours over the last version we both knew (merge.ts) and tries
  * again.
  */
-import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, REALTIME_SUBSCRIBE_STATES, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
 import { mergeGardens } from './merge';
 import type { Garden } from './model';
 import { local } from './local';
@@ -63,6 +63,9 @@ export class SupabaseStore implements GardenStore {
     private saving = false;
     private buffered: GardenRow | null = null;
     private listener: ((garden: Garden) => void) | null = null;
+    /** Undoes the focus / visibility / online listeners and a pending rejoin. */
+    private stopWatching: (() => void) | null = null;
+    private lastCatchUp = 0;
 
     constructor(
         private readonly client: SupabaseClient,
@@ -228,32 +231,91 @@ export class SupabaseStore implements GardenStore {
         }
     }
 
+    /**
+     * Follow the garden live. A channel that drops (a laptop asleep, a changed
+     * network, an expired token, Obsidian in the background) is joined again, and
+     * coming back to the window fetches whatever was missed meanwhile, so two
+     * devices never wait on each other.
+     */
     subscribe(listener: (garden: Garden) => void): () => void {
         this.listener = listener;
-        const filter = this.gardenId ? `id=eq.${this.gardenId}` : `user_id=eq.${this.userId}`;
-        this.channel = this.client
-            .channel(`gardens:${this.gardenId ?? this.userId}`)
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'gardens', filter },
-                (payload) => {
-                    const row = payload.new as GardenRow | undefined;
-                    if (!row || !row.id) return;
-                    if (this.saving) {
-                        // Our own save may already have merged this; decide once it lands.
-                        this.buffered = row;
-                        return;
+        let retry: number | null = null;
+        let delay = 1000;
+        const join = () => {
+            retry = null;
+            if (!this.listener) return;
+            if (this.channel) void this.client.removeChannel(this.channel);
+            const filter = this.gardenId ? `id=eq.${this.gardenId}` : `user_id=eq.${this.userId}`;
+            const channel = this.client
+                .channel(`gardens:${this.gardenId ?? this.userId}:${Date.now()}`)
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'gardens', filter },
+                    (payload) => {
+                        const row = payload.new as GardenRow | undefined;
+                        if (!row || !row.id) return;
+                        if (this.saving) {
+                            // Our own save may already have merged this; decide once it lands.
+                            this.buffered = row;
+                            return;
+                        }
+                        void this.deliver(row);
                     }
-                    void this.deliver(row);
+                );
+            this.channel = channel;
+            channel.subscribe((status) => {
+                // A channel we replaced or closed ourselves reports CLOSED too: only the live one counts.
+                if (!this.listener || channel !== this.channel) return;
+                if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) {
+                    // Anything saved while the channel was down arrives now.
+                    delay = 1000;
+                    void this.catchUp(true);
+                } else if ((status === REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR || status === REALTIME_SUBSCRIBE_STATES.TIMED_OUT || status === REALTIME_SUBSCRIBE_STATES.CLOSED) && retry === null) {
+                    retry = window.setTimeout(join, delay);
+                    delay = Math.min(delay * 2, 30000);
                 }
-            )
-            .subscribe();
+            });
+        };
+        join();
+
+        const doc = typeof document !== 'undefined' ? document : null;
+        const onVisible = () => { if (!doc || doc.visibilityState === 'visible') void this.catchUp(); };
+        window.addEventListener('focus', onVisible);
+        window.addEventListener('online', onVisible);
+        doc?.addEventListener('visibilitychange', onVisible);
+        this.stopWatching = () => {
+            window.removeEventListener('focus', onVisible);
+            window.removeEventListener('online', onVisible);
+            doc?.removeEventListener('visibilitychange', onVisible);
+            if (retry !== null) window.clearTimeout(retry);
+            retry = null;
+        };
+
         return () => {
             this.listener = null;
             this.buffered = null;
-            void this.channel?.unsubscribe();
+            this.stopWatching?.();
+            this.stopWatching = null;
+            const channel = this.channel;
             this.channel = null;
+            if (channel) void this.client.removeChannel(channel);
         };
+    }
+
+    /** Fetch the garden's row and take it if it is newer than what we hold (deliver decides). */
+    private async catchUp(force = false) {
+        if (!this.listener || this.saving) return;
+        const now = Date.now();
+        if (!force && now - this.lastCatchUp < 1500) return;
+        this.lastCatchUp = now;
+        let query = this.client.from('gardens').select('id, data, updated_at, rev');
+        if (this.rowId) query = query.eq('id', this.rowId);
+        else if (this.gardenId) query = query.eq('id', this.gardenId);
+        else query = query.eq('user_id', this.userId);
+        const { data, error } = await query.limit(1);
+        if (error) return;
+        const row = ((data ?? []) as GardenRow[])[0];
+        if (row) await this.deliver(row);
     }
 
     private flushBuffered() {
