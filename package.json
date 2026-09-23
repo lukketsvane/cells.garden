@@ -1,6 +1,6 @@
 {
   "name": "cells.garden",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "Your tasks grow into a pixel-art garden: a board on every new tab, in the side panel and the toolbar, synced across devices.",
   "license": "Apache-2.0",
