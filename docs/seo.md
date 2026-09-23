@@ -7,6 +7,18 @@ privacy pages; this is not a Search Console coverage report or traffic baseline.
 
 ## Public pages
 
+Primary goal: make the homepage discoverable on Google's first page for the
+unquoted branded query `cells garden`, prioritizing Norway and both mobile and
+desktop. This is a target, not a ranking claim. Also monitor `cells.garden`.
+Work on homepage identity, crawlability and genuine existing product references
+before expanding generic keyword coverage.
+
+The homepage identifies `cells.garden` as the site name and `Cells Garden` as its
+alternate name through WebSite microdata. The metadata remains in the document
+after the interactive app starts. This expresses site identity; it is not a
+ranking guarantee. Keep both names natural and consistent, without adding
+keyword variants or changing the product's established identity.
+
 | URL | Purpose |
 | --- | --- |
 | https://cells.garden/ | Open the app; visual project planner and task garden |
@@ -48,6 +60,19 @@ and request indexing. Record impressions, clicks, queries and indexed pages
 before comparing at 7 and 28 days. Do not infer traffic or rankings from a site:
 search alone. No analytics or tracking was added to the app.
 
+For the branded baseline, use Search Console's Web performance report, filter
+the query exactly to `cells garden` and the country to Norway, and review mobile
+and desktop separately. Track impressions, clicks and average position, while
+checking whether the homepage is the returned URL. Average position is not a
+guarantee of every user's first-page placement. Record a manual Google check's
+date, location, device, query and homepage position separately when available;
+general web-search tool results are not a measured Google ranking.
+
+With authorized owner access, inspect `https://cells.garden/` and its
+Google-selected canonical, run the live test and request indexing after a real
+published change. Submit the sitemap once; do not repeatedly request unchanged
+URLs. IndexNow submission is separate and does not request Google indexing.
+
 ## Daily improvement cycle
 
 A daily task is scheduled for around 08:00 Europe/Oslo, starting 24 September
@@ -56,6 +81,9 @@ release log, current main and open SEO pull requests. Prefer continuing an
 existing batch to opening a duplicate.
 
 - Check live pages and available search data before selecting the next task.
+- Prioritize the exact branded query `cells garden` and the homepage until the
+  first-page goal is supported by Google evidence; do not infer success from a
+  generic web search, a successful build or an indexing submission receipt.
 - Make at most one coherent, useful improvement batch. Improve existing pages
   before adding pages, and verify every product claim against the current code.
 - Keep the free, local-first product and privacy commitments intact. Do not add

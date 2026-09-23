@@ -40,6 +40,35 @@
 - Daily improvement task enabled for around 08:00 Europe/Oslo starting
   24 September 2026. Continue this pending batch before creating another one.
 
+## 2026-09-23 — Branded query priority, awaiting release
+
+- Clarified the main goal: Google's first page for the unquoted query
+  `cells garden`, prioritizing Norway on mobile and desktop. The recurring task
+  was updated with this priority without changing its schedule.
+- General web searches returned the homepage and official product listings.
+  Those results are not a measured Google Norway rank. No Search Console query,
+  impression, click or position data is available in this session.
+- Added the natural spaced brand `Cells Garden` to the homepage title,
+  description and introduction, with a matching reference in the guide.
+  WebSite microdata keeps `cells.garden` as the primary name and `Cells Garden`
+  as the alternate name. It remains in the document after app startup without
+  adding executable scripts or loosening the Content Security Policy.
+- Extended the SEO browser checks to verify this site identity both without
+  JavaScript and after the interactive garden starts.
+- Passed locally: typecheck, lint, security invariants, web build, all eight-page
+  SEO checks and `git diff --check`. The aggregate build still fails at the same
+  four missing asset mappings. The previously recorded full-browser runtime
+  restriction is unresolved; that test is not claimed as passed.
+- Prior PR revision `ed57ce5` passed the hosted SEO checks. Its full CI run
+  failed specifically at Verify Figma asset contract. Its preview was READY,
+  but the Vercel connection could not fetch protected preview pages; additional
+  project/team access is needed before that verification can continue.
+- These brand-specific changes are saved to the pending SEO branch, not
+  production. No IndexNow submission or Google recrawl request was made.
+- Followed Google's [site-name guidance](https://developers.google.com/search/docs/appearance/site-names)
+  and [recrawl guidance](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl).
+  Site-name markup expresses identity, not a ranking guarantee.
+
 ### Next actions
 
 1. Resolve the existing asset-contract discrepancy with verified source mapping,
@@ -47,4 +76,6 @@
 2. Publish this batch only after the required checks pass, verify live canonical
    URLs and redirects, then submit only changed pages to IndexNow.
 3. With owner-authorized Search Console access, submit the sitemap and establish
-   an impressions/clicks/indexing baseline for 7- and 28-day comparisons.
+   an impressions/clicks/indexing baseline for `cells garden` in Norway on
+   mobile and desktop, for 7- and 28-day comparisons. Inspect the homepage's
+   Google-selected canonical and request indexing after the published change.

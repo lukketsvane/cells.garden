@@ -25,6 +25,13 @@ const server = createServer(async (req, res) => {
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
+async function checkBrand(page) {
+    assert.equal(await page.locator('[itemscope][itemtype="https://schema.org/WebSite"]').count(), 1, 'one site identity must survive app boot');
+    assert.equal(await page.locator('meta[itemprop="name"]').getAttribute('content'), 'cells.garden');
+    assert.equal(await page.locator('meta[itemprop="alternateName"]').getAttribute('content'), 'Cells Garden');
+    assert.equal(await page.locator('link[itemprop="url"]').getAttribute('href'), 'https://cells.garden/');
+    assert.match(await page.title(), /Cells Garden \(cells\.garden\)/);
+}
 let browser;
 try {
     browser = await chromium.launch();
@@ -53,6 +60,7 @@ try {
         assert(title.length > 10 && !titles.has(title), 'unique useful title: ' + url.pathname);
         assert(description.length > 60 && !descriptions.has(description), 'unique useful description: ' + url.pathname);
         titles.add(title); descriptions.add(description);
+        if (url.pathname === '/') await checkBrand(page);
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile overflow: ' + url.pathname);
         const outgoing = await page.locator('a[href^="/"]').evaluateAll(anchors => anchors.map(a => a.getAttribute('href')));
         links.set(url.pathname, outgoing);
@@ -83,6 +91,7 @@ try {
     const app = await context.newPage();
     await app.goto(base + '/');
     await app.waitForFunction(() => !!window.garden);
+    await checkBrand(app);
     await app.evaluate(() => navigator.serviceWorker.ready);
     await app.reload();
     assert(await app.evaluate(() => !!navigator.serviceWorker.controller), 'worker must control the browser');
