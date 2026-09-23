@@ -276,9 +276,17 @@
     transition: filter 0.2s ease;
 }
 
-.garden-part:hover,
+/* Under the mouse (garden.ts, hoverPart: the part a click there means, by its
+   pixels), or its board cell hovered. */
+.garden-part.is-hovered,
 .garden-part-highlighted {
     filter: brightness(1.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .garden-part {
+        transition: none;
+    }
 }
 
 /* Above ground a part sits on the one below it; below ground it hangs from it. */
@@ -1354,48 +1362,20 @@
     }
 }
 
-/* The part a chip speaks for: ringed one art pixel wide, light inside and dark
-   outside, so it reads on a day sky, a night sky and the soil alike. The
-   offsets are world pixels, four to an art pixel (PIXEL_SCALE), so the ring
-   keeps to the sprite's own grid at any zoom. Raised over its neighbours so
-   none of them covers the ring; the rest of the plant stays as it is. */
-.garden-plants-layer {
-    --garden-peek-ring:
-        drop-shadow(4px 0 0 #ffffff) drop-shadow(-4px 0 0 #ffffff)
-        drop-shadow(0 4px 0 #ffffff) drop-shadow(0 -4px 0 #ffffff)
-        drop-shadow(4px 0 0 #16161d) drop-shadow(-4px 0 0 #16161d)
-        drop-shadow(0 4px 0 #16161d) drop-shadow(0 -4px 0 #16161d);
-}
-
+/* The part a chip speaks for, raised over its neighbours; the rest of the
+   plant stays as it is. */
 .garden-part.garden-part-peeked {
     z-index: 1;
-    filter: var(--garden-peek-ring);
 }
 
-/* Under the pointer it keeps the hover's light, so the ring comes on without a flicker. */
-.garden-part.garden-part-peeked:hover {
-    filter: brightness(1.4) var(--garden-peek-ring);
-}
-
-.garden-part-slow-pulse.garden-part-peeked {
-    animation: none;
-}
-
-/* A plant on standby keeps its silhouette under the ring. */
-.garden-stem-container.is-standby-plant .garden-seed-part.garden-part-peeked,
-.garden-stem-container.is-standby-plant .garden-root-part.garden-part-peeked {
-    filter: brightness(0) invert(4%) sepia(10%) saturate(708%) hue-rotate(2deg) brightness(92%) contrast(98%) var(--garden-peek-ring);
-}
-
-.garden-stem-container.is-standby-plant .garden-stem-part.garden-part-peeked,
-.garden-stem-container.is-standby-plant .garden-flower-part.garden-part-peeked {
-    filter: brightness(0) invert(19%) sepia(19%) saturate(984%) hue-rotate(127deg) brightness(95%) contrast(90%) var(--garden-peek-ring);
-}
-
-/* A silhouette in the garden's own colour is a mask, which would cut the ring
-   away: it lightens instead. */
-.garden-stem-container.is-standby-plant .garden-part.is-tinted.garden-part-peeked {
-    filter: brightness(1.5);
+/* Its ring (garden.ts, ringOf): its own outline, one art pixel light and one
+   dark, so it reads on a day sky, a night sky and the soil alike. Drawn in
+   art pixels and scaled with the sprite, so it keeps to the sprite's grid at
+   any zoom. It comes on and goes at once. */
+.garden-peek-ring {
+    position: absolute;
+    pointer-events: none;
+    image-rendering: pixelated;
 }
 
 /* Your garden in the middle, your friends' plants at its borders (app.ts arrange). */

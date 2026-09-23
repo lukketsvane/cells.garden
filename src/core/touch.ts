@@ -16,7 +16,8 @@
  */
 
 const CELL = '.garden-item, .seed-content, .garden-peek-chip';
-const HOLD_MS = 450;
+/** How long a finger rests on a cell (or, in the garden, a plant part) for its menu. */
+export const HOLD_MS = 450;
 const MOVE_TOLERANCE = 8;
 
 function mouse(type: string, touch: Touch, target: EventTarget, extra: MouseEventInit = {}) {
