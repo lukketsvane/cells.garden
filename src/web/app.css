@@ -23,6 +23,8 @@ html, body {
     height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
+    /* The page scrolls but never zooms; the garden canvas does its own pinch. */
+    touch-action: pan-x pan-y;
 }
 
 body {

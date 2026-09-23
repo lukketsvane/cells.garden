@@ -10,6 +10,12 @@ import { bootGarden } from '../core/boot';
 const host = document.getElementById('app');
 if (!host) throw new Error('cells.garden: #app element missing');
 
+// Safari zooms the whole page on a pinch whatever the viewport says. Only the
+// garden canvas zooms, and it reads the touches itself, so the page gesture goes.
+for (const type of ['gesturestart', 'gesturechange']) {
+    document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+}
+
 const extensionOAuthHandoff = Boolean(
     (window as Window & { __CELLS_EXTENSION_OAUTH_HANDOFF__?: boolean })
         .__CELLS_EXTENSION_OAUTH_HANDOFF__
