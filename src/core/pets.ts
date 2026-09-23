@@ -1,31 +1,77 @@
+/**
+ * The pet layer: animals living in the garden, one layer in front of its
+ * items and behind the grass and the plants. Each kind moves in its own way,
+ * written in a behaviour module of its own (the crow's is crow.ts). The Pets
+ * menu switches each on or off per garden; after that it does its own thing.
+ *
+ * Only a build with the extras (extras.ts) has pets. Without them the Pets
+ * menu shows what is coming, greyed out, as it has since before any was ready.
+ */
 import './shim';
 import type { GardenApp } from './app';
+import { CROW_PREVIEW_URL, mountCrow } from './crow';
+import { EXTRAS } from './extras';
+import { ITEM_TYPES } from './items';
 import type { GardenSettings } from './model';
+import { pictureTile } from './tiles';
 import { Modal } from './ui';
-import { CROW_PREVIEW_URL, mountCrowNPC } from './crow';
 
-import gnomeUrl from '../assets/pets/gnome.png';
-import pumpkinOffUrl from '../assets/pack/pumpkin/pumpkin_1_off.png';
-import pumpkin1Url from '../assets/pack/pumpkin/pumpkin_1_on_1.png';
-import pumpkin2Url from '../assets/pack/pumpkin/pumpkin_1_on_2.png';
-import pumpkin3Url from '../assets/pack/pumpkin/pumpkin_1_on_3.png';
+/** What a pet knows of the garden around it, in world px. */
+export interface PetScene {
+    /** The world's width. A pet keeps inside it. */
+    width: number;
+    /** The ground line, down from the top of the world: where feet go. */
+    horizon: number;
+    /** The slice of the world the camera shows now, or null while nothing is laid out. */
+    view(): { left: number; right: number } | null;
+    /** The viewer asked for less motion: pets hold still. */
+    reducedMotion: boolean;
+}
 
-type PetSettingKey = 'petGnome' | 'petPumpkin' | 'petCrow';
+/** Where a pet stood and which way it looked when the garden last redrew, so a redraw does not send it back to the start. */
+export interface PetSpot {
+    x: number;
+    facing: 1 | -1;
+}
 
-/** `available: false` keeps a pet in the grid, greyed out, and out of the scene. */
-type PetOption = { key: PetSettingKey; label: string; preview: string; available: boolean };
+/**
+ * A pet in the garden. Building it starts nothing: it lives from start() until
+ * stop(), which ends every timer and frame it runs and says where it got to.
+ */
+export interface PetLife {
+    start(): void;
+    stop(): PetSpot;
+}
 
-const PETS: PetOption[] = [
-    { key: 'petGnome', label: 'Garden gnome', preview: gnomeUrl, available: false },
-    { key: 'petPumpkin', label: 'Pumpkin', preview: pumpkin1Url, available: false },
-    { key: 'petCrow', label: 'Crow', preview: CROW_PREVIEW_URL, available: false },
+/** A kind of pet: its switch, its tile in the Pets menu, and the behaviour that brings it to life. */
+interface PetType {
+    /** The garden setting that switches it on. */
+    key: `pet${string}`;
+    /** Which sprite this is; styles.css sizes its preview by it. */
+    kind: string;
+    label: string;
+    preview: string;
+    /** Build the pet in `layer`, where `spot` says it last stood (null the first time). */
+    mount(layer: HTMLElement, scene: PetScene, spot: PetSpot | null): PetLife;
+}
+
+/**
+ * Every pet. A new one (a frog) is its art, a behaviour module that exports a
+ * mount like mountCrow, and one more entry here. Its switch needs no other
+ * home: a garden without it reads as off, and a merge keeps a key it has never
+ * seen.
+ */
+const PETS: PetType[] = [
+    { key: 'petCrow', kind: 'crow', label: 'Crow', preview: CROW_PREVIEW_URL, mount: mountCrow },
 ];
 
-const isAvailable = (key: PetSettingKey) => PETS.some((pet) => pet.key === key && pet.available);
+function isOn(settings: GardenSettings, key: PetType['key']): boolean {
+    return EXTRAS && (settings as unknown as Record<string, unknown>)[key] === true;
+}
 
-/** What the menu reports, so an unavailable pet never counts as on. */
+/** What the menu reports: pets switched on in a build that has them. */
 export function activePetCount(settings: GardenSettings) {
-    return PETS.filter((pet) => pet.available && settings[pet.key]).length;
+    return PETS.filter((pet) => isOn(settings, pet.key)).length;
 }
 
 export class PetsModal extends Modal {
@@ -35,7 +81,7 @@ export class PetsModal extends Modal {
 
     onOpen() {
         this.modalEl.addClass('share-modal');
-        this.modalEl.addClass('garden-pets-modal');
+        this.modalEl.addClass('garden-tiles-modal');
         this.render();
     }
 
@@ -43,127 +89,63 @@ export class PetsModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
         contentEl.createEl('h2', { text: 'Pets' });
+        const grid = contentEl.createDiv('garden-tiles');
 
-        const grid = contentEl.createDiv('garden-pets-grid');
-        for (const pet of PETS) {
-            if (!pet.available) {
-                const tile = grid.createEl('button', {
-                    cls: 'garden-pet-tile is-unavailable',
-                    attr: {
-                        type: 'button',
-                        disabled: 'true',
-                        'aria-label': pet.label + ', unavailable',
-                        'data-pet': pet.key,
-                    },
-                });
-                const preview = tile.createDiv('garden-pet-tile-preview');
-                preview.createEl('img', { attr: { src: pet.preview, alt: '' } });
-                tile.createSpan({ cls: 'garden-pet-tile-name', text: pet.label });
-                tile.createSpan({ cls: 'garden-pet-tile-state', text: 'Unavailable' });
-                continue;
+        if (!EXTRAS) {
+            // What is coming, greyed out. The gnome and the pumpkin are items
+            // now, but this is where people have seen them waiting.
+            for (const type of [...ITEM_TYPES, ...PETS]) {
+                pictureTile(grid, { kind: type.kind, label: type.label, preview: type.preview, state: 'Unavailable', disabled: true });
             }
+            return;
+        }
 
-            const active = Boolean(this.app.settings[pet.key]);
-            const tile = grid.createEl('button', {
-                cls: 'garden-pet-tile',
-                attr: {
-                    type: 'button',
-                    'aria-pressed': String(active),
-                    'aria-label': pet.label + (active ? ', on' : ', off'),
-                    'data-pet': pet.key,
+        for (const pet of PETS) {
+            const on = isOn(this.app.settings, pet.key);
+            pictureTile(grid, {
+                kind: pet.kind,
+                label: pet.label,
+                preview: pet.preview,
+                state: on ? 'On' : 'Off',
+                pressed: on,
+                onClick: () => {
+                    this.app.settings = { ...this.app.settings, [pet.key]: !on };
+                    this.app.view?.scheduleRender();
+                    void this.app.saveGardenData();
+                    this.render();
                 },
-            });
-            tile.toggleClass('is-active', active);
-
-            const preview = tile.createDiv('garden-pet-tile-preview');
-            preview.createEl('img', { attr: { src: pet.preview, alt: '' } });
-            tile.createSpan({ cls: 'garden-pet-tile-name', text: pet.label });
-            tile.createSpan({ cls: 'garden-pet-tile-state', text: active ? 'On' : 'Off' });
-
-            tile.addEventListener('click', () => {
-                const next = !this.app.settings[pet.key];
-                this.app.settings = { ...this.app.settings, [pet.key]: next };
-                this.app.view?.scheduleRender();
-                void this.app.saveGardenData();
-                this.render();
             });
         }
     }
 }
 
-function bindTap(el: HTMLElement, action: () => void) {
-    let press: { x: number; y: number } | null = null;
-
-    el.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
-    el.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: true });
-    el.addEventListener('touchend', (e) => e.stopPropagation(), { passive: true });
-
-    el.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        press = { x: e.clientX, y: e.clientY };
-        el.setPointerCapture?.(e.pointerId);
-    });
-
-    el.addEventListener('pointerup', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const start = press;
-        press = null;
-        if (!start) return;
-        if (Math.hypot(e.clientX - start.x, e.clientY - start.y) <= 12) action();
-    });
-
-    el.addEventListener('pointercancel', () => { press = null; });
-    el.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-    });
-
-    el.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        action();
-    });
-}
-
-function makePetButton(layer: HTMLElement, cls: string, label: string) {
-    return layer.createEl('button', {
-        cls: 'garden-pet ' + cls,
-        attr: { type: 'button', 'aria-label': label },
-    });
+/** The pets of one drawing of the garden. */
+export interface GardenPets {
+    start(): void;
+    stop(): void;
 }
 
 /**
- * A pet that is greyed out in the grid never joins the scene either: a garden
- * saved while it was still switchable must not keep one standing there. Every
- * pet is unavailable at the moment, so this mounts nothing.
+ * Build the pets switched on in `settings` into `world`, or null when none
+ * is. They hold still until the view starts them, once the world is on
+ * screen; stop() notes in `spots` where each got to, for the next drawing.
  */
-export function renderGardenPets(world: HTMLElement, settings: GardenSettings) {
-    const on = (key: PetSettingKey) => isAvailable(key) && Boolean(settings[key]);
-    if (!on('petPumpkin') && !on('petCrow')) return;
+export function renderGardenPets(
+    world: HTMLElement,
+    settings: GardenSettings,
+    scene: PetScene,
+    spots: Map<string, PetSpot>,
+): GardenPets | null {
+    const pets = PETS.filter((pet) => isOn(settings, pet.key));
+    if (pets.length === 0) return null;
     const layer = world.createDiv('garden-pets-layer');
-
-    if (on('petCrow')) {
-        mountCrowNPC(layer);
-    }
-
-    if (on('petPumpkin')) {
-        const pumpkin = makePetButton(layer, 'garden-pet-pumpkin', 'Pumpkin. Tap to make it jump.');
-        pumpkin.style.setProperty('--pumpkin-off', 'url("' + pumpkinOffUrl + '")');
-        pumpkin.style.setProperty('--pumpkin-1', 'url("' + pumpkin1Url + '")');
-        pumpkin.style.setProperty('--pumpkin-2', 'url("' + pumpkin2Url + '")');
-        pumpkin.style.setProperty('--pumpkin-3', 'url("' + pumpkin3Url + '")');
-
-        const pop = () => {
-            if (pumpkin.classList.contains('is-startled')) return;
-            pumpkin.classList.add('is-startled');
-        };
-        pumpkin.addEventListener('animationend', (e) => {
-            if ((e as AnimationEvent).animationName === 'garden-pumpkin-pop') {
-                pumpkin.classList.remove('is-startled');
-            }
-        });
-        bindTap(pumpkin, pop);
-    }
+    const lives = pets.map((pet) => ({ key: pet.key, life: pet.mount(layer, scene, spots.get(pet.key) ?? null) }));
+    return {
+        start: () => {
+            for (const { life } of lives) life.start();
+        },
+        stop: () => {
+            for (const { key, life } of lives) spots.set(key, life.stop());
+        },
+    };
 }

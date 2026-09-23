@@ -177,9 +177,9 @@
 }
 
 /*
- * What stands on the horizon, back to front: objects (5), pets (6), the grass
+ * What stands on the horizon, back to front: items (5), pets (6), the grass
  * (7), the plants (8), and the fireflies over it all (9). The grass hides the
- * feet of the pets and the objects, and the plants grow out of it.
+ * feet of the pets and the items, and the plants grow out of it.
  */
 .garden-grass-layer {
     position: absolute;
@@ -1438,7 +1438,71 @@
     user-select: none;
 }
 
-/* --- Pets: opt-in scene NPCs --- */
+/* --- Items: what stands in the garden, placed from the Items menu --- */
+.garden-items-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* Feet on the horizon, the middle on its x. The view sets the sprite and its size. */
+.garden-scene-item {
+    position: absolute;
+    top: calc(var(--sky) - var(--item-height));
+    width: var(--item-width);
+    height: var(--item-height);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    transform: translateX(-50%);
+    background: var(--item-sprite) center bottom / 100% 100% no-repeat;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: grab;
+}
+
+.garden-scene-item:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 4px;
+}
+
+.garden-scene-item.is-dragging {
+    z-index: 1;
+    cursor: grabbing;
+}
+
+/* At night a lit item (the pumpkin) shows its lit frames in turn. */
+.garden-items-layer.is-night .garden-scene-item[data-lit] {
+    background-image: var(--item-lit-1);
+    animation: garden-item-flicker 1.2s steps(1, end) infinite;
+    animation-delay: var(--item-flicker-delay, 0s);
+}
+
+@keyframes garden-item-flicker {
+    0%, 24% { background-image: var(--item-lit-1); }
+    25%, 49% { background-image: var(--item-lit-2, var(--item-lit-1)); }
+    50%, 74% { background-image: var(--item-lit-3, var(--item-lit-1)); }
+    75%, 100% { background-image: var(--item-lit-2, var(--item-lit-1)); }
+}
+
+/* Lit, but steady. */
+@media (prefers-reduced-motion: reduce) {
+    .garden-items-layer.is-night .garden-scene-item[data-lit] {
+        animation: none;
+    }
+}
+
+
+/* --- Pets: animals living in the garden, switched on in the Pets menu --- */
 .garden-pets-layer {
     position: absolute;
     inset: 0;
@@ -1467,40 +1531,14 @@
     outline-offset: 4px;
 }
 
-.garden-pet-pumpkin {
-    left: 212px;
-    top: calc(var(--sky) - 54px);
-    width: 58px;
-    height: 54px;
-    background-image: var(--pumpkin-off);
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: contain;
-    animation: garden-pumpkin-glow 2.8s steps(1, end) infinite;
-}
-.garden-pet-pumpkin.is-startled {
-    animation: garden-pumpkin-pop 650ms steps(6, end) 1, garden-pumpkin-glow 2.8s steps(1, end) infinite;
-}
-@keyframes garden-pumpkin-glow {
-    0%, 24% { background-image: var(--pumpkin-off); }
-    25%, 49% { background-image: var(--pumpkin-1); }
-    50%, 74% { background-image: var(--pumpkin-2); }
-    75%, 100% { background-image: var(--pumpkin-3); }
-}
-@keyframes garden-pumpkin-pop {
-    0%, 100% { transform: translateY(0) scale(1); }
-    35% { transform: translateY(-24px) scale(1.08); }
-    65% { transform: translateY(-8px) scale(0.96); }
-}
-
+/* One frame of the atlas; the view moves it, mirrors it and picks the frame. */
 .garden-pet-crow {
     left: 0;
     top: 0;
-    width: 40px;
-    height: 40px;
-    z-index: 9;
+    width: 80px;
+    height: 80px;
     background-image: var(--crow-atlas);
-    background-size: 320px 320px;
+    background-size: 640px 640px;
     background-position: 0 0;
     background-repeat: no-repeat;
     image-rendering: pixelated;
@@ -1508,25 +1546,22 @@
     transform-origin: 50% 50%;
     will-change: transform, background-position;
 }
-.garden-pet-crow.is-flipped {
-    scale: -1 1;
-}
 
-/* Main menu -> Pets */
-.garden-pets-modal {
+/* Main menu -> Pets and Items: a grid of picture tiles (tiles.ts) */
+.garden-tiles-modal {
     width: min(92vw, 420px);
     max-width: calc(100vw - 24px);
     min-width: 0;
     overflow-x: hidden;
 }
-.garden-pets-modal .modal-content {
+.garden-tiles-modal .modal-content {
     width: 100%;
     max-width: 100%;
     min-width: 0;
     overflow-x: hidden;
     box-sizing: border-box;
 }
-.garden-pets-grid {
+.garden-tiles {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
@@ -1536,7 +1571,7 @@
     margin: 14px 0 2px;
     overflow-x: hidden;
 }
-.garden-pet-tile {
+.garden-tile {
     width: 100%;
     max-width: 100%;
     min-width: 0;
@@ -1552,15 +1587,15 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
-.garden-pet-tile:hover,
-.garden-pet-tile:active,
-.garden-pet-tile.is-active {
+.garden-tile:hover,
+.garden-tile:active,
+.garden-tile.is-active {
     border: 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
 }
-.garden-pet-tile-preview {
+.garden-tile-preview {
     width: 100%;
     max-width: 100%;
     height: 70px;
@@ -1569,7 +1604,7 @@
     justify-content: center;
     overflow: hidden;
 }
-.garden-pet-tile-preview img {
+.garden-tile-preview img {
     display: block;
     width: auto;
     height: auto;
@@ -1578,28 +1613,28 @@
     image-rendering: pixelated;
     image-rendering: crisp-edges;
 }
-.garden-pet-tile[data-pet='petGnome'] .garden-pet-tile-preview img {
+.garden-tile[data-kind='gnome'] .garden-tile-preview img {
     width: 36px;
     height: 48px;
 }
-.garden-pet-tile[data-pet='petPumpkin'] .garden-pet-tile-preview img {
+.garden-tile[data-kind='pumpkin'] .garden-tile-preview img {
     width: 58px;
     height: 54px;
 }
-.garden-pet-tile[data-pet='petCrow'] .garden-pet-tile-preview img {
+.garden-tile[data-kind='crow'] .garden-tile-preview img {
     width: 80px;
     height: 80px;
     max-width: 80px;
     max-height: 80px;
 }
-.garden-pet-tile-name {
+.garden-tile-name {
     display: block;
     max-width: 100%;
     margin-top: 2px;
     overflow-wrap: anywhere;
     font-weight: 600;
 }
-.garden-pet-tile-state {
+.garden-tile-state {
     display: block;
     margin-top: 1px;
     font-size: 10px;
@@ -1607,15 +1642,15 @@
     letter-spacing: .08em;
     color: var(--text-faint);
 }
-.garden-pet-tile.is-active .garden-pet-tile-name,
-.garden-pet-tile.is-active .garden-pet-tile-state {
+.garden-tile.is-active .garden-tile-name,
+.garden-tile.is-active .garden-tile-state {
     color: var(--interactive-accent);
 }
 
-/* A pet that is not ready yet: still shown, but greyed out and inert. */
-.garden-pet-tile.is-unavailable,
-.garden-pet-tile.is-unavailable:hover,
-.garden-pet-tile.is-unavailable:active {
+/* Not ready yet: still shown, but greyed out and inert. */
+.garden-tile.is-unavailable,
+.garden-tile.is-unavailable:hover,
+.garden-tile.is-unavailable:active {
     background: transparent;
     border: 0;
     box-shadow: none;
@@ -1623,15 +1658,15 @@
     cursor: default;
     opacity: 0.4;
 }
-.garden-pet-tile.is-unavailable .garden-pet-tile-preview img {
+.garden-tile.is-unavailable .garden-tile-preview img {
     filter: grayscale(1);
 }
-.garden-pet-tile.is-unavailable .garden-pet-tile-name,
-.garden-pet-tile.is-unavailable .garden-pet-tile-state {
+.garden-tile.is-unavailable .garden-tile-name,
+.garden-tile.is-unavailable .garden-tile-state {
     color: var(--text-faint);
 }
 
 @media (max-width: 420px) {
-    .garden-pets-grid { gap: 0; }
-    .garden-pet-tile { padding-inline: 0; }
+    .garden-tiles { gap: 0; }
+    .garden-tile { padding-inline: 0; }
 }

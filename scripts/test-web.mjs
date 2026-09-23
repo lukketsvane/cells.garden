@@ -389,6 +389,39 @@ async function scenario(browser, errors) {
     console.log('after reload items:', (await page.$$('.garden-item')).length);
     assert(columns.length === 2, `expected 2 columns after reload, got ${columns.length}`);
 
+    // Items and pets wait for Max's approval, so this build shows neither, not
+    // even for a garden that holds them (one used on dev.cells.garden), and it
+    // keeps them in the garden untouched.
+    const held = await page.evaluate(() => {
+        const garden = JSON.parse(localStorage.getItem('cells.garden/v1'));
+        garden.settings.petCrow = true;
+        garden.settings.items = [{ id: 'gnome_test', kind: 'gnome', x: 0.5 }, { id: 'lamp_test', kind: 'lamp', x: 1 }];
+        localStorage.setItem('cells.garden/v1', JSON.stringify(garden));
+        return garden.settings.items;
+    });
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForSelector('.project-column');
+    await page.waitForTimeout(400);
+    const extras = await page.$$eval('.garden-items-layer, .garden-pets-layer, .garden-scene-item, .garden-pet', (els) => els.map((e) => e.className));
+    assert(extras.length === 0, `items or pets drawn in a build without them: ${JSON.stringify(extras)}`);
+    if (await page.$('.auth-pill')) {
+        await page.click('.auth-pill');
+        await page.waitForSelector('.garden-context-menu');
+        const pill = await page.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
+        assert(!pill.includes('Items') && pill.includes('Pets'), `the pill menu offers Items, or lost Pets: ${JSON.stringify(pill)}`);
+        await page.click('.garden-context-menu .garden-menu-item:has(.garden-menu-label:text-is("Pets"))');
+        await page.waitForSelector('.modal .garden-tile');
+        const tiles = await page.$$eval('.modal .garden-tile', (els) => els.map((e) => [e.getAttribute('aria-label'), e.disabled]));
+        console.log('pets without extras:', tiles);
+        assert.deepEqual(tiles, [['Garden gnome, unavailable', true], ['Pumpkin, unavailable', true], ['Crow, unavailable', true]],
+            'the Pets menu shows what is coming, greyed out');
+        await page.keyboard.press('Escape');
+    }
+    await page.evaluate(() => window.garden.saveGardenData());
+    const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')).settings);
+    assert.deepEqual(kept.items, held, 'a build without items must keep the ones a garden holds');
+    assert(kept.petCrow === true, 'a build without pets must keep their switches');
+
     // --- PWA: manifest and service worker are served ---------------------------
     const manifestRes = await fetch(new URL('manifest.webmanifest', BASE));
     assert(manifestRes.ok, `manifest.webmanifest: HTTP ${manifestRes.status}`);

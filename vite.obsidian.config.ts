@@ -1,7 +1,7 @@
 import { copyFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
-import { supabaseEnv } from './vite.config';
+import { extrasFlag, supabaseEnv } from './vite.config';
 
 // The Obsidian plugin: the same core as the web build, bundled as one CommonJS
 // file Obsidian can load, with every sprite inlined and the CSS in styles.css.
@@ -12,7 +12,7 @@ import { supabaseEnv } from './vite.config';
 // root, beside manifest.json, where the plugin directory's build check looks.
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
     return {
         publicDir: false,
         plugins: [{
@@ -29,6 +29,8 @@ export default defineConfig(({ mode }) => {
             'process.env.NODE_ENV': JSON.stringify('production'),
             __CELLS_BROWSER_STORAGE__: 'false',
             __CELLS_SYSTEM_CLIPBOARD__: 'false',
+            // The plugin ships from main, never from Vercel's dev build.
+            __CELLS_EXTRAS__: extrasFlag(command, false),
         },
         build: {
             outDir: 'obsidian-plugin',

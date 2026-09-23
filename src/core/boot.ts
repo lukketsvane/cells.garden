@@ -13,6 +13,8 @@ import { PlantSync } from './plants';
 import { GardenQuestionModal, NewSpaceModal, ShareGardenModal } from './share';
 import { SharePlantModal } from './share-plant';
 import { FriendsModal } from './friends';
+import { EXTRAS } from './extras';
+import { ItemsModal, shownItems } from './items';
 import { PetsModal, activePetCount } from './pets';
 import { applyScene } from './scene';
 import { SettingsModal } from './settings';
@@ -268,8 +270,15 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
     pill.setMenu(async (): Promise<MenuItem[]> => {
         const uid = currentUser;
         const petCount = activePetCount(app.settings);
+        const itemCount = shownItems(app.settings).length;
         const common: MenuItem[] = [
             { label: 'Export or import', onClick: () => openGardenFiles(app) },
+            // Items wait for Max's approval, so only a build with the extras offers them.
+            ...(EXTRAS ? [{
+                label: 'Items',
+                sub: itemCount ? itemCount + ' placed' : undefined,
+                onClick: () => new ItemsModal(app).open(),
+            }] : []),
             {
                 label: 'Pets',
                 sub: petCount ? petCount + ' on' : 'Off',

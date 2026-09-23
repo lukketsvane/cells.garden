@@ -8,8 +8,10 @@ import { menuRow, openMenu, type MenuItem } from './menu';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
 import { mineralOpacity, skyAt } from './garden-settings';
+import { EXTRAS } from './extras';
+import { renderGardenItems } from './items';
 import { PanView } from './pan';
-import { renderGardenPets } from './pets';
+import { renderGardenPets, type GardenPets, type PetSpot } from './pets';
 import type { LayerItem, LayerName, ProjectData, ViewState } from './model';
 
 declare const __CELLS_SYSTEM_CLIPBOARD__: boolean;
@@ -47,6 +49,9 @@ import stem8Url from '../assets/pack/plant_1/stem/stem8.png';
 const WORLD_PADDING = 320;
 /** The middle of plant slot `i`, in world coordinates. */
 const plantCentre = (i: number) => WORLD_PADDING + i * PLANT_SPACING + PLANT_SPACING / 2;
+/** An item's x (plant slots from the first plant's left edge, see GardenItem) in world coordinates, and back. */
+const slotToWorld = (x: number) => WORLD_PADDING + x * PLANT_SPACING;
+const worldToSlot = (x: number) => (x - WORLD_PADDING) / PLANT_SPACING;
 // How far past an edge a drag can stretch, in screen pixels, before it stops.
 const RUBBER_REACH = 120;
 // Frames a shooting star lives, long enough to fade in and out again.
@@ -609,6 +614,26 @@ export class GardenView extends View {
     private fireflyRAF: number | null = null;
     private fireflySkyHeight: number = 0;
 
+    // --- Items and pets ---
+    // Every render builds a world, and a render can be overtaken by the next
+    // one and thrown away. So the pets are kept by the world they live in, and
+    // only the world on screen ever has its pets started.
+    private _pets = new WeakMap<HTMLElement, GardenPets>();
+    /** Where each pet was when the garden last redrew, so it carries on from there. */
+    private _petSpots = new Map<string, PetSpot>();
+    /** The item being dragged, if any: redraws wait until it is put down. */
+    private _itemDrag: HTMLElement | null = null;
+
+    private startPets() {
+        const world = this.world;
+        if (world) this._pets.get(world)?.start();
+    }
+
+    private stopPets() {
+        const world = this.world;
+        if (world) this._pets.get(world)?.stop();
+    }
+
     // --- Drawing Mode State ---
     private isDrawingMode = false;
     private selectedToolEraser = false; // Tracks which toolbar button is active
@@ -1106,8 +1131,9 @@ export class GardenView extends View {
         const win = this.containerEl.ownerDocument.defaultView || window;
         this._renderDebounce = win.setTimeout(() => {
             // A sync from another tab or device must not throw away a cell being
-            // written: wait until the typing is done, then render.
-            if (this.isTyping()) this.scheduleRender();
+            // written, or snatch an item from under the finger: wait until the
+            // typing or the drag is done, then render.
+            if (this.isTyping() || this._itemDrag?.isConnected) this.scheduleRender();
             else void this.onOpen();
         }, 80);
     }
@@ -1126,6 +1152,7 @@ export class GardenView extends View {
             this.stopWorm();
             this.stopFireflies();
             this.stopShootingStars();
+            this.stopPets();
 
             // Only load from hard drive on the very first render (app startup)
             const persistedState = !this._hasLoadedInitialState ? this.loadViewState() : null;
@@ -1259,6 +1286,7 @@ export class GardenView extends View {
             this.startWorm();
             this.startFireflies();
             this.startShootingStars();
+            this.startPets();
             this.onRendered?.();
             
 
@@ -1565,6 +1593,7 @@ export class GardenView extends View {
         this.stopShootingStars();
         this.stopAnt();
         this.stopWorm();
+        this.stopPets();
         this._renderDebounce = stop(this._renderDebounce);
         this._skyUpdateInterval = stop(this._skyUpdateInterval);
 
@@ -1788,6 +1817,39 @@ export class GardenView extends View {
         this.applyWorldTransform(world, viewport);
         this.settleCamera(false);
         this.scheduleViewStateSave();
+    }
+
+    /**
+     * Where a new item goes, as an item's x (see GardenItem): on the ground in
+     * the middle of the camera's view. The plants stand in front of the items,
+     * and the camera likes to look straight at one, so it goes to the gap
+     * between plants nearest the middle that is in view and has nothing in it
+     * yet (`taken` are the items' x). With no such gap, the middle itself, or
+     * looking out into the void, the nearest bit of the garden.
+     */
+    itemSpot(taken: number[]): number {
+        const width = this.world?.offsetWidth || 0;
+        const margin = PLANT_SPACING / 4;
+        const slice = this.visibleSlice() ?? { left: 0, right: width };
+        const inWorld = (x: number) => Math.max(margin, Math.min(width - margin, x));
+        const middle = worldToSlot(inWorld((slice.left + slice.right) / 2));
+        const from = worldToSlot(inWorld(slice.left + margin));
+        const to = worldToSlot(inWorld(slice.right - margin));
+        // The gaps are the whole slots: 0 before the first plant, 1 after it, and so on.
+        const gaps: number[] = [];
+        for (let gap = 0; gap <= this.app.gardenData.length; gap++) {
+            if (gap >= from && gap <= to) gaps.push(gap);
+        }
+        gaps.sort((a, b) => Math.abs(a - middle) - Math.abs(b - middle));
+        return gaps.find(gap => taken.every(x => Math.abs(x - gap) > 0.3)) ?? middle;
+    }
+
+    /** The slice of the world the camera shows, in world coordinates. Null before the pane is laid out. */
+    private visibleSlice(): { left: number; right: number } | null {
+        const viewport = this.viewport;
+        if (!viewport || !viewport.offsetWidth || !(this.zoom > 0)) return null;
+        const left = -this.currentTranslateX / this.zoom;
+        return { left, right: left + viewport.offsetWidth / this.zoom };
     }
 
     /** The two elements the camera works on. Null between renders. */
@@ -2388,9 +2450,33 @@ export class GardenView extends View {
         this.wormTrailCanvas = trailCanvas;
 
         const wormLayer = world.createDiv("garden-worm-layer");
+        const night = starOpacity > 0.1;
+
+        // What stands in the garden: the items, and one layer in front of them
+        // the pets. Both wait for Max's approval, so only a build with the
+        // extras has them.
+        let itemsLayer: HTMLElement | null = null;
+        if (EXTRAS) {
+            itemsLayer = await renderGardenItems(world, this.app, {
+                width: calculatedWidth,
+                toWorld: slotToWorld,
+                toSlot: worldToSlot,
+                spriteSize: (url) => this.getImageDimensions(url),
+                onDrag: (item) => { this._itemDrag = item; },
+            });
+            itemsLayer.toggleClass('is-night', night);
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const pets = renderGardenPets(world, this.app.settings, {
+                width: calculatedWidth,
+                horizon: skyHeight,
+                view: () => this.visibleSlice(),
+                reducedMotion,
+            }, this._petSpots);
+            if (pets) this._pets.set(world, pets);
+        }
 
         // Grass along the horizon, tiled like the tree line: behind the plants,
-        // in front of whatever stands in the garden (its pets and objects).
+        // in front of whatever stands in the garden (its pets and items).
         const grassImg = await loadImage(grassUrl);
         const grassLayer = world.createDiv("garden-grass-layer");
         grassLayer.style.backgroundImage = `url(${grassUrl})`;
@@ -2400,18 +2486,22 @@ export class GardenView extends View {
         const plantsLayer = world.createDiv("garden-plants-layer");
 
         const fireflyLayer = world.createDiv("garden-firefly-layer");
-        const night = starOpacity > 0.1;
         fireflyLayer.style.setProperty('--firefly-color', night ? '#7eb357' : '#5e7e50');
         fireflyLayer.style.setProperty('--glow-opacity', String(starOpacity));
         this.createFireflies(fireflyLayer, skyHeight);
 
-        // The sky drifts through the day; a minute's resolution is plenty.
+        // The sky drifts through the day; a minute's resolution is plenty. The
+        // old world's clock goes with it, or every redraw would leave one
+        // running on a world nobody sees.
+        this._skyUpdateInterval = stop(this._skyUpdateInterval);
         this._skyUpdateInterval = window.setInterval(() => {
             const state = this.getDayNightState();
             skyColorLayer.style.backgroundColor = state.skyColor;
             starsLayer.style.opacity = String(state.starOpacity);
             fireflyLayer.style.setProperty('--glow-opacity', String(state.starOpacity));
             fireflyLayer.style.setProperty('--firefly-color', state.starOpacity > 0.1 ? '#7eb357' : '#5e7e50');
+            // Pumpkins light up when the fireflies do.
+            itemsLayer?.toggleClass('is-night', state.starOpacity > 0.1);
         }, 60000);
 
         // --- The ant walks the horizon ---
@@ -2450,10 +2540,6 @@ export class GardenView extends View {
                 border.style.left = `${WORLD_PADDING + i * PLANT_SPACING}px`;
             }
         });
-
-        // Optional pets live in the same world/camera as the plants.
-        // All pets are off by default.
-        renderGardenPets(world, this.app.settings);
 
         // Apply the restored pan/zoom transform.
         this.applyWorldTransform(world, viewport);

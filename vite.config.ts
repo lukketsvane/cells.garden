@@ -20,8 +20,25 @@ export function supabaseEnv(mode: string) {
     };
 }
 
+/**
+ * Whether a build carries the garden's items and pets (src/core/extras.ts),
+ * which stay out of production until Max approves them. The dev server has
+ * them, and so does Vercel's build of the dev branch when `fromDevBranch`
+ * allows it (only the web app is deployed from there). CELLS_EXTRAS=1 turns
+ * them on for any build, for tests, and CELLS_EXTRAS=0 off. Only the real
+ * environment is read, never an .env file, so a local file can never slip
+ * them into a release.
+ */
+export function extrasFlag(command: string, fromDevBranch: boolean): string {
+    const forced = process.env.CELLS_EXTRAS;
+    if (forced === '1' || forced === 'true') return 'true';
+    if (forced === '0' || forced === 'false') return 'false';
+    const on = command === 'serve' || (fromDevBranch && process.env.VERCEL_GIT_COMMIT_REF === 'dev');
+    return JSON.stringify(on);
+}
+
 // The web app is the core build.
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
     return {
         root: 'src/web',
         publicDir: '../../public',
@@ -29,6 +46,7 @@ export default defineConfig(({ mode }) => {
             ...supabaseEnv(mode).define,
             __CELLS_BROWSER_STORAGE__: 'true',
             __CELLS_SYSTEM_CLIPBOARD__: 'true',
+            __CELLS_EXTRAS__: extrasFlag(command, true),
         },
         plugins: [
             // PWA: web manifest + Workbox service worker, so the garden installs on

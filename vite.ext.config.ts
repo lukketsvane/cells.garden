@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import { buildManifest, type ManifestEnv } from './ext/manifest';
-import { supabaseEnv } from './vite.config';
+import { extrasFlag, supabaseEnv } from './vite.config';
 
 const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
@@ -22,7 +22,7 @@ function extensionManifest(env: ManifestEnv): Plugin {
 
 // The Chrome extension: New Tab, Side Panel and popup around the same src/core
 // code as the web build. Output is an unpacked extension in dist-ext/.
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
     const { url: supabaseUrl, define } = supabaseEnv(mode);
     const pkg = JSON.parse(readFileSync(fromRoot('./package.json'), 'utf8')) as {
         version: string;
@@ -38,6 +38,8 @@ export default defineConfig(({ mode }) => {
             ...define,
             __CELLS_BROWSER_STORAGE__: 'true',
             __CELLS_SYSTEM_CLIPBOARD__: 'true',
+            // The extension ships from main, never from Vercel's dev build.
+            __CELLS_EXTRAS__: extrasFlag(command, false),
         },
         plugins: [
             extensionManifest({ version: pkg.version, description: pkg.description, supabaseUrl }),
