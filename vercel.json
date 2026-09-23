@@ -24,5 +24,14 @@
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), hid=(), accelerometer=(), gyroscope=(), magnetometer=(), display-capture=(), clipboard-read=(), clipboard-write=(self)" }
       ]
     }
+  ],
+  "redirects": [
+    {"source": "/index.html", "destination": "/", "permanent": true},
+    {"source": "/guide", "destination": "/guide/", "permanent": true},
+    {"source": "/guide/index.html", "destination": "/guide/", "permanent": true},
+    {"source": "/chrome-extension", "destination": "/chrome-extension/", "permanent": true},
+    {"source": "/chrome-extension/index.html", "destination": "/chrome-extension/", "permanent": true},
+    {"source": "/obsidian", "destination": "/obsidian/", "permanent": true},
+    {"source": "/obsidian/index.html", "destination": "/obsidian/", "permanent": true}
   ]
 }

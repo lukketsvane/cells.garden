@@ -18,6 +18,7 @@
     "icons": "node scripts/make-icons.mjs",
     "test:unit": "node --import ./scripts/ts-resolve.mjs --test \"src/**/*.test.ts\"",
     "test:web": "node scripts/test-web.mjs",
+    "test:seo": "node scripts/test-seo.mjs",
     "test:ext": "node scripts/test-ext.mjs",
     "typecheck:ext": "tsc --noEmit -p tsconfig.ext.json",
     "build:obsidian": "vite build --config vite.obsidian.config.ts",

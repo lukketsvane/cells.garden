@@ -67,7 +67,7 @@ export default defineConfig(({ command, mode }) => {
                 manifest: {
                     name: 'cells.garden',
                     short_name: 'Garden',
-                    description: 'A kanban-style project garden where tasks grow into plants.',
+                    description: 'A free visual project planner where tasks grow into a pixel-art garden.',
                     start_url: './',
                     scope: './',
                     display: 'standalone',
@@ -90,9 +90,11 @@ export default defineConfig(({ command, mode }) => {
                     // emitted as a file (scripts/test-web.mjs fails offline if one is
                     // missing from the precache).
                     globPatterns: ['**/*.{html,js,css}'],
-                    // Every same-origin navigation gets the precached shell. The
-                    // Supabase magic link lands on "/?code=..." and must reach index.html.
+                    // Only app-root navigations get the shell. Public guides and
+                    // unknown URLs must keep their own content or 404 response.
+                    // Magic links on "/?code=..." still reach index.html.
                     navigateFallback: 'index.html',
+                    navigateFallbackAllowlist: [/^\/(?:index\.html)?(?:\?|$)/],
                     // Plain pages next to the app, such as the privacy policy, load as themselves.
                     navigateFallbackDenylist: [/^\/privacy/],
                     // No runtimeCaching on purpose: only precached same-origin URLs are

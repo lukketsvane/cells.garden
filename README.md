@@ -6,6 +6,8 @@ Turn a task board into a pixel-art garden inside Obsidian. Each project is a pla
 
 Start with one idea. Add what it needs. Watch it take shape.
 
+[Open the web app](https://cells.garden/) · [How it works](https://cells.garden/guide/) · [Chrome extension](https://cells.garden/chrome-extension/) · [Obsidian plugin](https://cells.garden/obsidian/)
+
 ## A garden that works like a board
 
 The seed holds your project's name or goal. Around it, four layers give your work a home:

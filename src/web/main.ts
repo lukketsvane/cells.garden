@@ -49,6 +49,8 @@ const extensionOAuthHandoff = Boolean(
 );
 
 if (!extensionOAuthHandoff) {
+    // Replace the readable loading/no-JavaScript introduction with the app.
+    document.getElementById('garden-intro')?.remove();
     void bootGarden(host).then((app) => {
         window.garden = app;
     });

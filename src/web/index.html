@@ -3,8 +3,22 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-    <title>cells.garden</title>
-    <meta name="description" content="A kanban-style project garden where tasks grow into plants.">
+    <title>cells.garden | Free Visual Project Planner &amp; Task Garden</title>
+    <meta name="description" content="Turn projects and tasks into a pixel-art garden. Free visual kanban for your browser, Chrome and Obsidian. Start locally, or sign in to sync and share.">
+    <link rel="canonical" href="https://cells.garden/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="cells.garden">
+    <meta property="og:title" content="cells.garden | Free Visual Project Planner">
+    <meta property="og:description" content="Each project is a plant. Each task is a cell. Grow a pixel-art garden as you work, in your browser, Chrome or Obsidian.">
+    <meta property="og:url" content="https://cells.garden/">
+    <meta property="og:image" content="https://cells.garden/icon-512.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="cells.garden pixel-art plant icon">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="cells.garden | Free Visual Project Planner">
+    <meta name="twitter:description" content="Turn projects and tasks into a pixel-art garden. Free, open source, and local by default.">
+    <meta name="twitter:image" content="https://cells.garden/icon-512.png">
     <meta name="theme-color" content="#1e1e1e">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,7 +32,21 @@
     <!-- <link rel="manifest"> is injected by vite-plugin-pwa in the build. -->
 </head>
 <body>
-    <div id="app"></div>
+    <div id="app">
+        <main id="garden-intro">
+            <h1>cells.garden: a visual project planner</h1>
+            <p>Turn projects and tasks into a pixel-art garden. Each project is a plant, each task is a cell, and your garden changes as work moves forward.</p>
+            <p>Organize ideas, plans, work in progress and finished tasks on a kanban board. Start on this device without an account, or sign in to sync and share your garden.</p>
+            <p>Free and open source. Available on the web, in Chrome and in Obsidian.</p>
+            <nav aria-label="Product information">
+                <a href="/guide/">How cells.garden works</a>
+                <a href="/chrome-extension/">Chrome extension</a>
+                <a href="/obsidian/">Obsidian plugin</a>
+                <a href="/privacy.html">Privacy</a>
+            </nav>
+            <noscript><p>Enable JavaScript to open the interactive garden. The guides and setup instructions work without it.</p></noscript>
+        </main>
+    </div>
     <script type="module" src="./main.ts"></script>
 </body>
 </html>
