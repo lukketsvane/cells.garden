@@ -5,6 +5,7 @@
  * copy of the current plant's kanban card sits below the scene.
  */
 import { local } from '../src/core/local';
+import { setIcon } from '../src/core/icons';
 import { inExtension, ready } from './main';
 
 /** Which plant the popup showed last. Per device, like the camera. */
@@ -25,11 +26,13 @@ function readKanbanOpen(): boolean {
 }
 
 void ready.then((app) => {
+    const scene = document.querySelector<HTMLElement>('#app')!;
     const footer = document.body.createDiv('popup-footer');
-    const row = footer.createDiv('popup-row');
-    const prev = row.createEl('button', { cls: 'popup-arrow', text: '<', attr: { 'aria-label': 'Previous plant' } });
+    const row = scene.createDiv('popup-row');
+    const prev = row.createEl('button', { cls: 'popup-arrow', text: '‹', attr: { 'aria-label': 'Previous plant', title: 'Previous plant' } });
     const label = row.createDiv('popup-label');
-    const next = row.createEl('button', { cls: 'popup-arrow', text: '>', attr: { 'aria-label': 'Next plant' } });
+    label.setAttribute('aria-live', 'polite');
+    const next = row.createEl('button', { cls: 'popup-arrow', text: '›', attr: { 'aria-label': 'Next plant', title: 'Next plant' } });
 
     const kanban = footer.createEl('details', { cls: 'popup-kanban' });
     const kanbanSummary = kanban.createEl('summary', { cls: 'popup-kanban-summary' });
@@ -37,14 +40,18 @@ void ready.then((app) => {
     kanbanSummary.createSpan({ cls: 'popup-kanban-chevron', text: '›' });
     const kanbanBody = kanban.createDiv('popup-kanban-body');
 
-    const actions = footer.createDiv('popup-actions');
-    const openGarden = actions.createEl('button', { cls: 'popup-action', text: 'Garden' });
-    const openPanel = actions.createEl('button', { cls: 'popup-action', text: 'Side panel' });
+    const actions = scene.createDiv('popup-actions');
+    const openPanel = actions.createEl('button', { cls: 'popup-action', attr: { 'aria-label': 'Open side panel', title: 'Open side panel' } });
+    const openGarden = actions.createEl('button', { cls: 'popup-action', attr: { 'aria-label': 'Open garden in new tab', title: 'Open garden in new tab' } });
+    const svg = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+    setIcon(openPanel, `<svg ${svg}><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>`);
+    setIcon(openGarden, `<svg ${svg}><path d="M14 3h7v7M21 3l-11 11M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/></svg>`);
 
     let index = readIndex();
 
     const syncKanbanOpenClass = () => {
         document.documentElement.classList.toggle('popup-kanban-open', kanban.open);
+        kanbanSummary.setAttribute('aria-label', kanban.open ? 'Hide Kanban' : 'Show Kanban');
         local.set(KANBAN_KEY, kanban.open ? '1' : '0');
     };
 
@@ -87,24 +94,35 @@ void ready.then((app) => {
 
     kanban.open = readKanbanOpen();
     syncKanbanOpenClass();
+    kanbanSummary.addEventListener('click', (e) => {
+        e.preventDefault();
+        kanban.open = !kanban.open;
+        // Persist in the click itself: a toolbar popup can close immediately.
+        syncKanbanOpenClass();
+    });
     kanban.addEventListener('toggle', syncKanbanOpenClass);
 
     prev.onclick = () => show(index - 1);
     next.onclick = () => show(index + 1);
     document.addEventListener('keydown', (e) => {
+        if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable="true"], .modal, .garden-context-menu')) return;
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
         if (e.key === 'ArrowLeft') show(index - 1);
         if (e.key === 'ArrowRight') show(index + 1);
     });
 
     if (inExtension) {
+        // Resolve the window before the click, so sidePanel.open keeps the user gesture.
+        let windowId: number | undefined;
+        void chrome.windows.getCurrent().then((win) => { windowId = win.id; });
         openGarden.onclick = () => {
             void chrome.tabs.create({ url: chrome.runtime.getURL('newtab.html') });
             window.close();
         };
-        openPanel.onclick = async () => {
-            const win = await chrome.windows.getCurrent();
-            if (win.id !== undefined) await chrome.sidePanel.open({ windowId: win.id });
-            window.close();
+        openPanel.onclick = () => {
+            if (windowId !== undefined) void chrome.sidePanel.open({ windowId }).then(() => window.close());
         };
     } else {
         // Opened from disk while debugging: no chrome.* APIs.

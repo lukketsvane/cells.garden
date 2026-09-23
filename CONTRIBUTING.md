@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping the garden grow. The [README](README.md) covers what the project is and how it fits together.
+Thanks for helping the garden grow. The [README](README.md) introduces the app; the [architecture notes](docs/architecture.md) explain how it fits together.
 
 ## Setup
 

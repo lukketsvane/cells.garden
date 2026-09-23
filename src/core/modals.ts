@@ -49,7 +49,7 @@ export class CreateProjectModal extends Modal {
         };
 
         new Setting(contentEl)
-            .setName("Goal / Seed")
+            .setName("Goal / seed")
             .setDesc("This will also act as the plant's title.")
             .addTextArea((text) => {
                 text.onChange((value) => { projectSeed = value; });
@@ -67,7 +67,7 @@ export class CreateProjectModal extends Modal {
                 btn.setButtonText("Cancel").onClick(() => this.close());
             })
             .addButton((btn) => {
-                btn.setButtonText("Plant Seed")
+                btn.setButtonText("Plant seed")
                     .setCta()
                     .onClick(submit);
             });

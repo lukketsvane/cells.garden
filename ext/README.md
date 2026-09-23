@@ -4,7 +4,7 @@ The same garden as the web app, packaged as a Manifest V3 extension with three s
 
 - **New Tab** (`newtab.html`): the garden replaces Chrome's new tab page, so it is the start page.
 - **Side Panel** (`sidepanel.html`): the garden in a strip along the window while you work.
-- **Popup** (`popup.html`): click the toolbar icon for one plant at a time, a 320x440 cutout of the same canvas. Left and right (buttons or arrow keys) cycle through the plants; the popup remembers which one it showed. Buttons open the full garden in a new tab or the side panel (`chrome.sidePanel.open`, Chrome 116+).
+- **Popup** (`popup.html`): click the toolbar icon for one plant at a time in a 320x320 garden scene. The Kanban strip opens its editable board below (368px tall collapsed, 600px expanded). Small corner icons open the side panel or the full garden in a new tab. Left and right arrows cycle through plants; the selection and board state are remembered. Arrow keys stay inside text fields while editing.
 
 All three share the extension's origin, so they share the same `localStorage` garden, and the same Supabase session once you sign in.
 

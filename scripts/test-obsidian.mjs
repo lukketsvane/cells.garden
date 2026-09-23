@@ -33,6 +33,7 @@ assert(!/import\.meta\.glob/.test(mainJs), 'main.js still contains an unresolved
 assert(/require\(["']obsidian["']\)/.test(mainJs), 'main.js should require obsidian at runtime');
 assert(!/navigator\.clipboard|\.clipboardData\b/.test(mainJs), 'Obsidian build must not access the system clipboard');
 assert(!/loadLocalStorage|saveLocalStorage/.test(mainJs), 'Obsidian build must use Plugin.loadData/saveData instead of legacy local storage APIs');
+assert(!/\blocalStorage\b/.test(mainJs), 'Obsidian build, including dependencies, must not access localStorage');
 assert(/privacy\/oauth-return\.html\?target=obsidian/.test(mainJs), 'Obsidian Google sign-in must return through the website bridge');
 assert(
     /\.kanban-scroll-container\s+\.project-column\s*\{[^}]*display:\s*flex/s.test(css),
@@ -152,12 +153,21 @@ try {
         if (/Failed to fetch|Failed to load resource|ERR_/.test(text)) return; // offline Supabase is fine
         errors.push(`console: ${text}`);
     });
-    // A real origin, so localStorage works as it does in Obsidian.
+    // A real origin, with browser storage forbidden: plugin data is the only persistence.
     await page.route('http://obsidian.test/**', (route) => route.fulfill({
         contentType: 'text/html',
         body: '<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0"></body></html>',
     }));
     await page.goto('http://obsidian.test/');
+    await page.evaluate(() => {
+        window.__storageTouches = [];
+        for (const key of ['localStorage', 'sessionStorage']) {
+            Object.defineProperty(window, key, { get() {
+                window.__storageTouches.push(key);
+                throw new Error('Browser storage is unavailable in this host');
+            } });
+        }
+    });
     await page.addStyleTag({ content: css });
     await page.evaluate((md) => { window.__plantMd = md; }, PLANT_MD);
     await page.addScriptTag({ content: STUB });
@@ -271,6 +281,7 @@ try {
     assert(await page.evaluate(() => typeof window.__plugin.onunload !== 'function' || !/detachLeaves/.test(String(window.__plugin.onunload))), 'onunload must not detach leaves');
     await page.evaluate(async () => { await window.__app.workspace.detachLeavesOfType('cells-garden'); });
     assert((await page.$('.cells-garden-host')) === null, 'closing the tab should remove the garden');
+    assert.deepEqual(await page.evaluate(() => window.__storageTouches), [], 'plugin and dependencies must never probe browser storage');
     await page.waitForTimeout(300);
 } catch (e) {
     failure = e;

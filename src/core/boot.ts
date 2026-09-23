@@ -128,7 +128,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         await app.mount(host);
     } catch (e) {
         console.error('GARDEN CELLS CRASH IN MOUNT:', e);
-        host.createEl('h2', { text: 'Garden Crashed' });
+        host.createEl('h2', { text: 'Garden crashed' });
         host.createEl('p', { text: String(e) });
         return app;
     }

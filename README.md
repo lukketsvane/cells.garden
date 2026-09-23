@@ -1,130 +1,59 @@
 # cells.garden
 
-A kanban-style project garden where tasks grow into pixel-art plants. Web port of Max's Obsidian plugin **Garden Cells**.
+**Give your projects a place to grow.**
 
-Use it at [cells.garden](https://cells.garden), as an app on your phone's home screen, as a Chrome extension, or in Obsidian: search for **cells.garden** under Settings, Community plugins, and open it from the sprout in the ribbon. Without an account the garden stays on your device. Sign in to have the same garden everywhere and to share gardens and plants with others.
+Turn a task board into a pixel-art garden inside Obsidian. Each project is a plant, each task is a cell, and every step forward changes the scene. Keep the board open to work through the details, or tuck it away and see your progress in the garden.
 
-**Disclosures (Obsidian plugin).** Network: when you sign in, the garden syncs with the cells.garden server (Supabase), and only then. Account: optional, needed only to sync or share. No telemetry, no ads, no payments. It reads your vault only when you run "Import this vault's garden", and never writes to it. Open source under Apache-2.0.
+Start with one idea. Add what it needs. Watch it take shape.
 
-The original code is ~4,200 lines of vanilla TypeScript in one file: DOM + CSS transforms, no canvas engine, touch and pinch already in place. The Obsidian coupling was thin, so the port was a port, not a rewrite: Max's code lives on in `src/core/garden.ts`, with the same structure and rather less of it.
+## A garden that works like a board
 
-## Getting started
+The seed holds your project's name or goal. Around it, four layers give your work a home:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the checks and conventions.
+- **Minerals** hold the raw material: ideas, notes and things to explore.
+- **Roots** hold the groundwork: plans, prerequisites and next steps.
+- **Stem** holds the work in progress.
+- **Flowers** hold what you have finished.
 
-```sh
-npm install
-npm run dev            # http://localhost:5173, with the Sign in pill (reads .env)
-npm run build          # everything: web, extension and Obsidian plugin
-npm run build:web      # typecheck + static web build into dist/
-npm run preview        # serves dist/ on http://localhost:4173
-npm run build:ext      # Chrome extension into dist-ext/
-npm run dev:ext        # extension build in watch mode
-npm run icons          # regenerates the PNG icons from the pixel grid
-npm run typecheck      # tsc for the web app (also :ext, :obsidian and :test)
-npm run test:unit      # node --test over src/**/*.test.ts
-npm run test:web       # Playwright smoke test of the web build + PWA offline start
-npm run test:ext       # Playwright test of the extension (new tab, side panel, popup)
-npm run build:obsidian # Obsidian plugin into obsidian-plugin/ (committed; CI rebuilds it), copied to the root
-npm run test:obsidian  # loads the plugin build behind a stand-in Obsidian API
-```
+Drag cells between layers as your project moves forward. The plant changes with them. Use the layers your own way, from a small personal checklist to a shared project with many moving parts.
 
-The tests use the repo's Playwright and a Chromium it can find; run `npx playwright install chromium` once on a fresh machine.
+Choose a plant shape, change its colours and make the garden your own. Click a piece of the plant to find the task behind it. Pan and zoom to explore, then return to the board when you want to write.
 
-## Architecture
+## Start in Obsidian
 
-The web app is the core. The PWA, the extension and the Obsidian plugin are shells around the same code.
+1. Open **Settings → Community plugins → Browse**, search for **cells.garden**, then install and enable it.
+2. Select the sprout in the ribbon, or run **cells.garden: Open garden** from the command palette.
+3. Add a plant, name its seed and use **+** in a layer to add your first cell.
+4. Move a cell into Flowers when it is done.
 
-- **Web**: the garden at a URL, deployed by Vercel: `main` is `cells.garden`, `dev` is `dev.cells.garden`.
-- **PWA**: same app on a phone; service worker precaches the shell so it opens offline.
-- **Extension**: New Tab override, Side Panel and a popup that shows one plant at a time, same core, same local storage.
-- **Obsidian**: the same app in an Obsidian tab, see below.
+Works on Obsidian desktop and mobile. An account is optional: you can begin immediately and keep your garden on your device.
 
-## Repository
+## The same garden, wherever you work
 
-```
-src/core/      the core, independent of web, extension and Obsidian; every file opens
-               with a comment saying what it holds. garden.ts is Max's main.ts ported,
-               styles.css his styles.css, shim.ts and ui.ts the bits of Obsidian's API he used.
-               Max's plugin itself, untouched, is on the `original` branch.
-src/web/       index.html, main.ts, app.css (theme tokens), service-worker registration
-src/assets/    sprites; pack/<plantType>/<category>/ is what Garden-Assets/ was in the vault
-ext/           Chrome extension (Manifest V3), see ext/README.md
-public/        icons (SVG + PNG); the web manifest is generated at build time
-scripts/       the icon generator, the three browser tests, the .ts loader for the unit tests
-supabase/      migrations + README (auth, RLS, sharing)
-obsidian-plugin/  the synced Obsidian plugin; main.js and styles.css are its committed build
-main.js, styles.css  copies of that build beside manifest.json (ignored)
-dist/          web build (ignored)
-dist-ext/      extension build (ignored)
-```
+Open [cells.garden](https://cells.garden) in your browser, add it to your phone's Home Screen, or use the Chrome extension on a new tab, in the side panel or from its toolbar popup. Sign in with the same account to sync your garden across these places and Obsidian.
 
-## Obsidian plugin
+Share a whole garden or an individual plant. Assign a cell to someone who shares it; their tiny avatar stays beside the task, and the assignment appears in their notification inbox. Right-click a cell, or press and hold on touch, to find **Assign**.
 
-`obsidian-plugin/` runs the same app in an Obsidian tab. Sign in with the same account and the garden syncs live with the web app, the phone and the extension. The folder is a complete plugin: `main.js` and `styles.css` are its build, committed, and CI rebuilds them on every push to `main` and `dev` that touches the code (`npm run build:obsidian` does the same locally). Link the folder into a vault once (Windows; `ln -s` elsewhere):
+Optional phone notifications can alert you when someone assigns you a cell. On iPhone and iPad, use iOS 16.4 or later, add the website to the Home Screen and open it from there. In the web app, open **Settings → Notifications → Turn on**. Tapping a notification takes you to the cell. Obsidian and the extension have the in-app inbox; phone alerts are enabled separately in the web app.
 
-```
-mklink /J "<vault>\.obsidian\plugins\cells-garden" "<repo>\obsidian-plugin"
-```
+## Your work stays yours
 
-Then turn on cells.garden under Settings, Community plugins. From then on a pull (GitHub Desktop: Fetch origin, then Pull) is the update: reload the plugin, or restart Obsidian, to pick it up. With the Hot Reload community plugin installed, the empty `.hotreload` file makes it reload on its own. Its id is `cells-garden`. Turn Max's `garden-cells` off in the same vault: both style the same class names, and the plugin says so if both are on. A release is made from the root `manifest.json`: bump its `version` (and `versions.json`), push to `main`, and CI publishes the release Obsidian installs from, with build attestations. `npm run lint` runs the rules Obsidian's review applies. The review builds with `npm run build` and looks for `main.js` beside `manifest.json`, so the plugin build copies `main.js` and `styles.css` to the root too; those copies are ignored. The command "Import this vault's garden" brings the plants Max's plugin keeps in `Garden-Cells/` into the synced garden.
+Use **Export or import** in the garden menu to download a backup or bring a garden back. Markdown export gives you one file per plant.
 
-## Storage and sync
+Already using Max's original **Garden Cells** plugin? The command **Import this vault's garden** brings plants from its `Garden-Cells/` folder into cells.garden. Turn the original plugin off before enabling this one, as their styles can conflict.
 
-Everything goes through one interface, so the UI never knows where the garden lives:
+## Privacy and account information
 
-```ts
-interface GardenStore {
-  load(): Promise<Garden | null>
-  save(garden: Garden): Promise<void>
-  subscribe?(listener: (garden: Garden) => void): () => void
-}
-```
+- **Local by default.** Without signing in, your garden stays on your device. In Obsidian, the garden, preferences and account session use the plugin's data file in your vault.
+- **Optional online features.** Signing in connects to the cells.garden service, hosted on Supabase, for account access, sync, sharing and the notification inbox. Shared garden and plant members can see and edit what you share.
+- **Optional push.** Turning on phone or browser notifications stores a push subscription with the service. Assignment text may appear on your lock screen. Turn notifications off in settings or sign out to stop them on that device.
+- **Your notes are left alone.** The plugin reads `Garden-Cells/` only when you run the import command. It does not scan or edit the rest of your notes. Garden changes are saved in plugin data rather than written into your Markdown notes automatically.
+- **Free and open source.** No paid features, ads, analytics or telemetry. Read the [privacy policy](https://cells.garden/privacy.html).
 
-- Signed out: `LocalStore` (localStorage, key `cells.garden/v1`). Tabs stay in step through the `storage` event. In Obsidian this storage is per vault (copied once from the old shared keys) and other Obsidian windows do not update live; the anonymous-garden claim stays device-wide.
-- Signed in: `SupabaseStore` is primary and a per-user `LocalStore` mirrors every save, so the device keeps an offline copy and sign-out never loses anything. The whole garden is one JSON blob per owner; saves are compare-and-swap on a server revision and merge by plant and cell id when someone wrote first; realtime pushes changes to the other devices.
-- Shared: an owner shares their garden by link (`#join=<token>`); members edit the same blob. See `supabase/README.md`.
-- Garden spaces: more gardens than your own (New garden space in the pill menu), shared the same way.
-- Assign cells: right-click or hold a cell, choose Assign, and pick people who share its garden or plant. Their small avatars stay on the cell. Assignment notices appear under Notifications in the account menu.
-- Phone notifications: open Settings, Notifications, Turn on. On iPhone or iPad (iOS 16.4+), add cells.garden to the Home Screen and open it from there first. Tapping a notification opens the assigned cell. Pushes are optional and stop on this device when you turn them off or sign out.
-- Garden settings (pill menu, Settings): fireflies, the sky's colours through the day or one fixed colour, minerals that fade with depth, and the standby look. They belong to the garden, so everyone who shares it sees the same; the defaults are Max's original garden.
-- Collaborative plants: one plant shared by link (`#plant=<token>`) into other people's gardens; everyone who has it edits it live.
-- First sign-in on a device offers the anonymous garden to an account that has none yet, once.
-- Camera, kanban scroll and the divider between them are per surface (web, new tab, side panel) and stay on the device.
+## Help and credits
 
-The `.env` file carries the Supabase URL and publishable key on purpose; both are public by design and RLS protects the data. Anything private for local tooling goes in `.env.local`, which git ignores. See `supabase/README.md` for the migrations and the dashboard settings.
+Found a problem or have an idea? [Open an issue](https://github.com/lukketsvane/cells.garden/issues).
 
-## Assets
+Based on Max's **Garden Cells**, whose garden design, pixel art and original plugin made this project possible. The original is preserved on the [`original` branch](https://github.com/lukketsvane/cells.garden/tree/original). Licensed under [Apache-2.0](LICENSE).
 
-Images are bundled by Vite as data URLs (as esbuild did). `imagePath` on a cell is the path relative to `src/assets/pack/`, e.g. `plant_1/stem/stem3.png`, so it survives markdown export unchanged.
-
-The pack is a copy of Max's `Garden-Assets/` vault folder, filenames and all, so a garden exported from Obsidian resolves here and back:
-
-```
-pack/plant_1 … plant_8/stem/stem<n>.png        19, 11, 7, 8, 5, 10, 7, 3 stems
-pack/plant_1 … plant_8/flowers/flower<n>.png    9,  3, 2, 2, 3,  2, 5, 3 flowers
-pack/roots/root<n>.png                         14
-pack/minerals/mineral<n>.png                  100
-pack/seeds/seed<n>.png                         27
-pack/seeds/seed_icons/seed<n>.png               27
-```
-
-`PLANT_TYPES` in `assets.ts` is whatever the pack holds, so a new plant folder is a new plant type with no code change. Sprite sizes are per plant (35×7 for `plant_1`, roots, minerals and seeds; 45×7 for `plant_3`; down to 15×8 for a `plant_7` stem) and the view reads each one's natural size before scaling it by `PIXEL_SCALE`, so a folder can hold whatever the drawing needs.
-
-A plant's menu names each type from `PLANT_TYPE_NAMES` in `assets.ts` (Bell, Branch, Vine, Spray, Arch, Fork, Starburst and Cluster come from Figma; `plant_9` is Plume); a folder without a name goes by its own. Its seed list shows `seeds/seed_icons/seed<n>.png` for the seed `seeds/seed<n>.png`.
-
-### Figma handoff
-
-The production Figma library keeps source sprites at exact native 1x size. Its `EXPORTS` section maps export frames to repo destinations; `figma/exports.json` is the machine-readable copy of that contract. Run `npm run verify:figma-assets` after changing sprites or the Figma export surface. It checks all mapped PNG paths and native dimensions, and requires every file under `src/assets/**` to be represented either by a Figma export or an explicit repo-source-only reference. With `FIGMA_TOKEN` in the environment or ignored `.env.local`, `npm run sync:figma-assets` reads the original image fill from each of the 277 mapped atomic source components and writes it to the manifest destination. It does not render or resample the pixel art, and it preserves the existing repo PNG when Figma differs only by ancillary metadata while the PNG IDAT pixel stream is identical. `stars_pattern.gif` and the original brand PNGs remain repo-source-of-truth rather than Figma round-trips.
-
-The first web build carried the twelve `plant_1` sprites bundled with the plugin, under their names there (`plant_1_part3.png`, `plant_1_flower2.png`). Gardens saved then still hold those paths, so `asset-paths.ts` maps them onto the same ordinal in the vault naming and they keep rendering.
-
-## Milestones
-
-- **M0**: runs in a browser, localStorage, deployed on Vercel. Done.
-- **M1**: Supabase auth + sync, PWA. Same garden on phone and desktop. Done.
-- **M2**: Chrome extension (new tab + side panel), service worker, per-surface camera, hardened sync. Done.
-- **M3**: Obsidian import/export in the UI, the extension popup (one plant at a time), and the Obsidian plugin on the same backend. Done. Custom images are out of scope for now.
-- **M4**: shared gardens (invite by link, live co-editing, merge on conflict). Done.
-
-<!-- force production deploy attempt 2026-09-19 crow ground-only -->
+For development, see [Contributing](CONTRIBUTING.md) and the [architecture notes](docs/architecture.md).

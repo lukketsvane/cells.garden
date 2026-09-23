@@ -16,6 +16,17 @@ export default defineConfig(({ command, mode }) => {
     return {
         publicDir: false,
         plugins: [{
+            name: 'cells-garden:obsidian-realtime-storage',
+            enforce: 'pre',
+            transform(code, id) {
+                if (!id.replaceAll('\\', '/').endsWith('/@supabase/phoenix/priv/static/phoenix.mjs')) return;
+                // Phoenix probes Web Storage even when Realtime passes its own
+                // store. In Obsidian use that injected memory store exclusively.
+                const probe = 'global && global.sessionStorage';
+                if (!code.includes(probe)) this.error('Review the updated Phoenix storage adapter before releasing.');
+                return { code: code.replace(probe, 'undefined'), map: null };
+            },
+        }, {
             name: 'cells-garden:obsidian-manifest',
             generateBundle() {
                 this.emitFile({ type: 'asset', fileName: 'manifest.json', source: readFileSync(fromRoot('./manifest.json'), 'utf8') });
@@ -28,6 +39,10 @@ export default defineConfig(({ command, mode }) => {
             ...supabaseEnv(mode).define,
             'process.env.NODE_ENV': JSON.stringify('production'),
             __CELLS_BROWSER_STORAGE__: 'false',
+            // Disable the dependency's browser-storage fallback and capability
+            // probe too. Auth receives our plugin-data adapter.
+            'globalThis.localStorage': 'undefined',
+            'globalThis.sessionStorage': 'undefined',
             __CELLS_SYSTEM_CLIPBOARD__: 'false',
             // The plugin ships from main, never from Vercel's dev build.
             __CELLS_EXTRAS__: extrasFlag(command, false),

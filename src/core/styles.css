@@ -1515,7 +1515,6 @@
     z-index: 10000;
     min-width: 160px;
     /* Taller than the window (a panel open on a small screen), it scrolls. */
-    max-height: calc(100vh - 20px);
     max-height: calc(100dvh - 20px);
     overflow-x: hidden;
     overflow-y: auto;
@@ -1816,7 +1815,6 @@
     max-width: none;
     zoom: 2;
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
     filter: var(--plant-filter, none);
     pointer-events: none;
     user-select: none;
@@ -1840,7 +1838,6 @@
     mask-size: 100% 100%;
     mask-repeat: no-repeat;
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
 }
 
 .garden-menu-hue {
@@ -1968,7 +1965,6 @@
     transform: translateX(-50%);
     background: var(--item-sprite) center bottom / 100% 100% no-repeat;
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
     pointer-events: auto;
     touch-action: none;
     user-select: none;
@@ -2027,7 +2023,6 @@
     outline: 0;
     background: transparent;
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
     pointer-events: auto;
     touch-action: none;
     cursor: pointer;
@@ -2050,7 +2045,6 @@
     background-position: 0 0;
     background-repeat: no-repeat;
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
     transform-origin: 50% 50%;
     will-change: transform, background-position;
 }
@@ -2119,7 +2113,6 @@
     max-width: 100%;
     max-height: 100%;
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
 }
 .garden-tile[data-kind='gnome'] .garden-tile-preview img {
     width: 36px;

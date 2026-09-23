@@ -442,7 +442,7 @@ try {
 
     // --- Popup: one plant at a time, compact controls, optional kanban card. ---
     const popup = await context.newPage();
-    await popup.setViewportSize({ width: 320, height: 440 });
+    await popup.setViewportSize({ width: 320, height: 368 });
     watch(popup, 'popup');
     await popup.goto(`chrome-extension://${extId}/popup.html`);
     await popup.waitForSelector('.garden-canvas-viewport');
@@ -468,8 +468,8 @@ try {
         };
     });
     assert(popupLayout.kanbanHidden, 'the popup must hide the kanban, the resizer and the board toggle');
-    assert(popupLayout.canvas.height >= 200, `the popup canvas is too small: ${JSON.stringify(popupLayout.canvas)}`);
-    assert(popupLayout.footer.y + popupLayout.footer.height <= 440 && popupLayout.scrollWidth <= 320 && popupLayout.scrollHeight <= 440, `the popup overflows its window: ${JSON.stringify(popupLayout)}`);
+    assert(popupLayout.canvas.height === 320, `the popup canvas is too small: ${JSON.stringify(popupLayout.canvas)}`);
+    assert(popupLayout.footer.y + popupLayout.footer.height <= 368 && popupLayout.scrollWidth <= 320 && popupLayout.scrollHeight <= 368, `the popup overflows its window: ${JSON.stringify(popupLayout)}`);
     assert(/scale\(/.test(popupLayout.transform), `the popup camera was not aimed: transform "${popupLayout.transform}"`);
     // The plant's anchor (its horizon point) must be inside the canvas, roughly centred.
     const anchorX = popupLayout.plant.x - popupLayout.canvas.x;
@@ -478,13 +478,16 @@ try {
     // Arrow keys and buttons wrap around; with one plant the seed label does not change.
     await popup.keyboard.press('ArrowRight');
     assert(await popup.textContent('.popup-label') === SEED, 'cycling past the last plant must wrap');
-    assert(await popup.textContent('.popup-action >> nth=0') === 'Garden' && await popup.textContent('.popup-action >> nth=1') === 'Side panel', 'the popup must offer Garden and Side panel');
+    assert(await popup.getByRole('button', { name: 'Open side panel', exact: true }).isVisible(), 'popup must offer the side panel icon');
+    assert(await popup.getByRole('button', { name: 'Open garden in new tab', exact: true }).isVisible(), 'popup must offer the external icon');
+    assert(await popup.locator('.popup-actions svg').count() === 2, 'launch buttons must use compact icons');
+    await screenshot(popup, 'popup-collapsed');
 
     // The current plant's kanban card is available in a collapsible panel.
     assert(!(await popup.$eval('.popup-kanban', (el) => el.open)), 'the popup kanban should start collapsed');
     await popup.click('.popup-kanban-summary');
     await popup.waitForFunction(() => document.querySelector('.popup-kanban')?.open === true);
-    await popup.setViewportSize({ width: 320, height: 560 });
+    await popup.setViewportSize({ width: 320, height: 600 });
     assert(await popup.textContent('.popup-kanban-body .seed-content') === SEED, 'the popup kanban must show the selected plant');
     assert((await popup.$$eval('.popup-kanban-body .garden-item', (els) => els.map((e) => e.textContent))).includes(STEM), 'the popup kanban must show the selected plant cells');
     await screenshot(popup, 'popup');
@@ -509,6 +512,17 @@ try {
     assert(secondAnchor.plants[1] > secondAnchor.width * 0.3 && secondAnchor.plants[1] < secondAnchor.width * 0.7, `the second plant is not centred: ${JSON.stringify(secondAnchor)}`);
     assert(await popup.evaluate(() => localStorage.getItem('cells.garden/popup/index')) === '1', 'the popup must remember the plant it shows');
     await screenshot(popup, 'popup-2');
+    // Left/right must still edit text normally inside a task.
+    await popup.locator('.popup-kanban-body .seed-content').dblclick();
+    await popup.waitForSelector('.popup-kanban-body [contenteditable="true"]');
+    await popup.locator('.popup-kanban-body [contenteditable="true"]').press('ArrowLeft');
+    assert(await popup.textContent('.popup-label') === SEED_2, 'editing text must not change the selected plant');
+    await popup.keyboard.press('Escape');
+    await popup.click('.popup-kanban-summary');
+    assert(!(await popup.$eval('.popup-kanban', el => el.open)), 'the board handle should collapse the board');
+    await popup.reload();
+    await popup.waitForSelector('.popup-kanban');
+    assert(!(await popup.$eval('.popup-kanban', el => el.open)), 'the board should remember its collapsed state');
 
     // --- Sign-in pill: present exactly when the build has Supabase config. ---
     for (const [page, label, width] of [[newtab, 'newtab', 1280], [panel, 'sidepanel', 360]]) {

@@ -42,7 +42,7 @@ class GardenTabView extends ItemView {
     }
 
     getDisplayText() {
-        return 'cells.garden';
+        return 'Cells.garden';
     }
 
     getIcon() {
@@ -91,7 +91,7 @@ export default class CellsGardenPlugin extends Plugin {
         this.app.workspace.onLayoutReady(() => {
             const plugins = (this.app as unknown as { plugins?: { enabledPlugins?: Set<string> } }).plugins;
             if (plugins?.enabledPlugins?.has('garden-cells')) {
-                new Notice('Garden Cells (the original plugin) is on too. Its styles clash with cells.garden: turn it off under Community plugins.', 12000);
+                new Notice('The original plugin is on too. Its styles clash with cells.garden: turn it off under community plugins.', 12000);
             }
         });
     }

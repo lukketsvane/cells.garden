@@ -184,7 +184,7 @@ class GardenFilesModal extends Modal {
         const { contentEl } = this;
         contentEl.addClass('garden-files-modal');
         contentEl.createEl('h2', { text: 'Garden files' });
-        contentEl.createEl('p', { text: 'One markdown file per plant. Unzip into a vault and the Obsidian plugin reads it as is.' });
+        contentEl.createEl('p', { text: 'One Markdown file per plant. Unzip into a vault and the Obsidian plugin reads it as is.' });
 
         new Setting(contentEl)
             .setName('Download a copy')

@@ -1445,7 +1445,7 @@ export class GardenView extends View {
                         this._lastViewportSize = { width: viewport.offsetWidth, height: viewport.offsetHeight };
 
                         if (!persistedState) {
-                            const scrollContainer = this.contentEl.querySelector('.kanban-scroll-container') as HTMLElement | null;
+                            const scrollContainer = this.contentEl.querySelector<HTMLElement>('.kanban-scroll-container');
                             if (scrollContainer) {
                                 const middle = (scrollContainer.scrollWidth - scrollContainer.clientWidth) / 2;
                                 const cols = scrollContainer.querySelectorAll('.project-column');
@@ -1483,7 +1483,7 @@ export class GardenView extends View {
             console.error("GARDEN CELLS CRASH IN ONOPEN:", e);
             const container = this.contentEl;
             if (container) {
-                container.createEl("h2", { text: "Garden Crashed" });
+                container.createEl("h2", { text: "Garden crashed" });
                 container.createEl("p", { text: String(e) });
             }
         }

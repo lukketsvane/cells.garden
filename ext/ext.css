@@ -51,17 +51,16 @@ html[data-context="sidepanel"] .kanban-empty-message {
     padding: 24px 16px;
 }
 
-/* The popup is a fixed small window: the canvas cutout of one plant on top,
-   then compact navigation and an optional kanban card below. */
+/* One square of garden, with the current plant's board opening underneath. */
 html[data-context="popup"],
 html[data-context="popup"] body {
     width: 320px;
-    height: 440px;
+    height: 368px;
 }
 
 html[data-context="popup"].popup-kanban-open,
 html[data-context="popup"].popup-kanban-open body {
-    height: 560px;
+    height: 600px;
 }
 
 html[data-context="popup"] body {
@@ -70,7 +69,8 @@ html[data-context="popup"] body {
 }
 
 html[data-context="popup"] #app {
-    flex: 1 1 auto;
+    flex: 0 0 320px;
+    height: 320px;
     min-height: 0;
     position: relative;
 }
@@ -91,65 +91,70 @@ html[data-context="popup"].popup-aimed .garden-world {
 }
 
 .popup-footer {
-    flex: 0 0 auto;
-    padding: 8px 10px 10px;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 6px;
     border-top: 1px solid var(--background-modifier-border);
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    background: color-mix(in srgb, var(--background-primary) 94%, transparent);
+    background: var(--background-primary);
 }
 
 .popup-row {
+    position: absolute;
+    inset: auto 6px 6px;
+    z-index: 20;
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    pointer-events: none;
 }
 
+/* Keep the selected plant announced without another strip of chrome. */
 .popup-label {
-    flex: 1 1 auto;
-    min-width: 0;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-normal);
-    white-space: nowrap;
+    position: absolute;
+    width: 1px;
+    height: 1px;
     overflow: hidden;
-    text-overflow: ellipsis;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 .popup-arrow,
 .popup-action {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
     font: inherit;
-    font-size: 13px;
+    font-size: 19px;
     line-height: 1;
-    color: var(--text-normal);
-    background: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 5px;
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--background-primary) 65%, transparent);
+    border: 1px solid color-mix(in srgb, var(--text-muted) 16%, transparent);
+    border-radius: 6px;
     cursor: pointer;
-}
-
-.popup-arrow {
-    width: 36px;
-    height: 30px;
-    flex: 0 0 36px;
-    font-weight: 700;
+    pointer-events: auto;
 }
 
 .popup-arrow:disabled {
-    opacity: 0.35;
-    cursor: default;
+    visibility: hidden;
 }
 
-.popup-arrow:not(:disabled):hover,
+.popup-arrow:hover,
 .popup-action:hover,
 .popup-kanban-summary:hover {
     background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.popup-arrow:focus-visible,
+.popup-action:focus-visible,
+.popup-kanban-summary:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -2px;
 }
 
 .popup-kanban {
+    height: 100%;
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
     overflow: hidden;
@@ -161,10 +166,10 @@ html[data-context="popup"].popup-aimed .garden-world {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    height: 34px;
     gap: 8px;
-    padding: 7px 9px;
+    padding: 0 9px;
     color: var(--text-muted);
-    background: transparent;
     cursor: pointer;
     user-select: none;
     font-size: 11px;
@@ -178,23 +183,38 @@ html[data-context="popup"].popup-aimed .garden-world {
 }
 
 .popup-kanban-chevron {
-    display: inline-block;
     font-size: 16px;
     line-height: 1;
-    transform: rotate(0deg);
-    transition: transform 160ms ease;
 }
 
-.popup-kanban[open] .popup-kanban-chevron {
-    transform: rotate(90deg);
+.popup-kanban[open] {
+    border-color: transparent;
+    background: transparent;
+}
+
+.popup-kanban[open] .popup-kanban-summary {
+    justify-content: center;
+    height: 12px;
+    padding: 0;
+}
+
+.popup-kanban[open] .popup-kanban-summary span {
+    display: none;
+}
+
+.popup-kanban[open] .popup-kanban-summary::after {
+    content: '';
+    width: 30px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--background-modifier-border);
 }
 
 .popup-kanban-body {
-    max-height: 154px;
+    height: calc(100% - 12px);
     overflow: auto;
-    padding: 7px;
-    border-top: 1px solid var(--background-modifier-border);
     overscroll-behavior: contain;
+    scrollbar-width: thin;
 }
 
 .popup-kanban-body .project-column {
@@ -226,11 +246,21 @@ html[data-context="popup"].popup-aimed .garden-world {
 }
 
 .popup-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 20;
     display: flex;
-    gap: 6px;
+    gap: 4px;
 }
 
-.popup-action {
-    flex: 1 1 0;
-    padding: 7px 0;
+.popup-action svg {
+    width: 14px;
+    height: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-context="popup"].popup-aimed .garden-world {
+        transition: none;
+    }
 }
