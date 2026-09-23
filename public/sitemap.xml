@@ -2,6 +2,9 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://cells.garden/</loc></url>
   <url><loc>https://cells.garden/guide/</loc></url>
+  <url><loc>https://cells.garden/guide/mobile/</loc></url>
+  <url><loc>https://cells.garden/guide/sync-sharing/</loc></url>
+  <url><loc>https://cells.garden/guide/backups/</loc></url>
   <url><loc>https://cells.garden/chrome-extension/</loc></url>
   <url><loc>https://cells.garden/obsidian/</loc></url>
   <url><loc>https://cells.garden/privacy.html</loc></url>

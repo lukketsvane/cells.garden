@@ -30,11 +30,14 @@ try {
     browser = await chromium.launch();
     const sitemap = await (await fetch(base + '/sitemap.xml')).text();
     const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m => new URL(m[1]));
-    assert.equal(urls.length, 5);
+    const expected = ['/', '/guide/', '/guide/mobile/', '/guide/sync-sharing/', '/guide/backups/', '/chrome-extension/', '/obsidian/', '/privacy.html'];
+    assert.deepEqual(urls.map(url => url.pathname).sort(), expected.slice().sort(), 'Sitemap must contain each public canonical page exactly once.');
+    assert(urls.every(url => url.origin === 'https://cells.garden' && !url.search && !url.hash), 'Only public canonical URLs belong in the sitemap.');
     const robots = await (await fetch(base + '/robots.txt')).text();
     assert(robots.includes('Sitemap: https://cells.garden/sitemap.xml'));
     const titles = new Set();
     const descriptions = new Set();
+    const links = new Map();
     const plain = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
     const page = await plain.newPage();
     for (const url of urls) {
@@ -43,15 +46,33 @@ try {
         assert.equal(await page.locator('h1').count(), 1, url.pathname);
         assert(await page.locator('h1').isVisible());
         assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'), url.href);
+        assert.equal(await page.locator('link[rel="canonical"]').count(), 1);
+        assert.equal(await page.locator('meta[name="robots"][content*="noindex"]').count(), 0, 'public page must remain indexable');
         const title = await page.title();
         const description = await page.locator('meta[name="description"]').getAttribute('content');
         assert(title.length > 10 && !titles.has(title), 'unique useful title: ' + url.pathname);
         assert(description.length > 60 && !descriptions.has(description), 'unique useful description: ' + url.pathname);
         titles.add(title); descriptions.add(description);
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile overflow: ' + url.pathname);
-        for (const href of await page.locator('a[href^="/"]').evaluateAll(links => links.map(a => a.getAttribute('href')))) {
+        const outgoing = await page.locator('a[href^="/"]').evaluateAll(anchors => anchors.map(a => a.getAttribute('href')));
+        links.set(url.pathname, outgoing);
+        for (const href of outgoing) {
             assert.equal((await fetch(base + href)).status, 200, 'broken internal link: ' + href);
         }
+    }
+    const reachable = new Set();
+    const queue = ['/'];
+    while (queue.length) {
+        const path = queue.shift();
+        if (reachable.has(path)) continue;
+        reachable.add(path);
+        queue.push(...(links.get(path) ?? []));
+    }
+    assert(expected.every(path => reachable.has(path)), 'Every public page needs a crawlable path from the homepage.');
+    for (const redirect of config.redirects) {
+        const response = await fetch(base + redirect.source + '?from=seo-check', { redirect: 'manual' });
+        assert.equal(response.status, 308);
+        assert.equal(response.headers.get('location'), redirect.destination + '?from=seo-check');
     }
     for (const path of ['/privacy/oauth-return.html', '/privacy/oauth-extension-start.html', '/privacy-refresh.html']) {
         await page.goto(base + path);
@@ -65,14 +86,16 @@ try {
     await app.evaluate(() => navigator.serviceWorker.ready);
     await app.reload();
     assert(await app.evaluate(() => !!navigator.serviceWorker.controller), 'worker must control the browser');
-    for (const path of ['/guide/', '/chrome-extension/', '/obsidian/', '/privacy.html']) {
+    for (const path of expected.filter(path => path !== '/')) {
         await app.goto(base + path);
         assert.equal(await app.locator('h1').count(), 1, 'worker swallowed ' + path);
         assert.equal(await app.locator('#app').count(), 0, 'app shell replaced ' + path);
     }
     await context.setOffline(true);
-    await app.goto(base + '/guide/');
-    assert.match(await app.locator('h1').innerText(), /project planner/);
+    for (const path of expected.filter(path => path.startsWith('/guide/'))) {
+        await app.goto(base + path);
+        assert.equal(await app.locator('h1').count(), 1, 'guide must work offline: ' + path);
+    }
     await app.goto(base + '/?offline-check=1');
     await app.waitForFunction(() => !!window.garden);
     await context.setOffline(false);
@@ -86,7 +109,7 @@ try {
         await app.goto(base + '/chrome-extension/');
         await app.screenshot({ path: process.env.SEO_SCREENSHOTS + '/chrome-mobile.png', fullPage: true });
     }
-    console.log('SEO checks passed: 5 crawlable pages, unique metadata, mobile layout, internal links, utility noindex, service-worker navigation, offline app and guide, true 404.');
+    console.log(`SEO checks passed: ${urls.length} crawlable pages, unique metadata, mobile layout, reachable internal links, canonical redirects, utility noindex, service-worker navigation, offline app and guides, true 404.`);
 } finally {
     await browser?.close();
     await new Promise(resolve => server.close(resolve));
