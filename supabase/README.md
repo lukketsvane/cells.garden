@@ -37,6 +37,7 @@ Run them in order in the SQL editor. Each one is safe to run more than once.
 | `migrations/0008_owner_rows_visible_on_insert.sql` | lets an owner read back a garden or plant row inside the insert that creates it |
 | `migrations/0009_friends.sql` | `profiles.avatar_seed`, `friends()`, plant offers to friends |
 | `migrations/0010_garden_spaces.sql` | garden spaces: rows with `owner_id` instead of `user_id`; ownership is `coalesce(user_id, owner_id)` everywhere |
+| `migrations/0011_avatar_drawing.sql` | `profiles.avatar_drawing` (a drawn picture, format checked by a constraint); `friends()` and `plant_offers_for_me()` send it in place of the seed |
 
 ## Shared gardens (M4)
 

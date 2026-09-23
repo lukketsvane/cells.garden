@@ -258,9 +258,9 @@ export class AuthPill {
 
     private avatar: string | null = null;
 
-    /** The seed of the signed-in user's picture, once the profile is loaded. */
-    setAvatar(seed: string | null) {
-        this.avatar = seed;
+    /** The signed-in user's picture, a drawing or a seed, once the profile is loaded. */
+    setAvatar(avatar: string | null) {
+        this.avatar = avatar;
         this.render();
     }
 

@@ -6,6 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GardenApp } from './app';
 import { avatarEl } from './avatar';
+import { AvatarEditorModal } from './avatar-editor';
 import { hourOf, skyAt, skyGradient, timeOf } from './garden-settings';
 import { ICONS } from './icons';
 import { sameData } from './merge';
@@ -19,8 +20,8 @@ import { Modal, Setting } from './ui';
 export interface SettingsAccount {
     client: SupabaseClient;
     userId: string;
-    /** Tell the rest of the app the picture changed. */
-    onAvatar: (seed: string) => void;
+    /** Tell the rest of the app the picture changed: a drawing or a seed. */
+    onAvatar: (avatar: string) => void;
 }
 
 const randomSeed = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2, '0')).join('');
@@ -47,22 +48,50 @@ export class SettingsModal extends Modal {
             try {
                 const profile = await getProfile(client, userId);
 
-                const picture = new Setting(contentEl).setName('Picture').setDesc('Tap your picture to roll a new one.');
-                const holder = picture.controlEl.createEl('button', {
-                    cls: 'settings-avatar',
-                    type: 'button',
-                    attr: { 'aria-label': 'Roll a new picture', title: 'Roll a new picture' },
-                });
-                holder.appendChild(avatarEl(profile.avatar, 48));
+                // Tapping a generated picture rolls a new one. Tapping a drawing
+                // edits it instead, so one tap never throws a drawing away; the
+                // editor's "Use generated" goes back to the rolled picture.
+                let { seed, drawing } = profile;
+                const picture = new Setting(contentEl).setName('Picture');
+                picture.settingEl.addClass('settings-picture');
+                const holder = picture.controlEl.createEl('button', { cls: 'settings-avatar', type: 'button' });
+                const showPicture = () => {
+                    const label = drawing ? 'Edit your drawing' : 'Roll a new picture';
+                    picture.setDesc(drawing ? 'Tap it to edit your drawing.' : 'Tap it to roll a new one, or draw your own.');
+                    holder.setAttribute('aria-label', label);
+                    holder.title = label;
+                    holder.replaceChildren(avatarEl(drawing ?? seed, 48));
+                };
+                const changed = () => {
+                    showPicture();
+                    onAvatar(drawing ?? seed);
+                };
                 const rollPicture = () => void attempt(say, 'save the picture', async () => {
                     const next = randomSeed();
                     await updateProfile(client, userId, { avatar: next });
-                    holder.empty();
-                    holder.appendChild(avatarEl(next, 48));
-                    onAvatar(next);
+                    seed = next;
+                    changed();
                     say('');
                 });
-                holder.addEventListener('click', rollPicture);
+                const drawPicture = () => {
+                    if (!profile.canDraw) {
+                        say('Drawn pictures are not available yet.');
+                        return;
+                    }
+                    new AvatarEditorModal({
+                        seed,
+                        drawing,
+                        save: async (next) => {
+                            await updateProfile(client, userId, { drawing: next });
+                            drawing = next;
+                            changed();
+                            say('');
+                        },
+                    }).open();
+                };
+                holder.addEventListener('click', () => (drawing ? drawPicture() : rollPicture()));
+                picture.addButton((b) => b.setButtonText('Draw').onClick(drawPicture));
+                showPicture();
 
                 let name = profile.name;
                 new Setting(contentEl)

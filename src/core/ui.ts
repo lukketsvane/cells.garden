@@ -25,11 +25,16 @@ export class Modal {
     modalEl: HTMLElement;
     contentEl: HTMLElement;
     private _onKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            this.close();
-        }
+        // With one modal open over another, Escape closes only the one on top.
+        if (e.key !== 'Escape' || e.defaultPrevented || !this.onTop()) return;
+        e.preventDefault();
+        this.close();
     };
+
+    private onTop() {
+        const open = document.querySelectorAll('.modal-container');
+        return open[open.length - 1] === this.containerEl;
+    }
 
     constructor() {
         this.containerEl = createDiv('modal-container');

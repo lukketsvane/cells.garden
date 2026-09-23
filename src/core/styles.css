@@ -1022,13 +1022,17 @@
     align-items: center;
 }
 
-.settings-avatar {
+/* Scoped to the row so it outranks the row's own button look (ui.css, and Obsidian's). */
+.setting-item-control button.settings-avatar {
     display: inline-flex;
+    width: auto;
+    height: auto;
     margin: 0 8px 0 0;
     padding: 0;
     border: 0;
     border-radius: 50%;
     background: transparent;
+    box-shadow: none;
     color: inherit;
     cursor: pointer;
     appearance: none;
@@ -1040,7 +1044,7 @@
     transform: scale(1.04);
 }
 
-.settings-avatar:focus-visible {
+.setting-item-control button.settings-avatar:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--interactive-accent);
 }
@@ -1051,6 +1055,167 @@
 
 .settings-avatar .garden-avatar {
     margin-right: 0;
+}
+
+.settings-picture .setting-item-control {
+    align-items: center;
+}
+
+/* The picture editor (avatar-editor.ts): a grid a finger can paint on a phone,
+   the palette under it and the picture at its real sizes beside it. */
+.avatar-editor {
+    container-type: inline-size;
+}
+
+.avatar-editor-stage {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.avatar-editor-grid {
+    position: relative;
+    flex: 0 1 336px;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 6px;
+    outline: none;
+    cursor: crosshair;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.avatar-editor-grid:focus-visible {
+    box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.avatar-editor-cell {
+    box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+}
+
+.avatar-editor-grid:focus-visible .avatar-editor-cell.is-cursor {
+    box-shadow: inset 0 0 0 2px var(--interactive-accent);
+}
+
+/* The corners the circle cuts off, faded toward the modal. */
+.avatar-editor-mask {
+    position: absolute;
+    inset: 0;
+    color: var(--background-primary);
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.avatar-editor-mask svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.avatar-editor-previews {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding-top: 2px;
+}
+
+.avatar-editor-previews .garden-avatar {
+    margin-right: 0;
+}
+
+/* A phone: the previews in a row under the grid, which takes the full width. */
+@container (max-width: 400px) {
+    .avatar-editor-stage {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .avatar-editor-grid {
+        flex: none;
+        width: 100%;
+    }
+
+    .avatar-editor-previews {
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        padding-top: 0;
+    }
+}
+
+.avatar-editor-palette {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+    max-width: 336px;
+    margin: 14px 0 4px;
+}
+
+.avatar-editor-palette .avatar-swatch {
+    aspect-ratio: 1;
+    min-width: 0;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 6px;
+    box-shadow: none;
+    cursor: pointer;
+}
+
+/* Erase: the empty swatch, struck through. */
+.avatar-editor-palette .avatar-swatch.is-empty {
+    background:
+        linear-gradient(to top right, transparent calc(50% - 1px), var(--text-faint) calc(50% - 1px),
+            var(--text-faint) calc(50% + 1px), transparent calc(50% + 1px)),
+        var(--background-primary-alt);
+}
+
+.avatar-editor-palette .avatar-swatch.is-active {
+    box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 4px var(--text-normal);
+}
+
+.avatar-editor-tools .setting-item-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.avatar-editor-tools .setting-item-control {
+    align-items: center;
+}
+
+.avatar-editor-tools button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.avatar-editor-bg-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    border-radius: 50%;
+    vertical-align: -1px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+/* The buttons take the whole row; "Use generated" stands apart from Cancel and Save. */
+.avatar-editor-actions .setting-item-info {
+    display: none;
+}
+
+.avatar-editor-actions .avatar-editor-generated {
+    margin-right: auto;
 }
 
 /* A plant's card floating over the garden while the board is hidden: the board's

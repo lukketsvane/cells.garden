@@ -98,6 +98,30 @@ for (const table of ['profiles','gardens','garden_members','garden_invites','pla
     assert(new RegExp('alter\\s+table\\s+public\\.' + table + '\\s+enable\\s+row\\s+level\\s+security','i').test(allSql), 'RLS missing: ' + table);
 }
 
+// Drawn pictures (0011): the database accepts exactly the format the client
+// draws from (DRAWING_FORMAT, anchored, fixed length), nothing looser.
+const pixels = read('src/core/avatar-pixels.ts');
+const drawingFormat = /DRAWING_FORMAT = \/(.+)\/;/.exec(pixels)?.[1] ?? '';
+const drawingLength = /DRAWING_LENGTH = (\d+);/.exec(pixels)?.[1] ?? '';
+assert(/^\^[^|]*\$$/.test(drawingFormat), 'DRAWING_FORMAT must be one anchored pattern');
+const drawingChecks = [...allSql.matchAll(/add\s+constraint\s+profiles_avatar_drawing_format\s+check\s*\(([\s\S]*?)\);/gi)];
+const drawingCheck = drawingChecks.at(-1)?.[1] ?? '';
+assert(drawingCheck.includes(`avatar_drawing ~ '${drawingFormat}'`), 'avatar_drawing check must use DRAWING_FORMAT exactly');
+assert(drawingCheck.includes(`length(avatar_drawing) = ${drawingLength}`), 'avatar_drawing check must pin DRAWING_LENGTH');
+
+// Every function that hands out a picture, as last defined, sends the drawing before the seed.
+const latestFunctions = new Map();
+for (const name of migrations) {
+    for (const m of read(join('supabase','migrations',name)).matchAll(/create\s+or\s+replace\s+function\s+([\w.]+)\s*\([\s\S]*?\$\$([\s\S]*?)\$\$;/gi)) {
+        latestFunctions.set(m[1], m[2]);
+    }
+}
+for (const [fn, body] of latestFunctions) {
+    if (/\bavatar_seed\b/.test(body)) {
+        assert(/coalesce\(\s*\w+\.avatar_drawing\s*,\s*\w+\.avatar_seed\b/.test(body), fn + ': hands out avatar_seed without avatar_drawing');
+    }
+}
+
 for (const name of readdirSync(join(ROOT,'.github','workflows')).filter((n) => /\.ya?ml$/.test(n))) {
     const wf = read(join('.github','workflows',name));
     for (const m of wf.matchAll(/uses:\s*(actions\/[A-Za-z0-9_.-]+)@([^\s#]+)/g)) {

@@ -5,6 +5,7 @@
  * `sharingAvailable()` hides the feature when they are missing.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isDrawing } from './avatar-pixels';
 import type { PlantData } from './merge';
 import { emptyGarden } from './model';
 
@@ -25,14 +26,29 @@ interface SharedGarden {
 export interface GardenMember {
     userId: string;
     name: string;
-    /** The generated picture's seed; the user id before migration 0009. */
+    /** Their drawing (migration 0011), else the generated picture's seed; the user id before migration 0009. */
     avatar: string;
 }
 
 interface PgError { code?: string; message?: string }
 
 const MISSING = new Set(['42P01', 'PGRST205', 'PGRST202', '42883']);
+/** A column the database does not have yet: an update naming it, or a select. */
+const NO_COLUMN = new Set(['PGRST204', '42703']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A profile row as `select *` returns it. Columns from later migrations may be missing. */
+interface ProfileRow {
+    display_name: string | null;
+    avatar_seed?: string | null;
+    avatar_drawing?: string | null;
+}
+
+/** The picture a profile shows: the drawing when there is a good one, else the seed, else `fallback`. */
+export function shownAvatar(row: ProfileRow | null | undefined, fallback: string): string {
+    if (isDrawing(row?.avatar_drawing)) return row.avatar_drawing;
+    return row?.avatar_seed || fallback;
+}
 
 /** A database function's reply; its rows are cast where they are read. */
 type Rpc = { data: unknown; error: PgError | null };
@@ -172,6 +188,11 @@ async function clear(client: SupabaseClient, of: Shared, id: string): Promise<vo
     if (error) fail(error);
 }
 
+/**
+ * Everyone in a garden or on a plant. `profiles(*)` rather than a column list:
+ * a column a later migration adds (avatar_seed, avatar_drawing) comes along
+ * once it exists, and a build that runs ahead of its migration still loads.
+ */
 async function members(client: SupabaseClient, of: Shared, id: string): Promise<GardenMember[]> {
     const { data, error } = await client
         .from(of.members)
@@ -179,8 +200,8 @@ async function members(client: SupabaseClient, of: Shared, id: string): Promise<
         .eq(of.key, id)
         .order('created_at');
     if (error) fail(error);
-    return ((data ?? []) as unknown as { user_id: string; profiles: { display_name: string | null; avatar_seed?: string | null } | null }[])
-        .map(m => ({ userId: m.user_id, name: m.profiles?.display_name || 'someone', avatar: m.profiles?.avatar_seed || m.user_id }));
+    return ((data ?? []) as unknown as { user_id: string; profiles: ProfileRow | null }[])
+        .map(m => ({ userId: m.user_id, name: m.profiles?.display_name || 'someone', avatar: shownAvatar(m.profiles, m.user_id) }));
 }
 
 /** The owner removing someone, or a member leaving: the same delete. */
@@ -258,6 +279,7 @@ export async function deleteSharedPlant(client: SupabaseClient, plantId: string)
 interface Friend {
     userId: string;
     name: string;
+    /** From migration 0011 the function sends the drawing here when there is one. */
     avatar: string;
     gardens: number;
     plants: number;
@@ -266,6 +288,7 @@ interface Friend {
 interface PlantOffer {
     plantId: string;
     fromName: string;
+    /** A drawing or a seed, as for Friend. */
     fromAvatar: string;
     seed: string;
 }
@@ -316,20 +339,45 @@ export async function declinePlantOffer(client: SupabaseClient, plantId: string,
 
 interface Profile {
     name: string;
+    /** The picture shown: the drawing, else the seed. */
     avatar: string;
+    /** The generated picture's seed; the user id before migration 0009. */
+    seed: string;
+    /** Their own drawing, or null for the generated picture. */
+    drawing: string | null;
+    /** False before migration 0011, when there is nowhere to keep a drawing. */
+    canDraw: boolean;
 }
 
 export async function getProfile(client: SupabaseClient, userId: string): Promise<Profile> {
     const { data, error } = await client.from('profiles').select('*').eq('id', userId).limit(1);
     if (error) fail(error);
-    const row = ((data ?? []) as { display_name: string | null; avatar_seed?: string | null }[])[0];
-    return { name: row?.display_name ?? '', avatar: row?.avatar_seed || userId };
+    const row = ((data ?? []) as ProfileRow[])[0];
+    return {
+        name: row?.display_name ?? '',
+        avatar: shownAvatar(row, userId),
+        seed: row?.avatar_seed || userId,
+        drawing: isDrawing(row?.avatar_drawing) ? row.avatar_drawing : null,
+        canDraw: !row || 'avatar_drawing' in row,
+    };
 }
 
-export async function updateProfile(client: SupabaseClient, userId: string, changes: { name?: string; avatar?: string }): Promise<void> {
-    const patch: Record<string, string> = {};
+/** `avatar` is a new seed; `drawing` a new drawing, or null to go back to the generated picture. */
+export async function updateProfile(
+    client: SupabaseClient,
+    userId: string,
+    changes: { name?: string; avatar?: string; drawing?: string | null },
+): Promise<void> {
+    const patch: Record<string, string | null> = {};
     if (changes.name !== undefined) patch.display_name = changes.name;
     if (changes.avatar !== undefined) patch.avatar_seed = changes.avatar;
+    if (changes.drawing !== undefined) {
+        if (changes.drawing !== null && !isDrawing(changes.drawing)) throw new ShareError('That is not a drawing.');
+        patch.avatar_drawing = changes.drawing;
+    }
     const { error } = await client.from('profiles').update(patch).eq('id', userId);
+    if (error && changes.drawing !== undefined && NO_COLUMN.has(error.code ?? '')) {
+        throw new ShareError('Drawn pictures are not available yet.');
+    }
     if (error) fail(error);
 }
