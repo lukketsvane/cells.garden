@@ -5,7 +5,7 @@
 // checkouts can test at once) against dist/ (building first when dist/
 // is missing) and drives the garden with Playwright: plants seeds, adds cells
 // to every zone, context menus, pan/zoom, reload persistence, a mobile
-// viewport. Then the PWA: the manifest and sw.js are served, the service
+// viewport with pan view. Then the PWA: the manifest and sw.js are served, the service
 // worker takes control of the page, and the garden still renders offline.
 //
 // Console errors that are exactly network failures to Supabase/Google are
@@ -163,6 +163,8 @@ async function scenario(browser, errors) {
     const desktopGround = await groundRatio(page);
     assert(desktopGround > 0.45 && desktopGround < 0.84,
         `desktop garden opened with the horizon misplaced: ${desktopGround}`);
+    // Pan view is for fingers: a mouse pans the garden in place.
+    assert(!(await page.isVisible('.garden-pan-toggle')), 'the pan view button should not show on a desktop');
 
     // Add items to each zone
     const zones = [
@@ -704,6 +706,99 @@ async function scenario(browser, errors) {
     const after = await mpage.$eval('.garden-canvas-area', (el) => el.getBoundingClientRect().height);
     console.log('divider drag:', Math.round(before), '->', Math.round(after));
     assert(after > before + 60, `dragging the divider did not resize the canvas: ${before} -> ${after}`);
+
+    // Pan view: the garden alone on the whole screen, where a finger pans it
+    // and no touch reaches the page, so Obsidian or the browser never swipe.
+    const camera = () => mpage.evaluate(() => {
+        const viewport = document.querySelector('.garden-canvas-viewport');
+        const m = new DOMMatrix(getComputedStyle(document.querySelector('.garden-world')).transform);
+        const vr = viewport.getBoundingClientRect();
+        const plant = document.querySelector('.garden-plant-wrapper').getBoundingClientRect();
+        return {
+            x: m.m41,
+            zoom: m.a,
+            // The world x in the middle of the pane: what a sideways pan moves.
+            centre: (vr.width / 2 - m.m41) / m.a,
+            ground: (plant.top - vr.top) / vr.height,
+            height: vr.height,
+        };
+    });
+    assert(await mpage.isVisible('.garden-pan-toggle'), 'the pan view button should show on a phone');
+    const panButton = await mpage.$eval('.garden-pan-toggle', (el) => el.getBoundingClientRect().toJSON());
+    assert(panButton.right <= 390 && panButton.top >= 0, `the pan view button is off screen: ${JSON.stringify(panButton)}`);
+    const beforePan = await camera();
+    await tapAt('.garden-pan-toggle');
+    await mpage.waitForSelector('.garden-pan-layer .garden-canvas-viewport');
+    const panOpen = await mpage.evaluate(() => {
+        const viewport = document.querySelector('.garden-canvas-viewport').getBoundingClientRect();
+        const world = document.querySelector('.garden-world').getBoundingClientRect();
+        const exit = document.querySelector('.garden-pan-exit').getBoundingClientRect();
+        return {
+            viewport: [viewport.left, viewport.top, viewport.width, viewport.height],
+            world: [world.top, world.bottom],
+            exit: exit.toJSON(),
+            inHost: !!document.querySelector('#app .garden-canvas-viewport'),
+            boardShown: document.querySelector('.kanban-scroll-container').getClientRects().length > 0,
+            // Whatever was there before, the garden is what a finger meets now.
+            onTop: [[20, 20], [innerWidth - 20, innerHeight - 20]]
+                .every(([x, y]) => !!document.elementFromPoint(x, y)?.closest('.garden-pan-layer')),
+        };
+    });
+    console.log('pan view:', panOpen);
+    assert.deepEqual(panOpen.viewport, [0, 0, 390, 844], `pan view should fill the screen: ${JSON.stringify(panOpen)}`);
+    assert(panOpen.world[0] <= 1 && panOpen.world[1] >= 843, `the garden should fill pan view from top to bottom: ${JSON.stringify(panOpen)}`);
+    assert(!panOpen.inHost && !panOpen.boardShown && panOpen.onTop, `pan view should lie over the app and hide the board: ${JSON.stringify(panOpen)}`);
+    assert(Math.abs(panOpen.exit.left - panButton.left) <= 1 && Math.abs(panOpen.exit.top - panButton.top) <= 1,
+        `the X should sit where the pan button was: ${JSON.stringify({ button: panButton, exit: panOpen.exit })}`);
+
+    const openPan = await camera();
+    await mpage.evaluate(() => {
+        window.__panLeaks = 0;
+        window.__panWatch = new AbortController();
+        for (const type of ['touchstart', 'touchmove', 'touchend', 'pointermove']) {
+            document.addEventListener(type, () => { window.__panLeaks++; }, { signal: window.__panWatch.signal });
+        }
+    });
+    await touch('touchStart', 300, 420);
+    for (let i = 1; i <= 8; i++) await touch('touchMove', 300 - i * 20, 420);
+    const draggedPan = await camera();
+    await touch('touchEnd', 140, 420);
+    await mpage.waitForTimeout(400);
+    const panPage = await mpage.evaluate(() => {
+        window.__panWatch.abort();
+        const root = document.scrollingElement;
+        return { leaks: window.__panLeaks, scroll: [scrollX, scrollY, root.scrollLeft, root.scrollTop] };
+    });
+    console.log('pan view drag:', Math.round(openPan.x), '->', Math.round(draggedPan.x), panPage);
+    assert(draggedPan.x < openPan.x - 100, `a one-finger drag should pan the garden: ${openPan.x} -> ${draggedPan.x}`);
+    assert.deepEqual(panPage.scroll, [0, 0, 0, 0], `the page scrolled under pan view: ${JSON.stringify(panPage)}`);
+    assert(panPage.leaks === 0, `touches in pan view reached the page: ${JSON.stringify(panPage)}`);
+
+    const pannedCentre = (await camera()).centre;
+    await tapAt('.garden-pan-exit');
+    await mpage.waitForFunction(() => !document.querySelector('.garden-pan-layer'));
+    const afterPan = await camera();
+    const backHome = await mpage.evaluate(() => ({
+        inHost: !!document.querySelector('#app > .view-content .garden-canvas-viewport'),
+        board: document.querySelector('.kanban-scroll-container').getBoundingClientRect().height,
+    }));
+    console.log('after pan view:', afterPan, backHome);
+    assert(backHome.inHost && backHome.board > 100, `the X should bring back the board and the garden's place: ${JSON.stringify(backHome)}`);
+    assert(Math.abs(afterPan.height - beforePan.height) <= 1, `the garden pane changed size: ${beforePan.height} -> ${afterPan.height}`);
+    assert(Math.abs(afterPan.zoom - beforePan.zoom) < 0.001, `pan view should give the zoom back: ${beforePan.zoom} -> ${afterPan.zoom}`);
+    assert(Math.abs(afterPan.ground - beforePan.ground) < 0.02, `the horizon jumped: ${beforePan.ground} -> ${afterPan.ground}`);
+    assert(Math.abs(afterPan.centre - pannedCentre) < 1 && afterPan.centre > beforePan.centre + 100,
+        `the pan should stay after pan view: ${JSON.stringify({ before: beforePan.centre, panned: pannedCentre, after: afterPan.centre })}`);
+    await mpage.waitForTimeout(1300); // the debounced view-state save
+    const panSaved = await mpage.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/view/web')));
+    assert(Math.abs(panSaved.translateX - afterPan.x) < 1 && Math.abs(panSaved.zoom - afterPan.zoom) < 0.001,
+        `the camera after pan view was not saved: ${JSON.stringify({ saved: panSaved, shown: afterPan })}`);
+
+    // Escape leaves pan view too.
+    await tapAt('.garden-pan-toggle');
+    await mpage.waitForSelector('.garden-pan-layer');
+    await mpage.keyboard.press('Escape');
+    await mpage.waitForFunction(() => !document.querySelector('.garden-pan-layer') && !!document.querySelector('#app .garden-canvas-viewport'));
 
     // Everything was saved.
     await mpage.waitForTimeout(300);

@@ -6,8 +6,9 @@
 // loads, the Open garden command puts the garden in a tab with the sign-in pill, the vault
 // import command brings a Garden-Cells/ plant in, the garden keeps its device
 // storage in the vault's storage (copying the old shared keys once), a plant's
-// menu changes its hue, and Obsidian
-// closing the tab tears the garden down without errors. Run with "npm run test:obsidian".
+// menu changes its hue, pan view lifts the garden out of its tab and back, and
+// Obsidian closing the tab tears the garden down without errors. Run with
+// "npm run test:obsidian".
 
 import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
@@ -229,6 +230,42 @@ try {
     await page.waitForFunction(() => /"hue":120\b/.test(window.__pluginData?.local?.['cells.garden/v1'] ?? ''));
     assert((await page.$('.garden-context-menu')) === null, 'Enter should close the plant menu');
     console.log('test-obsidian: plant hue saved from the menu');
+
+    // Pan view lifts the garden out of its tab, even out of a leaf that traps
+    // position: fixed (a transform does, as Obsidian's leaves can), over the
+    // whole window, and puts it back exactly where it was.
+    const pan = await page.evaluate(async () => {
+        const leaf = document.querySelector('.workspace-leaf-content');
+        leaf.style.inset = '60px 0 40px 0';
+        leaf.style.transform = 'translateZ(0)';
+        const host = document.querySelector('.cells-garden-host');
+        const content = host.querySelector(':scope > .view-content');
+        const next = content.nextSibling;
+        const canvas = () => content.querySelector('.garden-canvas-viewport').getBoundingClientRect();
+        const before = canvas().height;
+        // The button shows on touch screens only; this window has a mouse.
+        host.querySelector('.garden-pan-toggle').click();
+        const layer = document.querySelector('body > .garden-pan-layer');
+        const r = canvas();
+        const open = {
+            lifted: !!layer && layer.contains(content) && !host.contains(content),
+            canvas: [r.left, r.top, r.width, r.height],
+            window: [0, 0, innerWidth, innerHeight],
+        };
+        layer?.querySelector('.garden-pan-exit')?.click();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        return {
+            open,
+            back: content.parentNode === host && content.nextSibling === next,
+            layerGone: !document.querySelector('.garden-pan-layer'),
+            canvas: [before, canvas().height],
+        };
+    });
+    console.log('test-obsidian: pan view', pan);
+    assert(pan.open.lifted, 'pan view should lift the garden out of its tab');
+    assert.deepEqual(pan.open.canvas, pan.open.window, 'pan view should cover the whole window, not the leaf');
+    assert(pan.back && pan.layerGone, 'leaving pan view should put the garden back where it was');
+    assert(Math.abs(pan.canvas[0] - pan.canvas[1]) <= 1, `the garden pane changed size after pan view: ${pan.canvas}`);
 
     // Obsidian closes the tab (the plugin must not detach it itself on unload).
     assert(await page.evaluate(() => typeof window.__plugin.onunload !== 'function' || !/detachLeaves/.test(String(window.__plugin.onunload))), 'onunload must not detach leaves');

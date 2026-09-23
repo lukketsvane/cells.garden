@@ -20,6 +20,7 @@
 
 .cells-garden-host .auth-pill,
 .cells-garden-host .garden-board-toggle,
+.cells-garden-host .garden-pan-toggle,
 .cells-garden-host .garden-files-button {
     position: absolute;
 }

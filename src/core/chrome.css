@@ -129,6 +129,71 @@
 }
 .garden-board-toggle:hover { opacity: 1; }
 
+/* --- Pan view (pan.ts): its button beside the board toggle, touch screens only,
+   and the X that takes the button's place while the garden fills the screen --- */
+.garden-pan-toggle,
+.garden-pan-exit {
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #ffffff;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+    cursor: pointer;
+}
+/* Drawn to the board icon's size: the arrows fill their square, the X half of it. */
+.garden-pan-toggle svg {
+    width: 16px;
+    height: 16px;
+}
+.garden-pan-exit svg {
+    width: 18px;
+    height: 18px;
+}
+.garden-pan-toggle {
+    display: none;
+    position: fixed;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    right: calc(46px + env(safe-area-inset-right, 0px));
+    z-index: 50;
+}
+.garden-pan-exit {
+    display: flex;
+    position: absolute;
+    top: var(--pan-exit-top, calc(8px + env(safe-area-inset-top, 0px)));
+    right: var(--pan-exit-right, calc(46px + env(safe-area-inset-right, 0px)));
+    z-index: 50;
+}
+
+/* Over the host's own bars and sidebars, under its dialogs, menus and notices
+   (Obsidian's begin at 50). No touch in it scrolls, zooms or swipes the page. */
+.garden-pan-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: var(--background-primary);
+    touch-action: none;
+    overscroll-behavior: none;
+}
+/* Out of its host, the view's content brings its own size. */
+.garden-pan-layer > .view-content {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    overflow: hidden;
+}
+/* The garden alone: no divider, no board. */
+.garden-pan-layer .garden-resizer,
+.garden-pan-layer .garden-bottom-half {
+    display: none;
+}
+.garden-pan-layer .garden-canvas-area {
+    flex: 1 1 auto;
+}
+
 .garden-files-modal hr {
     border: none;
     border-top: 1px solid var(--background-modifier-border);
@@ -179,6 +244,10 @@
     .garden-board-toggle {
         width: 34px;
         height: 34px;
+    }
+
+    .garden-pan-toggle {
+        display: flex;
     }
 
     .auth-pill {

@@ -8,6 +8,7 @@ import { menuRow, openMenu, type MenuItem } from './menu';
 import { ConfirmDeleteModal, CreateProjectModal, ShortcutsModal } from './modals';
 import { View } from './ui';
 import { mineralOpacity, skyAt } from './garden-settings';
+import { PanView } from './pan';
 import { renderGardenPets } from './pets';
 import type { LayerItem, LayerName, ProjectData, ViewState } from './model';
 
@@ -249,7 +250,8 @@ export class GardenView extends View {
                 const wrapper = part?.closest<HTMLElement>('.garden-plant-wrapper') ?? null;
                 const itemId = part?.dataset.itemId;
                 const projectId = wrapper?.dataset.projectId;
-                if (!this.boardHidden() && part && itemId && projectId) {
+                // Pan view covers the board, so a tap there has no cell to show.
+                if (!this.boardHidden() && !this.panView.active && part && itemId && projectId) {
                     if (part.matches('.garden-stem-part, .garden-flower-part')) this.scareFireflies(projectId);
                     this.focusKanbanCell(itemId, projectId);
                 } else {
@@ -1089,6 +1091,10 @@ export class GardenView extends View {
     constructor(host: HTMLElement, app: GardenApp) {
         super(host);
         this.app = app;
+        this.panView = new PanView(host, this.contentEl, {
+            beforeMove: (entering) => this.beforePanMove(entering),
+            afterMove: (entering) => this.afterPanMove(entering),
+        });
     }
 
     private _renderGeneration = 0; // Guards against concurrent onOpen() calls
@@ -1505,7 +1511,48 @@ export class GardenView extends View {
         });
     }
 
+    // --- Pan view (pan.ts) ---
+    // The garden alone on the screen, for fingers. It opens filling the screen
+    // from top to bottom with the middle of the pane still in the middle, and
+    // gives the zoom and the horizon back when it ends: what stays is how far
+    // it was panned.
+
+    private readonly panView: PanView;
+    /** The camera and the board's scroll from before pan view, to give back after it. */
+    private _panReturn: { zoom: number; ratio: number | null; scroll: ReturnType<GardenView['saveScrollPositions']> } | null = null;
+    /** The world x in the middle of the pane, carried across a move. */
+    private _panCentreX = 0;
+
+    private beforePanMove(entering: boolean) {
+        const viewport = this.viewport;
+        if (!viewport) return;
+        this.cancelSettle();
+        this._panCentreX = (viewport.offsetWidth / 2 - this.currentTranslateX) / this.zoom;
+        if (entering) {
+            this.hidePeek();
+            this._panReturn = { zoom: this.zoom, ratio: this.groundScreenRatio(viewport), scroll: this.saveScrollPositions() };
+        }
+    }
+
+    private afterPanMove(entering: boolean) {
+        const back = this._panReturn;
+        if (!entering) this._panReturn = null;
+        const viewport = this.viewport;
+        const world = this.world;
+        if (!viewport || !world || !viewport.offsetWidth || !viewport.offsetHeight) return;
+        this.zoom = entering ? Math.max(this.zoom, this.fillHeightZoom(world, viewport)) : back?.zoom ?? this.zoom;
+        this.currentTranslateX = viewport.offsetWidth / 2 - this._panCentreX * this.zoom;
+        // In, no void above or below the garden; out, the horizon where it was in the pane.
+        this.anchorGroundToRatio(viewport, world, back?.ratio ?? DEFAULT_GROUND_SCREEN_RATIO, entering);
+        // This move is already answered: the resize watcher must not carry the old horizon over it again.
+        this._lastViewportSize = { width: viewport.offsetWidth, height: viewport.offsetHeight };
+        if (!entering && back) this.restoreScrollPositions(back.scroll);
+        this.scheduleViewStateSave();
+    }
+
     async onClose() {
+        // The garden goes back into its host before anything is saved or torn down.
+        this.panView.exit();
         this.removeShortcuts();
         this._viewportObserver?.disconnect();
         this._viewportObserver = null;
@@ -2039,7 +2086,7 @@ export class GardenView extends View {
     }
 
     private handlePeekMove = (e: MouseEvent) => {
-        if (!this.boardHidden() || this.isDragging || this._peekPinned || this.inPeek(e.target)) return;
+        if (!this.boardHidden() || this.panView.active || this.isDragging || this._peekPinned || this.inPeek(e.target)) return;
         const hit = this.plantAt(e.clientX, e.clientY);
         if (hit) this.schedulePeek(hit);
         else this.hidePeek();
@@ -2049,9 +2096,13 @@ export class GardenView extends View {
         if (!this._peekPinned) this.hidePeek();
     };
 
-    /** A tap (touch or a click without a drag) pins the card, a tap elsewhere lets it go. */
+    /**
+     * A tap (touch or a click without a drag) pins the card, a tap elsewhere lets it go.
+     * Not in pan view, which keeps every touch to the garden: the card's cells need
+     * theirs to reach the page (the touch adapter, Sortable).
+     */
     private peekTap(clientX: number, clientY: number, target: EventTarget | null = null) {
-        if (!this.boardHidden() || this.inPeek(target)) return;
+        if (!this.boardHidden() || this.panView.active || this.inPeek(target)) return;
         const hit = this.plantAt(clientX, clientY);
         if (hit) {
             this.cancelPeekHover();
@@ -2840,6 +2891,16 @@ export class GardenView extends View {
         if (this.shortcutsBlocked(e.target)) return;
         const mod = e.ctrlKey || e.metaKey;
         const key = e.key;
+
+        // Pan view shows the garden alone: Escape leaves it, and the board's
+        // shortcuts wait until the board is back on screen.
+        if (this.panView.active) {
+            if (key === 'Escape') {
+                e.preventDefault();
+                this.panView.exit();
+            }
+            return;
+        }
 
         if (e.shiftKey && !mod && key.toLowerCase() === 'd') {
             const locs = this.selectedLocations();
