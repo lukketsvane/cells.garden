@@ -497,9 +497,11 @@
     display: flex;
     flex-shrink: 0;
 }
+/* Pixel art on a 12-square (see ZONE_ICONS): one art pixel to one CSS pixel,
+   so no pixel is ever split across device pixels. */
 .zone-icon svg {
-    width: 11px;
-    height: 11px;
+    width: 12px;
+    height: 12px;
     display: block;
 }
 

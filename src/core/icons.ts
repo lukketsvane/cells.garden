@@ -25,21 +25,95 @@ export const ICONS = {
 };
 
 /**
+ * A pixel-art icon from rows of `#` (a pixel) and `.` (none), one row per line
+ * of the square it is drawn on. Each run of pixels in a row becomes a rectangle
+ * one pixel high, all in one path filled with `currentColor`; crisp edges keep
+ * the renderer from smoothing a pixel into its neighbours.
+ */
+function pixelIcon(rows: string[]): string {
+    const size = rows.length;
+    let d = '';
+    rows.forEach((row, y) => {
+        for (const run of row.matchAll(/#+/g)) {
+            const n = run[0].length;
+            d += `M${run.index} ${y}h${n}v1h-${n}z`;
+        }
+    });
+    return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true"><path d="${d}"></path></svg>`;
+}
+
+/**
  * The four zone icons, drawn rather than typed: the symbols these replace were
  * whichever characters a font happened to carry, and the stem one landed in a
- * plane no system font covers, so every reader saw an empty box. Each is one
- * plain line drawing on the same 24-square, to be redrawn without touching
- * anything else.
+ * plane no system font covers, so every reader saw an empty box.
+ *
+ * They are pixel art, like the garden they label: one ink, square pixels, each
+ * on the same 12-square and drawn here as its rows, so one can be redrawn
+ * without touching anything else. The board shows them at 12 CSS pixels, an
+ * art pixel to a CSS pixel, which puts every edge on a whole device pixel at
+ * any whole-number screen scale.
  */
 export const ZONE_ICONS: Record<LayerName, string> = {
-    /** A blossom: five petals around an eye. */
-    flowers: `<svg ${stroke}><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="6.5" r="2.8"></circle><circle cx="17.2" cy="10.3" r="2.8"></circle><circle cx="15.2" cy="16.4" r="2.8"></circle><circle cx="8.8" cy="16.4" r="2.8"></circle><circle cx="6.8" cy="10.3" r="2.8"></circle></svg>`,
-    /** A stalk carrying a leaf on either side. */
-    stem: `<svg ${stroke}><path d="M12 21V4"></path><path d="M12 11c-3.3 0-5-2.2-5-5 3.3 0 5 2.2 5 5z"></path><path d="M12 8c3.3 0 5-2.2 5-5-3.3 0-5 2.2-5 5z"></path></svg>`,
-    /** A taproot forking under the soil. */
-    roots: `<svg ${stroke}><path d="M12 2v7"></path><path d="M12 9v13"></path><path d="M12 9c0 4.5-2.2 7-5.5 9"></path><path d="M12 9c0 4.5 2.2 7 5.5 9"></path></svg>`,
-    /** A cut crystal, girdle and all. */
-    minerals: `<svg ${stroke}><path d="M12 3 4 9l8 12 8-12-8-6z"></path><path d="M4 9h16"></path></svg>`,
+    /** A blossom seen from above: four round petals parted around an open eye. */
+    flowers: pixelIcon([
+        '....####....',
+        '...######...',
+        '...######...',
+        '.##.####.##.',
+        '####.##.####',
+        '#####..#####',
+        '#####..#####',
+        '####.##.####',
+        '.##.####.##.',
+        '...######...',
+        '...######...',
+        '....####....',
+    ]),
+    /** A stalk with a pointed leaf on either side, the upper one reaching for the light. */
+    stem: pixelIcon([
+        '......#....#',
+        '......#..###',
+        '......#.####',
+        '......#.###.',
+        '......##....',
+        '.#....#.....',
+        '.###..#.....',
+        '.####.#.....',
+        '..###.#.....',
+        '.....##.....',
+        '......#.....',
+        '......#.....',
+    ]),
+    /** Roots from the base of the plant, forking as they spread down, one pixel thin like the garden's own. */
+    roots: pixelIcon([
+        '.....##.....',
+        '.....##.....',
+        '.....#.#....',
+        '...##..#....',
+        '..#...#.##..',
+        '.#...#....#.',
+        '.#..#.#....#',
+        '#...#..#....',
+        '...#...#..#.',
+        '..#.....##..',
+        '..#.......#.',
+        '.#..........',
+    ]),
+    /** A cut gem in outline: the table, the girdle and the facets meeting at the point. */
+    minerals: pixelIcon([
+        '............',
+        '...######...',
+        '..#.#..#.#..',
+        '.#..#..#..#.',
+        '############',
+        '#...#..#...#',
+        '.#..#..#..#.',
+        '..#..##..#..',
+        '...#.##.#...',
+        '....####....',
+        '.....##.....',
+        '............',
+    ]),
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';

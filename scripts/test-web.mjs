@@ -53,6 +53,32 @@ function watchErrors(page, label, errors) {
     });
 }
 
+// The zone icons are pixel art: crisp edges, no stroke, and a whole number of
+// CSS pixels to each art pixel, so no pixel is smeared across two.
+async function checkZoneIcons(page, label) {
+    const icons = await page.$$eval('.zone-icon svg', (els) => els.map((svg) => {
+        const rect = svg.getBoundingClientRect();
+        const grid = svg.viewBox.baseVal;
+        return {
+            zone: svg.closest('.garden-zone')?.classList[1],
+            shape: getComputedStyle(svg).shapeRendering,
+            stroked: [svg, ...svg.querySelectorAll('*')].some((el) => getComputedStyle(el).stroke !== 'none'),
+            grid: `${grid.width}x${grid.height}`,
+            scaleX: rect.width / grid.width,
+            scaleY: rect.height / grid.height,
+        };
+    }));
+    const zones = new Set(icons.map((icon) => icon.zone));
+    assert(['flowers-zone', 'stem-zone', 'roots-zone', 'minerals-zone'].every((z) => zones.has(z)), `${label}: a zone lost its icon: ${JSON.stringify(icons)}`);
+    for (const icon of icons) {
+        assert(/^crispedges$/i.test(icon.shape), `${label}: a zone icon is smoothed: ${JSON.stringify(icon)}`);
+        assert(!icon.stroked, `${label}: a zone icon is stroked, not built from pixels: ${JSON.stringify(icon)}`);
+        assert(Number.isInteger(icon.scaleX) && icon.scaleX >= 1 && icon.scaleX === icon.scaleY,
+            `${label}: a zone icon is not a whole number of CSS pixels per art pixel: ${JSON.stringify(icon)}`);
+    }
+    console.log(`${label} zone icons:`, [...new Set(icons.map((icon) => `${icon.grid} at ${icon.scaleX}x`))].join(', '));
+}
+
 // ---------------------------------------------------------------------------
 // Build + preview server
 // ---------------------------------------------------------------------------
@@ -151,6 +177,7 @@ async function scenario(browser, errors) {
     console.log('items:', items);
     assert(items.length === zones.length, `expected ${zones.length} items, got ${items.length}`);
     console.log('plant parts:', await page.$$eval('.garden-stem-container > div', (els) => els.map((e) => e.className)));
+    await checkZoneIcons(page, 'desktop');
     await shot(page, '02-one-plant.png');
 
     // Second plant on the left
@@ -439,6 +466,7 @@ async function scenario(browser, errors) {
         await mpage.keyboard.press('Enter');
         await mpage.waitForFunction((t) => [...document.querySelectorAll('.garden-item')].some((el) => el.textContent === t), text);
     }
+    await checkZoneIcons(mpage, 'mobile');
 
     // A card per plant on the board, a line between plants.
     const surface = await mpage.evaluate(() => {
