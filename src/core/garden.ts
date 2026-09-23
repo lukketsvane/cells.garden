@@ -2159,7 +2159,9 @@ export class GardenView extends View {
             touchStartThreshold: 6,
             ghostClass: 'sortable-column-ghost',
             handle: '.column-drag-handle',
-            filter: '.add-column-btn',
+            // Only the plants move. The two + buttons are not items of the list,
+            // so they stay put at either end and no plant can be dropped past them.
+            draggable: '.project-column',
             onEnd: (evt: SortableEvent) => void this.handleColumnDrop(evt)
         });
     }
@@ -3393,21 +3395,23 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
     }
 
     async handleColumnDrop(evt: SortableEvent) {
-        if (evt.oldIndex === undefined || evt.newIndex === undefined || evt.oldIndex === evt.newIndex) return;
+        // Counted over the plants alone: the + buttons are not draggable, so they are not counted.
+        const oldIdx = evt.oldDraggableIndex;
+        const newIdx = evt.newDraggableIndex;
+        if (oldIdx === undefined || newIdx === undefined || oldIdx === newIdx) return;
 
-        // Sortable indices include the +Left button at index 0, so subtract 1
-        const oldIdx = evt.oldIndex - 1;
-        let newIdx = evt.newIndex - 1;
-
-        // Clamp: can't go before 0 or past the last project
         const maxIdx = this.app.gardenData.length - 1;
-        if (oldIdx < 0 || newIdx < 0 || oldIdx > maxIdx || newIdx > maxIdx) return;
+        if (oldIdx < 0 || newIdx < 0 || oldIdx > maxIdx || newIdx > maxIdx) {
+            // Out of step with the board (a sync landed mid-drag): draw it from the data again.
+            this.scheduleRender();
+            return;
+        }
 
+        // newIdx is where the plant ends up, counted after it left its old place,
+        // so no correction: shifting it by one made every move to the right land
+        // back where it started.
         const [movedProject] = this.app.gardenData.splice(oldIdx, 1);
         if (!movedProject) return;
-
-        // Adjust newIdx if we removed an item before it
-        if (oldIdx < newIdx) newIdx--;
         this.app.gardenData.splice(newIdx, 0, movedProject);
 
         // UPDATE ALL ORDERS: Assign 0, 1, 2, 3... based on current array position
