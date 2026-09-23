@@ -195,12 +195,11 @@ function drawnRect(part: HTMLElement, margin = 0): { left: number; top: number; 
     };
 }
 
-/** How far a peeked part's ring reaches past its pixels, in art pixels: a light one, then a dark one. */
-const RING = 2;
-const RING_LIGHT = [255, 255, 255];
-const RING_DARK = [22, 22, 29];
+/** How far a peeked part's ring reaches past its pixels, in art pixels: one soft, pale line. */
+const RING = 1;
+const RING_LIGHT = [244, 241, 227, 225];
 /** The ring goes round, not into, a gap of up to twice this many art pixels between two strokes. */
-const RING_BRIDGE = 2;
+const RING_BRIDGE = 1;
 
 /**
  * The ring round a sprite's pixels, RING art pixels wider on every side. It
@@ -259,21 +258,12 @@ function ringOf(sprite: SpritePixels): ImageData {
         if (y < h - 1) queue.push(i + w);
     }
 
-    // The light ring all round the shape, corners too; the dark one round that, its corners cut.
+    // One line round the shape, its corners cut, the way pixel art outlines a sprite.
     const light = new Uint8Array(w * h);
-    const dark = new Uint8Array(w * h);
     for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
             if (!outside[y * w + x]) continue;
-            let touches = false;
-            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) touches ||= at(shape, x + dx, y + dy);
-            light[y * w + x] = touches ? 1 : 0;
-        }
-    }
-    for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-            if (!outside[y * w + x] || light[y * w + x]) continue;
-            dark[y * w + x] = at(light, x - 1, y) || at(light, x + 1, y) || at(light, x, y - 1) || at(light, x, y + 1) ? 1 : 0;
+            light[y * w + x] = at(shape, x - 1, y) || at(shape, x + 1, y) || at(shape, x, y - 1) || at(shape, x, y + 1) ? 1 : 0;
         }
     }
 
@@ -281,11 +271,8 @@ function ringOf(sprite: SpritePixels): ImageData {
     const ring = new ImageData(sprite.width + 2 * RING, sprite.height + 2 * RING);
     for (let y = 0; y < ring.height; y++) {
         for (let x = 0; x < ring.width; x++) {
-            const i = (y + RING_BRIDGE) * w + x + RING_BRIDGE;
-            const colour = light[i] ? RING_LIGHT : dark[i] ? RING_DARK : null;
-            if (!colour) continue;
-            const o = (y * ring.width + x) * 4;
-            ring.data.set([...colour, 255], o);
+            const i = (y + pad - RING) * w + x + pad - RING;
+            if (light[i]) ring.data.set(RING_LIGHT, (y * ring.width + x) * 4);
         }
     }
     sprite.ring = ring;
