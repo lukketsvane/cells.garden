@@ -4,20 +4,20 @@ Canonical submission notes for the cells.garden Chrome extension.
 
 - Item ID: `cighiofbnmdgppphnofkgfoneldalbbf`
 - Publisher: `iverfinne`
-- Current replacement release: `0.1.3`
+- Current replacement release: `0.1.4`
 - Privacy policy: `https://cells.garden/privacy.html`
 - Homepage: `https://cells.garden`
 - Support: `https://github.com/lukketsvane/cells.garden/issues`
 
 ## Review replacement
 
-The original 0.1.0 submission entered review on 18 September 2026. When 0.1.3 is ready:
+The original 0.1.0 submission entered review on 18 September 2026. When 0.1.4 is ready:
 
 1. Open the item in the Chrome Web Store Developer Dashboard.
 2. On **Store listing**, open the three-dot menu and choose **Cancel review**.
-3. On **Package**, upload the 0.1.3 ZIP. `manifest.json` must be at the ZIP root.
+3. On **Package**, upload the 0.1.4 ZIP. `manifest.json` must be at the ZIP root.
 4. Re-check Store listing and Privacy practices against the copy below.
-5. Submit the 0.1.3 revision for review.
+5. Submit the 0.1.4 revision for review.
 
 Do not submit 0.1.0 again.
 
