@@ -501,17 +501,19 @@
     margin-bottom: 3px;
 }
 
-/* The drawing sits on the cap height of the word beside it. */
+/* The drawing sits on the cap height of the word beside it. Pixel art on a
+   9-square (zone-icons.ts), one art pixel to one CSS pixel, so no pixel is
+   ever split across device pixels; a mask, so it takes the text colour. */
 .zone-icon {
-    display: flex;
-    flex-shrink: 0;
-}
-/* Pixel art on a 12-square (see ZONE_ICONS): one art pixel to one CSS pixel,
-   so no pixel is ever split across device pixels. */
-.zone-icon svg {
-    width: 12px;
-    height: 12px;
     display: block;
+    flex-shrink: 0;
+    width: 9px;
+    height: 9px;
+    background-color: currentColor;
+    mask-image: var(--zone-icon);
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    image-rendering: pixelated;
 }
 
 /* A zone's name, and its + pushed to the far end of the row. */
@@ -856,6 +858,12 @@
     mask-position: bottom center;
 }
 
+/* A highlighted part pulses by brightening its own colours, and an animation
+   outranks the silhouette's filter: asleep, it rests in the silhouette too. */
+.garden-stem-container.is-standby-plant .garden-part-slow-pulse {
+    animation: none;
+}
+
 /* --- Standby Mode (Kanban) --- */
 /* Hide Flowers, Stems, Roots, and Minerals completely */
 .project-column.is-standby .flowers-zone,
@@ -986,6 +994,31 @@
 .kanban-scroll-container:not(.is-empty) .add-column-btn-inner {
     top: 0;
     transform: none;
+}
+
+/* Plants out of sight behind a hidden tag (garden.ts, createHiddenNote): a
+   quiet word on the seed line, before the +, that brings them back. */
+.kanban-hidden-note {
+    align-self: flex-start;
+    flex-shrink: 0;
+    height: 32px;
+    margin: calc(var(--kanban-seed-offset, 8px) + 6px) 0 0 8px;
+    padding: 0 10px;
+    border: 1px dashed var(--background-modifier-border);
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-faint);
+    font: inherit;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.kanban-hidden-note:hover,
+.kanban-hidden-note:focus-visible {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
 }
 
 /* With nothing planted there is no card track to size the message against. */
@@ -1174,7 +1207,7 @@
     position: relative;
     flex: 0 1 336px;
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(var(--avatar-grid, 7), 1fr);
     aspect-ratio: 1;
     overflow: hidden;
     border-radius: 6px;
@@ -1394,15 +1427,22 @@
     color: #6e7f9c;
 }
 
-/* The zone's pixel icon on the first line, on whole pixels. */
+/* The zone's pixel icon on the middle of the first line, on whole pixels. */
 .garden-peek-chip .zone-icon {
-    margin-top: 2px;
+    margin-top: 4px;
     color: var(--text-faint);
 }
 
 .garden-peek-text {
     min-width: 0;
     outline: none;
+}
+
+/* A cell grown from a menu with the board hidden, before its first words. */
+.garden-peek-text:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-faint);
+    pointer-events: none;
 }
 
 .garden-peek-chip.is-editing .garden-peek-text {
@@ -1434,17 +1474,13 @@
         -webkit-user-select: none;
     }
 
-    .garden-peek-chip .zone-icon {
-        margin-top: 3px;
-    }
-
     /* iOS zooms into any field under 16px when it gains focus. */
     .garden-peek-chip.is-editing {
         font-size: 16px;
     }
 
     .garden-peek-chip.is-editing .zone-icon {
-        margin-top: 4px;
+        margin-top: 6px;
     }
 }
 
@@ -1889,9 +1925,38 @@
     accent-color: var(--interactive-accent);
 }
 
+/* A plant's Tags panel (garden.ts, tagsPanel): a field for a new tag above the garden's tags. */
+.garden-menu-tag-add {
+    padding: 8px 16px;
+}
+
+.garden-menu-tags .garden-menu-tag-field {
+    display: block;
+    width: 100%;
+    height: auto;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 4px 6px;
+    font: inherit;
+    font-size: 14px;
+    color: var(--text-normal);
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+.garden-menu-tags .garden-menu-tag-field:focus {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -1px;
+    border-color: transparent;
+    box-shadow: none;
+}
+
 /* iOS zooms into any field under 16px when it gains focus. */
 @media (pointer: coarse) {
-    .garden-menu-hue .garden-menu-hue-field {
+    .garden-menu-hue .garden-menu-hue-field,
+    .garden-menu-tags .garden-menu-tag-field {
         font-size: 16px;
     }
 }

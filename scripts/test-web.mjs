@@ -61,36 +61,41 @@ function watchErrors(page, label, errors) {
     });
 }
 
-/** A cell's menu: in a build with accounts, Assign follows the highlight. */
-async function cellMenu(page, highlight) {
+/** A cell's menu: another of its kind first; in a build with accounts, Assign follows the highlight. */
+async function cellMenu(page, highlight, kind) {
     const accounts = (await page.$('.auth-pill')) !== null;
-    return ['Delete', highlight, ...(accounts ? ['Assign'] : []), 'Convert to stem'];
+    return [`New ${kind}`, 'Delete', highlight, ...(accounts ? ['Assign'] : []), 'Convert to stem'];
 }
 
-// The zone icons are pixel art: crisp edges, no stroke, and a whole number of
-// CSS pixels to each art pixel, so no pixel is smeared across two.
+// The zone icons are the pixel art in src/assets/pack/kanban_icons, masked in
+// the text colour: each zone its own drawing, never smoothed, and a whole
+// number of CSS pixels to each of the 9 art pixels a side, so no pixel is
+// smeared across two.
 async function checkZoneIcons(page, label) {
-    const icons = await page.$$eval('.zone-icon svg', (els) => els.map((svg) => {
-        const rect = svg.getBoundingClientRect();
-        const grid = svg.viewBox.baseVal;
+    const icons = await page.$$eval('.garden-zone .zone-icon', (els) => els.map((el) => {
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
         return {
-            zone: svg.closest('.garden-zone')?.classList[1],
-            shape: getComputedStyle(svg).shapeRendering,
-            stroked: [svg, ...svg.querySelectorAll('*')].some((el) => getComputedStyle(el).stroke !== 'none'),
-            grid: `${grid.width}x${grid.height}`,
-            scaleX: rect.width / grid.width,
-            scaleY: rect.height / grid.height,
+            zone: el.closest('.garden-zone')?.classList[1],
+            mask: style.maskImage || style.webkitMaskImage,
+            rendering: style.imageRendering,
+            scaleX: rect.width / 9,
+            scaleY: rect.height / 9,
         };
     }));
     const zones = new Set(icons.map((icon) => icon.zone));
     assert(['flowers-zone', 'stem-zone', 'roots-zone', 'minerals-zone'].every((z) => zones.has(z)), `${label}: a zone lost its icon: ${JSON.stringify(icons)}`);
+    const drawings = new Map();
     for (const icon of icons) {
-        assert(/^crispedges$/i.test(icon.shape), `${label}: a zone icon is smoothed: ${JSON.stringify(icon)}`);
-        assert(!icon.stroked, `${label}: a zone icon is stroked, not built from pixels: ${JSON.stringify(icon)}`);
+        assert(/^url\(/.test(icon.mask), `${label}: a zone icon has no drawing: ${JSON.stringify(icon)}`);
+        assert.equal(drawings.get(icon.zone) ?? icon.mask, icon.mask, `${label}: one zone shows two drawings`);
+        drawings.set(icon.zone, icon.mask);
+        assert.equal(icon.rendering, 'pixelated', `${label}: a zone icon is smoothed: ${JSON.stringify(icon)}`);
         assert(Number.isInteger(icon.scaleX) && icon.scaleX >= 1 && icon.scaleX === icon.scaleY,
             `${label}: a zone icon is not a whole number of CSS pixels per art pixel: ${JSON.stringify(icon)}`);
     }
-    console.log(`${label} zone icons:`, [...new Set(icons.map((icon) => `${icon.grid} at ${icon.scaleX}x`))].join(', '));
+    assert.equal(new Set(drawings.values()).size, drawings.size, `${label}: two zones share a drawing`);
+    console.log(`${label} zone icons:`, [...new Set(icons.map((icon) => `9x9 at ${icon.scaleX}x`))].join(', '));
 }
 
 // The garden on screen is the stored one, drawn whole: no redraw under way,
@@ -493,7 +498,7 @@ async function scenario(browser, errors) {
     await openPlantMenu();
     const plantMenu = await page.$$eval('.garden-context-menu > .garden-menu-item .garden-menu-label', (els) => els.map((e) => e.textContent));
     console.log('plant menu:', plantMenu);
-    assert.deepEqual(plantMenu, ['Standby', 'Plant type', 'Seed', 'Plant hue', 'Recycle plant']);
+    assert.deepEqual(plantMenu, ['Add', 'Standby', 'Plant type', 'Seed', 'Tags', 'Plant hue', 'Recycle plant']);
 
     // Plant type: every type, one stem each, the very sprite the plant's first stem becomes.
     await page.click(menuRow('Plant type'));
@@ -575,6 +580,49 @@ async function scenario(browser, errors) {
     assert(await page.$('.garden-context-menu') === null && hue.sprite === 'hue-rotate(200deg)' && hue.seed === 'hue-rotate(200deg)',
         `Escape should put the hue back: ${JSON.stringify(hue)}`);
     assert((await stored(plantId)).hue === 200, 'Escape must not keep the previewed hue');
+
+    // Tags: a plant's menu puts them on it; hiding one takes every plant with
+    // it out of the garden and off the board, on this device only, and the
+    // board says so and brings them back. The pill menu hides and shows too.
+    const plantsShown = () => page.evaluate(() => ({
+        garden: [...document.querySelectorAll('.garden-plant-wrapper')].map((w) => w.dataset.projectId),
+        board: [...document.querySelectorAll('.kanban-scroll-container > .project-column')].map((c) => c.dataset.projectId),
+        note: document.querySelector('.kanban-hidden-note')?.textContent ?? null,
+    }));
+    const allShown = await plantsShown();
+    await openPlantMenu();
+    await page.click(menuRow('Tags'));
+    await page.fill('.garden-menu-tag-field', '  Side   project ');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction((id) => JSON.stringify(JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === id).tags) === '["Side project"]', plantId);
+    const tagRows = await page.$$eval('.garden-menu-panel.is-open [data-tag]', (els) => els.map((e) => [e.dataset.tag, e.classList.contains('is-active')]));
+    assert.deepEqual(tagRows, [['Side project', true]], 'a new tag should be on the plant, ticked in its panel');
+    assert.equal(await page.$eval(`${menuRow('Tags')} .garden-menu-sub`, (el) => el.textContent), 'Side project', 'the Tags row names the plant\'s tags');
+    await page.click('.garden-menu-panel.is-open [data-hide-tag="Side project"]');
+    const hiddenPlant = (hidden) => page.waitForFunction(({ id, hidden }) => {
+        const drawn = !!document.querySelector(`.garden-plant-wrapper[data-project-id="${id}"]`);
+        return drawn !== hidden && !document.querySelector('.garden-render-stage') && !!document.querySelector('.kanban-hidden-note') === hidden;
+    }, { id: plantId, hidden }, { timeout: 5000 });
+    await hiddenPlant(true);
+    const whileHidden = await plantsShown();
+    assert(!whileHidden.garden.includes(plantId) && !whileHidden.board.includes(plantId) && whileHidden.garden.length === allShown.garden.length - 1 && whileHidden.note === '1 plant hidden',
+        `hiding a tag should take its plant out of the garden and off the board: ${JSON.stringify({ allShown, whileHidden })}`);
+    assert.deepEqual((await stored(plantId)).tags, ['Side project'], 'hiding a tag must leave the plant as it is');
+    await page.click('.kanban-hidden-note');
+    await page.click('.garden-context-menu .garden-menu-item:has(.garden-menu-label:text-is("Side project"))');
+    await hiddenPlant(false);
+    if (await page.$('.auth-pill')) {
+        await page.click('.auth-pill');
+        await page.click('.garden-context-menu > .garden-menu-item:has(.garden-menu-label:text-is("Tags"))');
+        await page.click('.garden-menu-panel.is-open [data-tag="Side project"]');
+        await hiddenPlant(true);
+        assert.equal(await page.$eval('.garden-context-menu > .garden-menu-item:has(.garden-menu-label:text-is("Tags")) .garden-menu-sub', (el) => el.textContent), '1 hidden');
+        await page.click('.garden-menu-panel.is-open [data-tag="Side project"]');
+        await hiddenPlant(false);
+        await page.keyboard.press('Escape');
+    }
+    await settled();
+    assert.deepEqual(await plantsShown(), allShown, 'showing the tag again should put the garden back as it was');
 
     // Pan + zoom on the canvas
     const viewport = await page.$('.garden-canvas-viewport');
@@ -695,7 +743,7 @@ async function scenario(browser, errors) {
     await page.waitForSelector('.garden-context-menu');
     const chipMenu = await page.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
     // The flower was highlighted from its menu on the board, earlier.
-    assert.deepEqual(chipMenu, await cellMenu(page, 'Remove highlight'), 'the chip should open its cell\'s menu');
+    assert.deepEqual(chipMenu, await cellMenu(page, 'Remove highlight', 'flower'), 'the chip should open its cell\'s menu');
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !document.querySelector('.garden-context-menu'));
     const afterMenu = await chipState(page);
@@ -762,6 +810,39 @@ async function scenario(browser, errors) {
     await syncFlower('delete', syncedFlower.itemId);
     await peekGone(page, 'a sync that deletes the cell');
 
+    // With the board hidden a part's menu grows another of its kind right
+    // there: the new part's chip opens, empty, to be written in, and Enter
+    // keeps it. Escape takes a new one away again, as an empty draft on the
+    // board goes.
+    await gardenSettled(page);
+    const growFrom = await partSpot(page, '.garden-stem-part');
+    assert(growFrom, 'no stem to grow another from');
+    const growPlant = await page.evaluate((id) => document.querySelector(`.garden-plants-layer [data-item-id="${id}"]`).closest('.garden-plant-wrapper').dataset.projectId, growFrom.itemId);
+    const stemsOf = () => page.evaluate((pid) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === pid).stem.map((s) => s.content), growPlant);
+    const stemsBefore = await stemsOf();
+    const newStem = async (at) => {
+        await page.mouse.click(at.x, at.y, { button: 'right' });
+        await page.waitForSelector('.garden-context-menu');
+        await page.click('.garden-context-menu .garden-menu-item:has(.garden-menu-label:text-is("New stem"))');
+        await page.waitForSelector('.garden-peek-chip.is-visible.is-editing', { timeout: 5000 });
+        return chipState(page);
+    };
+    const grown = await newStem(growFrom);
+    assert(grown.pinned && grown.editing && grown.text === '' && grown.id !== growFrom.itemId && grown.markedId === grown.id,
+        `a new stem should open its own chip, empty, on its own part: ${JSON.stringify(grown)}`);
+    await page.keyboard.type('Grown in the garden');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction((pid) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === pid).stem[0]?.content === 'Grown in the garden', growPlant);
+    assert.deepEqual(await stemsOf(), ['Grown in the garden', ...stemsBefore], 'Enter should keep the new stem, on top');
+    await page.keyboard.press('Escape');
+    await peekGone(page, 'Escape after growing a stem');
+    await gardenSettled(page);
+    const dropped = await newStem(await partSpot(page, '.garden-stem-part'));
+    await page.keyboard.press('Escape');
+    await peekGone(page, 'Escape on a new stem');
+    await page.waitForFunction(({ pid, id }) => !JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === pid).stem.some((s) => s.id === id), { pid: growPlant, id: dropped.id });
+    assert.deepEqual(await stemsOf(), ['Grown in the garden', ...stemsBefore], 'Escape should take the new stem away');
+
     // Zooming the garden lets a pinned chip go.
     await gardenSettled(page);
     const zoomStem = await partSpot(page, '.garden-stem-part');
@@ -774,6 +855,31 @@ async function scenario(browser, errors) {
     await peekGone(page, 'a zoom of the garden');
     await page.click('.garden-board-toggle');
     await page.waitForFunction(() => document.documentElement.dataset.board === 'shown');
+
+    // The worm's drawing toolbar takes the corner the board toggle sits in: the
+    // toggle steps aside while drawing, even when a sync draws the garden again,
+    // and comes back with the toolbar's ✕.
+    await gardenSettled(page);
+    const corner = () => page.evaluate(() => ({
+        toggle: !!document.querySelector('.garden-board-toggle')?.getClientRects().length,
+        toolbars: document.querySelectorAll('.drawing-toolbar').length,
+    }));
+    await page.$eval('.garden-worm-hitbox', (el) => el.click());
+    await page.waitForSelector('.drawing-toolbar');
+    assert.deepEqual(await corner(), { toggle: false, toolbars: 1 }, 'drawing should hide the board toggle under its toolbar');
+    await page.evaluate(() => {
+        const garden = JSON.parse(localStorage.getItem('cells.garden/v1'));
+        garden.projects[0].seed = garden.projects[0].name = 'Drawn over';
+        garden.updatedAt = new Date(Date.now() + 1000).toISOString();
+        const value = JSON.stringify(garden);
+        localStorage.setItem('cells.garden/v1', value);
+        window.dispatchEvent(new StorageEvent('storage', { key: 'cells.garden/v1', newValue: value }));
+    });
+    await page.waitForFunction(() => [...document.querySelectorAll('.seed-content')].some((el) => el.textContent === 'Drawn over'));
+    await gardenSettled(page);
+    assert.deepEqual(await corner(), { toggle: false, toolbars: 1 }, 'a redraw while drawing should keep the toolbar, and the toggle aside');
+    await page.click('.drawing-toolbar-btn:has-text("✕")');
+    assert.deepEqual(await corner(), { toggle: true, toolbars: 0 }, 'leaving drawing mode should bring the board toggle back');
 
     // Items and pets wait for Max's approval, so this build shows neither, not
     // even for a garden that holds them (one used on dev.cells.garden), and it
@@ -1257,7 +1363,7 @@ async function scenario(browser, errors) {
     await holdAt('.garden-peek-chip.is-visible');
     await mpage.waitForSelector('.garden-context-menu', { timeout: 3000 });
     const phoneChipMenu = await mpage.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
-    assert.deepEqual(phoneChipMenu, await cellMenu(mpage, 'Highlight'), 'holding the chip should open its cell\'s menu');
+    assert.deepEqual(phoneChipMenu, await cellMenu(mpage, 'Highlight', 'flower'), 'holding the chip should open its cell\'s menu');
     const phoneEmpty = await emptySpot(mpage);
     assert(phoneEmpty, 'no empty garden to tap');
     await touch('touchStart', phoneEmpty.x, phoneEmpty.y);
@@ -1272,7 +1378,7 @@ async function scenario(browser, errors) {
     const heldChip = await chipState(mpage);
     const heldMenu = await mpage.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
     assert(heldChip.count === 1 && heldChip.pinned && heldChip.id === phoneFlower.itemId, `holding a part should pin its chip: ${JSON.stringify(heldChip)}`);
-    assert.deepEqual(heldMenu, await cellMenu(mpage, 'Highlight'), 'holding a part should open its cell\'s menu');
+    assert.deepEqual(heldMenu, await cellMenu(mpage, 'Highlight', 'flower'), 'holding a part should open its cell\'s menu');
     await touch('touchStart', phoneEmpty.x, phoneEmpty.y);
     await touch('touchEnd', phoneEmpty.x, phoneEmpty.y);
     await peekGone(mpage, 'a tap on the empty garden after a hold');

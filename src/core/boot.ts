@@ -9,7 +9,8 @@ import './shim';
 import { GardenApp, type Account } from './app';
 import { assignNotice } from './assign';
 import { AuthPill, type AuthOptions } from './auth';
-import type { MenuItem } from './menu';
+import { menuRow, type MenuItem } from './menu';
+import { gardenTags, tagKey } from './tags';
 import { NotificationCenter, NotificationsModal, sendAssignNotice } from './notifications';
 import { cellTargetFromHash, type CellTarget } from './notify-core';
 import { People } from './people';
@@ -407,6 +408,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
                 sub: petCount ? petCount + ' on' : 'Off',
                 onClick: () => new PetsModal(app).open(),
             },
+            ...tagsMenu(app),
             {
                 label: 'Settings',
                 onClick: () => new SettingsModal(uid ? {
@@ -586,4 +588,37 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
     });
 
     return app;
+}
+
+/**
+ * The garden's tags in the pill menu, ticked where their plants are shown: a
+ * tap hides or shows every plant with that tag, on this device. Absent while
+ * no plant has a tag; a plant's own menu gives it tags.
+ */
+function tagsMenu(app: GardenApp): MenuItem[] {
+    const tags = gardenTags(app.gardenData);
+    if (tags.length === 0) return [];
+    const hiddenCount = () => tags.filter(tag => app.hiddenTags.has(tagKey(tag))).length;
+    const sub = () => (hiddenCount() ? `${hiddenCount()} hidden` : 'All shown');
+    return [{
+        label: 'Tags',
+        sub: sub(),
+        panel: (panel, menu) => {
+            for (const tag of tags) {
+                const row = menuRow(panel, { label: tag, active: !app.hiddenTags.has(tagKey(tag)) });
+                row.dataset.tag = tag;
+                row.onclick = (event) => {
+                    event.stopPropagation();
+                    const shown = !app.hiddenTags.has(tagKey(tag));
+                    app.setTagHidden(tag, shown);
+                    row.toggleClass('is-active', !shown);
+                    if (shown) row.removeAttribute('aria-current');
+                    else row.setAttribute('aria-current', 'true');
+                    const check = row.querySelector('.garden-menu-check');
+                    if (check) check.textContent = shown ? '' : '✓';
+                    menu.setSub(sub());
+                };
+            }
+        },
+    }];
 }

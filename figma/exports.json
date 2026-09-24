@@ -15,9 +15,9 @@
     "preserveRepoMetadataWhenPixelStreamMatches": true
   },
   "coverage": {
-    "assetFiles": 287,
+    "assetFiles": 291,
     "figmaExports": 277,
-    "repoSourceReferences": 10
+    "repoSourceReferences": 14
   },
   "references": [
     {
@@ -66,6 +66,26 @@
       "path": "src/assets/grass.png",
       "policy": "repo-source-of-truth",
       "note": "The 540x10 image fill of Figma Source/Environment/Grass (88:3753), at the tree line's native 1x width. The component itself is 552x10 with two image fills and has no EXPORTS wrapper; give it a 540x10 one and promote this to an item to close the gap."
+    },
+    {
+      "path": "src/assets/pack/kanban_icons/flowers_icon.png",
+      "policy": "repo-source-of-truth",
+      "note": "The board's zone icon, drawn as a 9x9 white-on-clear PNG outside Figma; zone-icons.ts uses it as a mask."
+    },
+    {
+      "path": "src/assets/pack/kanban_icons/minerals_icon.png",
+      "policy": "repo-source-of-truth",
+      "note": "The board's zone icon, drawn as a 9x9 white-on-clear PNG outside Figma; zone-icons.ts uses it as a mask."
+    },
+    {
+      "path": "src/assets/pack/kanban_icons/roots_icon.png",
+      "policy": "repo-source-of-truth",
+      "note": "The board's zone icon, drawn as a 9x9 white-on-clear PNG outside Figma; zone-icons.ts uses it as a mask."
+    },
+    {
+      "path": "src/assets/pack/kanban_icons/stem_icon.png",
+      "policy": "repo-source-of-truth",
+      "note": "The board's zone icon, drawn as a 9x9 white-on-clear PNG outside Figma; zone-icons.ts uses it as a mask."
     }
   ],
   "count": 277,

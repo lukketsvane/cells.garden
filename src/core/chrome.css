@@ -129,6 +129,13 @@
 }
 .garden-board-toggle:hover { opacity: 1; }
 
+/* The worm's drawing toolbar takes this corner (garden.ts, attachDrawingMode):
+   while drawing, the corner buttons step aside and its ✕ is the way out. */
+:root[data-drawing] .garden-board-toggle,
+:root[data-drawing] .garden-pan-toggle {
+    display: none;
+}
+
 /* --- Pan view (pan.ts): its button beside the board toggle, touch screens only,
    and the X that takes the button's place while the garden fills the screen --- */
 .garden-pan-toggle,

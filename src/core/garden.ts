@@ -4,7 +4,9 @@ import type { GardenApp } from './app';
 import { allAssigned, assigneesOf, toggleAssignee } from './assign';
 import { PLANT_TYPES, plantTypeName } from './assets';
 import { avatarEl } from './avatar';
-import { ICONS, setIcon, ZONE_ICONS } from './icons';
+import { ICONS, setIcon } from './icons';
+import { zoneIcon } from './zone-icons';
+import { cleanTag, gardenTags, hasTag, isHidden, setTag, tagKey, tagsOf } from './tags';
 import { local } from './local';
 import { menuRow, openMenu, type MenuControls, type MenuItem } from './menu';
 import type { CellTarget } from './notify-core';
@@ -201,7 +203,7 @@ function drawnRect(part: HTMLElement, margin = 0): { left: number; top: number; 
 
 /** How far a peeked part's ring reaches past its pixels, in art pixels: one soft, pale line. */
 const RING = 1;
-const RING_LIGHT = [244, 241, 227, 225];
+const RING_LIGHT = [244, 241, 227, 128];
 /** The ring goes round, not into, a gap of up to twice this many art pixels between two strokes. */
 const RING_BRIDGE = 1;
 
@@ -296,6 +298,22 @@ const ZONE_LABELS: Record<LayerName, string> = {
     stem: 'Stem',
     roots: 'Roots',
     minerals: 'Minerals',
+};
+
+/** One of a zone's cells, as a menu offers a new one. */
+const ZONE_ONE: Record<LayerName, string> = {
+    flowers: 'Flower',
+    stem: 'Stem',
+    roots: 'Root',
+    minerals: 'Mineral',
+};
+
+/** What an empty new cell asks for, on the board and in its chip. */
+const ZONE_PLACEHOLDERS: Record<LayerName, string> = {
+    flowers: 'Result, takeaway',
+    stem: 'Completed task',
+    roots: 'Motivation, reason',
+    minerals: 'Idea, task',
 };
 
 const stemParts: string[] = [
@@ -1401,6 +1419,7 @@ export class GardenView extends View {
             stage.remove();
             this.settleCamera(false);
             this.restorePeek();
+            if (this.isDrawingMode) this.attachDrawingMode();
             // Canvas is now ground-only; offset by old ground line to align content
             if (savedCanvasImage && this.wormTrailCanvas) {
                 const img = new Image();
@@ -1432,7 +1451,7 @@ export class GardenView extends View {
                             // A fresh camera opens with the garden filling the pane from top to
                             // bottom: the void shows only past the garden's ends, if at all.
                             this.zoom = Math.max(DEFAULT_GARDEN_ZOOM, this.fillHeightZoom(world, viewport));
-                            const middlePlantIndex = Math.floor(this.app.gardenData.length / 2);
+                            const middlePlantIndex = Math.floor(this.shownPlants().length / 2);
                             const middlePlantWorldX = plantCentre(middlePlantIndex);
                             this.currentTranslateX = viewport.offsetWidth / 2 - middlePlantWorldX * this.zoom;
                         }
@@ -1493,6 +1512,17 @@ export class GardenView extends View {
     private enterDrawingMode() {
         this.isDrawingMode = true;
         this.selectedToolEraser = false;
+        this.attachDrawingMode();
+    }
+
+    /**
+     * Drawing mode on the viewport there is now. A render builds a new one, so
+     * it gets the toolbar and the pen again, with the tool in hand kept. The
+     * board's toggle sits where the toolbar does: while drawing it steps aside
+     * (chrome.css), and the toolbar's ✕ is the way out.
+     */
+    private attachDrawingMode() {
+        this.containerEl.ownerDocument.documentElement.dataset.drawing = 'on';
         this.showDrawingToolbar();
         const viewport = this.viewport;
         if (!viewport) return;
@@ -1504,6 +1534,7 @@ export class GardenView extends View {
     private exitDrawingMode() {
         this.isDrawingMode = false;
         this.isCurrentlyDrawing = false;
+        delete this.containerEl.ownerDocument.documentElement.dataset.drawing;
         this.drawingToolbarEl?.remove();
         this.drawingToolbarEl = null;
         const viewport = this.viewport;
@@ -1770,6 +1801,7 @@ export class GardenView extends View {
     async onClose() {
         // The garden goes back into its host before anything is saved or torn down.
         this.panView.exit();
+        if (this.isDrawingMode) this.exitDrawingMode();
         this.removeShortcuts();
         this._viewportObserver?.disconnect();
         this._viewportObserver = null;
@@ -1985,10 +2017,12 @@ export class GardenView extends View {
     focusProject(index: number) {
         const viewport = this.viewport;
         const world = this.world;
-        const count = this.app.gardenData.length;
-        if (!viewport || !world || count === 0) return;
-        const i = Math.max(0, Math.min(count - 1, index));
-        const project = this.app.gardenData[i];
+        const all = this.app.gardenData;
+        if (!viewport || !world || all.length === 0) return;
+        const project = all[Math.max(0, Math.min(all.length - 1, index))];
+        // Where it is drawn: a plant with a hidden tag is not, so there is nothing to aim at.
+        const i = this.shownPlants().indexOf(project);
+        if (i === -1) return;
         const vw = viewport.offsetWidth || 320;
         const vh = viewport.offsetHeight || 320;
         const extents = this.calculateProjectExtents(project);
@@ -2031,7 +2065,7 @@ export class GardenView extends View {
         const to = worldToSlot(inWorld(slice.right - margin));
         // The gaps are the whole slots: 0 before the first plant, 1 after it, and so on.
         const gaps: number[] = [];
-        for (let gap = 0; gap <= this.app.gardenData.length; gap++) {
+        for (let gap = 0; gap <= this.shownPlants().length; gap++) {
             if (gap >= from && gap <= to) gaps.push(gap);
         }
         gaps.sort((a, b) => Math.abs(a - middle) - Math.abs(b - middle));
@@ -2171,6 +2205,8 @@ export class GardenView extends View {
     /** The part the chip speaks for, by the ids its board cell carries. */
     private _peek: { itemId: string; projectId: string } | null = null;
     private _peekPinned = false;
+    /** A cell a menu grew in the garden, while its chip waits for its first words (newCell). */
+    private _peekDraft: string | null = null;
     private _peekEl: HTMLElement | null = null;
     /** The part wearing the ring, and the ring (ringOf), drawn beside it on its plant. */
     private _peekPart: HTMLElement | null = null;
@@ -2241,7 +2277,7 @@ export class GardenView extends View {
         const wx = (clientX - rect.left - this.currentTranslateX) / this.zoom;
         const wy = (clientY - rect.top - this.currentTranslateY) / this.zoom;
         const index = Math.round((wx - WORLD_PADDING - PLANT_SPACING / 2) / PLANT_SPACING);
-        const project = this.app.gardenData[index];
+        const project = this.shownPlants()[index];
         if (!project || Math.abs(wx - plantCentre(index)) > PLANT_SPACING * 0.3) return null;
         const extents = this.calculateProjectExtents(project);
         const ground = this._dynamicGroundLineY;
@@ -2378,10 +2414,10 @@ export class GardenView extends View {
         chip.toggleClass('is-seed', !cell.zone);
         chip.toggleClass('is-highlighted', !!cell.item?.highlighted);
         if (cell.zone) {
-            const icon = chip.createSpan({ cls: 'zone-icon', attr: { title: ZONE_LABELS[cell.zone] } });
-            setIcon(icon, ZONE_ICONS[cell.zone]);
+            zoneIcon(chip, cell.zone, ZONE_LABELS[cell.zone]);
         }
         const text = chip.createSpan({ cls: 'garden-peek-text', text: cell.text });
+        if (cell.zone && cell.item?.id === this._peekDraft) text.dataset.placeholder = ZONE_PLACEHOLDERS[cell.zone];
         // The seed wears its plant's hue, as on the board.
         if (!cell.zone) text.style.filter = `hue-rotate(${cell.project.hue ?? 0}deg)`;
         // Its people, as on the board: after the text, never in it.
@@ -2510,6 +2546,15 @@ export class GardenView extends View {
         if (field) field.contentEditable = 'false';
         const cell = peek ? this.peekCell(peek.itemId, peek.projectId) : null;
         const text = field?.getText().trim() ?? '';
+        const draft = !!peek && peek.itemId === this._peekDraft;
+        if (draft) this._peekDraft = null;
+        if (draft && peek && (!keep || !text)) {
+            // A new cell left without words goes again, as an empty draft on the board does.
+            if (field && this.containerEl.ownerDocument.activeElement === field) field.blur();
+            this.dropDraft(peek);
+            if (this._peek === peek) this.hidePeek();
+            return;
+        }
         if (keep && peek && cell && text && text !== cell.text) {
             if (cell.item) this.keepText(cell.item, text);
             else this.renameSeed(cell.project, text);
@@ -2606,11 +2651,56 @@ export class GardenView extends View {
             const part = this.findPart(viewport, peek.itemId, peek.projectId);
             if (part && this.peeking()) {
                 this.showPeek(part, true, true);
+                if (peek.itemId === this._peekDraft) this.startPeekEdit();
             } else {
                 this._peek = null;
                 this._peekPinned = false;
+                if (peek.itemId === this._peekDraft) this.dropDraft(peek);
             }
         });
+    }
+
+    /**
+     * A new cell in `zone`, from a menu. With the board on screen it is the
+     * board's own draft (addNewItem). With the board hidden it grows in the
+     * garden at once, as a part with its chip open to write in: Enter or
+     * clicking away keeps it, and Escape, or leaving it empty, takes it away
+     * again. So the garden can be kept without the board.
+     */
+    private newCell(project: ProjectData, zone: LayerName) {
+        if (!this.boardHidden() || this.panView.active) {
+            void this.addNewItem(project, zone);
+            return;
+        }
+        const live = this.live(project);
+        const item: LayerItem = {
+            id: 'item_' + Date.now(),
+            content: '',
+            isComplete: zone === 'flowers',
+            imagePath: this.app.assetManager.assignRandomImage(zone, live.plantType) || undefined,
+        };
+        this.hidePeek();
+        live[zone].unshift(item);
+        // The garden drawn again brings the chip back on the new part, open (restorePeek).
+        this._peek = { itemId: item.id, projectId: live.id };
+        this._peekPinned = true;
+        this._peekDraft = item.id;
+        void this.save();
+    }
+
+    /** Take away a cell newCell grew that never got its words. One that got some since (a sync) stays. */
+    private dropDraft(peek: { itemId: string; projectId: string }) {
+        if (this._peekDraft === peek.itemId) this._peekDraft = null;
+        const project = this.app.gardenData.find(p => p.id === peek.projectId);
+        if (!project) return;
+        for (const zone of ['flowers', 'stem', 'roots', 'minerals'] as const) {
+            const at = project[zone].findIndex(i => i.id === peek.itemId);
+            if (at === -1) continue;
+            if (project[zone][at].content) return;
+            project[zone].splice(at, 1);
+            void this.save();
+            return;
+        }
     }
 
     /** The camera moved by itself (a resize, a re-anchor): a shown chip keeps to its part; with the board back, it goes. */
@@ -2801,14 +2891,12 @@ export class GardenView extends View {
             emptyMsg.createEl("h3", { text: "Your garden is empty" });
             emptyMsg.createEl("p", { text: "Click + to plant your first seed!" });
         } else {
-            this.app.gardenData.forEach(project => {
+            this.shownPlants().forEach(project => {
                 if (project && project.stem && project.flowers) {
                     this.createProjectColumn(scrollContainer, project);
                 }
             });
-
-            
-            
+            this.createHiddenNote(scrollContainer);
         }
 
         const addRightBtn = scrollContainer.createEl('button', {
@@ -2889,7 +2977,8 @@ export class GardenView extends View {
         const viewport = parent.createDiv("garden-canvas-viewport");
         const world = viewport.createDiv("garden-world");
 
-        const calculatedWidth = Math.max(600, this.app.gardenData.length * PLANT_SPACING + WORLD_PADDING * 2);
+        const shown = this.shownPlants();
+        const calculatedWidth = Math.max(600, shown.length * PLANT_SPACING + WORLD_PADDING * 2);
         world.style.width = `${calculatedWidth}px`;
 
         // The backdrops are measured before they are laid out: each is drawn at its
@@ -2902,7 +2991,7 @@ export class GardenView extends View {
         // --- Sky and ground grow to fit the tallest plant and the deepest roots ---
         let maxAbove = 0;
         let maxUnderground = 0;
-        for (const project of this.app.gardenData) {
+        for (const project of shown) {
             const extents = this.calculateProjectExtents(project);
             maxAbove = Math.max(maxAbove, extents.aboveHeight);
             maxUnderground = Math.max(maxUnderground, extents.undergroundDepth);
@@ -3037,7 +3126,7 @@ export class GardenView extends View {
         // A plant stands in the middle of its slot, its top-left on the horizon:
         // renderPlantSprite grows the sprite up and down from there, a part at a
         // time, after the garden is swapped in. A pinned chip waits for it.
-        const drawn = this.app.gardenData.map((project, i) => {
+        const drawn = shown.map((project, i) => {
             const wrapper = plantsLayer.createDiv("garden-plant-wrapper");
             wrapper.dataset.projectId = project.id;
             wrapper.style.left = `${WORLD_PADDING + i * PLANT_SPACING + PLANT_SPACING / 2}px`;
@@ -3048,14 +3137,14 @@ export class GardenView extends View {
 
 
         // --- The borders between your plants and your friends' ---
-        this.app.gardenData.forEach((project, i) => {
+        shown.forEach((project, i) => {
             const section = this.app.sectionOf(project);
             if (section !== 'own') {
                 const band = world.createDiv('garden-friend-band');
                 band.style.left = `${WORLD_PADDING + i * PLANT_SPACING}px`;
                 band.style.width = `${PLANT_SPACING}px`;
             }
-            const prev = this.app.gardenData[i - 1];
+            const prev = shown[i - 1];
             if (prev && this.app.sectionOf(prev) !== section) {
                 const border = world.createDiv('garden-section-border');
                 border.style.left = `${WORLD_PADDING + i * PLANT_SPACING}px`;
@@ -3203,6 +3292,10 @@ export class GardenView extends View {
             const project = (target.plantId ? this.app.gardenData.find(p => p.sharedPlantId === target.plantId) : undefined)
                 ?? this.app.gardenData.find(p => p.id === target.projectId);
             const there = !!project && (['flowers', 'stem', 'roots', 'minerals'] as const).some(z => project[z].some(i => i.id === target.itemId));
+            // A cell asked for by name is shown, even on a plant whose tag is hidden here.
+            if (project && there && isHidden(project, this.app.hiddenTags)) {
+                for (const tag of tagsOf(project)) this.app.setTagHidden(tag, false);
+            }
             if (project && there && this.showCell(target.itemId, project.id)) return true;
             if (Date.now() > deadline) return false;
             await new Promise(resolve => win.setTimeout(resolve, 250));
@@ -3375,6 +3468,16 @@ export class GardenView extends View {
         return this.app.gardenData.find(p => p.id === project.id) ?? project;
     }
 
+    /**
+     * The plants drawn, in the garden and on the board: all of them but those
+     * with a tag hidden on this device (tags.ts). They close ranks, so a plant's
+     * place on screen is its index here, not in the garden.
+     */
+    private shownPlants(): ProjectData[] {
+        const hidden = this.app.hiddenTags;
+        return hidden.size > 0 ? this.app.gardenData.filter(p => !isHidden(p, hidden)) : this.app.gardenData;
+    }
+
     private liveItem(itemId: string): LayerItem | null {
         for (const p of this.app.gardenData) {
             for (const layer of ['stem', 'flowers', 'roots', 'minerals'] as const) {
@@ -3540,7 +3643,11 @@ export class GardenView extends View {
 
     /** The plant a shortcut acts on: the selected cell's, or the first one. */
     private shortcutProject(): ProjectData | undefined {
-        return this.selectedLocations().pop()?.project ?? this.app.gardenData[0];
+        // With the board hidden nothing on it is selected: the plant whose part is pinned.
+        const pinned = this._peekPinned ? this._peek?.projectId : undefined;
+        return this.selectedLocations().pop()?.project
+            ?? this.app.gardenData.find(p => p.id === pinned)
+            ?? this.shownPlants()[0];
     }
 
     private handleShortcut = (e: KeyboardEvent) => {
@@ -3613,7 +3720,7 @@ export class GardenView extends View {
             const project = this.shortcutProject();
             if (!project) return;
             e.preventDefault();
-            void this.addNewItem(project, zones[lower]);
+            this.newCell(project, zones[lower]);
         } else if (lower === 'n') {
             e.preventDefault();
             void this.createNewProject('right');
@@ -3897,7 +4004,26 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         // The type list's stems wear the hue being picked, so it is kept at hand.
         let typeList: HTMLElement | null = null;
 
-        const items: MenuItem[] = [
+        const items: MenuItem[] = [];
+        // A cell in any zone, so a plant grows from its seed with the board hidden too.
+        // Not while it sleeps: its card hides the zones' + then.
+        if (!live.standby) {
+            items.push({
+                label: 'Add',
+                panel: (panel, menu) => {
+                    for (const zone of ['flowers', 'stem', 'roots', 'minerals'] as const) {
+                        const row = menuRow(panel, { label: ZONE_ONE[zone] }, (slot) => zoneIcon(slot, zone));
+                        row.dataset.zone = zone;
+                        row.onclick = (event) => {
+                            event.stopPropagation();
+                            menu.close();
+                            this.newCell(project, zone);
+                        };
+                    }
+                },
+            });
+        }
+        items.push(
             {
                 label: live.standby ? 'Wake up' : 'Standby',
                 onClick: () => {
@@ -3906,7 +4032,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                     void this.save();
                 },
             },
-        ];
+        );
 
         if (PLANT_TYPES.length > 1) {
             items.push({
@@ -3959,6 +4085,8 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 },
             });
         }
+
+        items.push(this.tagsPanel(project));
 
         items.push(
             {
@@ -4094,8 +4222,14 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         const allMinerals = cells.every(c => c.parentElement?.dataset.array === 'minerals');
         // A selection never spans two plants, so its people are the one plant's.
         const assign = this.assignMenuItem(one.project, locations().map(l => l.item.id));
+        // Another cell like this one: with the board hidden it grows right here in the garden.
+        const grow: MenuItem[] = this.live(one.project).standby ? [] : [{
+            label: `New ${ZONE_ONE[one.arrayName].toLowerCase()}`,
+            onClick: () => this.newCell(one.project, one.arrayName),
+        }];
 
         openMenu([
+            ...grow,
             {
                 label: 'Delete',
                 onClick: () => {
@@ -4139,6 +4273,95 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         }).open();
     }
 
+    /**
+     * With a tag hidden, the board says how many plants are out of sight, and
+     * its menu brings them back, a tag at a time or all at once.
+     */
+    private createHiddenNote(parent: HTMLElement) {
+        const hidden = this.app.gardenData.filter(p => isHidden(p, this.app.hiddenTags));
+        if (hidden.length === 0) return;
+        const tags = gardenTags(hidden).filter(tag => this.app.hiddenTags.has(tagKey(tag)));
+        const note = parent.createEl('button', {
+            cls: 'kanban-hidden-note',
+            text: hidden.length === 1 ? '1 plant hidden' : `${hidden.length} plants hidden`,
+            attr: { type: 'button', title: `Hidden: ${tags.join(', ')}` },
+        });
+        note.onclick = (e) => {
+            e.stopPropagation();
+            openMenu([
+                { label: 'Show', heading: true },
+                ...tags.map(tag => ({ label: tag, onClick: () => this.app.setTagHidden(tag, false) })),
+                ...(tags.length > 1 ? [{ label: 'Show all', onClick: () => this.app.showAllTags() }] : []),
+            ], note, this.containerEl.ownerDocument);
+        };
+    }
+
+    /**
+     * A plant's Tags panel: every tag in the garden, ticked where this plant
+     * has it, a field for a new one, and a way to hide the plant's groups.
+     * Changes are saved as they are made; the panel stays open for more.
+     */
+    private tagsPanel(project: ProjectData): MenuItem {
+        const summary = () => tagsOf(this.live(project)).join(', ') || undefined;
+        return {
+            label: 'Tags',
+            sub: summary(),
+            panel: (panel, menu) => {
+                panel.addClass('garden-menu-tags');
+                const list = panel.createDiv();
+                const hideList = panel.createDiv();
+                const draw = () => {
+                    const live = this.live(project);
+                    list.empty();
+                    for (const tag of gardenTags(this.app.gardenData)) {
+                        const row = menuRow(list, { label: tag, active: hasTag(live, tag) });
+                        row.dataset.tag = tag;
+                        row.onclick = (event) => {
+                            event.stopPropagation();
+                            toggle(tag, !hasTag(this.live(project), tag));
+                        };
+                    }
+                    hideList.empty();
+                    const own = tagsOf(live);
+                    if (own.length === 0) return;
+                    hideList.createDiv({ cls: 'garden-menu-heading', text: 'Hide in the garden' });
+                    for (const tag of own) {
+                        const row = menuRow(hideList, { label: tag });
+                        row.dataset.hideTag = tag;
+                        row.onclick = (event) => {
+                            event.stopPropagation();
+                            menu.close();
+                            this.app.setTagHidden(tag, true);
+                        };
+                    }
+                };
+                const toggle = (tag: string, on: boolean) => {
+                    setTag(this.live(project), tag, on);
+                    menu.setSub(summary() ?? '');
+                    draw();
+                    menu.refit();
+                    void this.save();
+                };
+
+                const add = panel.createDiv('garden-menu-tag-add');
+                const field = add.createEl('input', {
+                    cls: 'garden-menu-tag-field',
+                    type: 'text',
+                    attr: { placeholder: 'New tag', maxlength: '32', 'aria-label': 'New tag', enterkeyhint: 'done' },
+                });
+                field.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter') return;
+                    event.preventDefault();
+                    const tag = cleanTag(field.value);
+                    field.value = '';
+                    if (tag) toggle(tag, true);
+                });
+                panel.prepend(add);
+                draw();
+            },
+        };
+    }
+
     createProjectColumn(parent: HTMLElement, project: ProjectData) {
 
         const column = parent.createDiv({ cls: "project-column" });
@@ -4146,8 +4369,8 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         // Where your garden ends and your friends' plants begin.
         const section = this.app.sectionOf(project);
         if (section !== 'own') column.addClass('is-friend-plant');
-        const index = this.app.gardenData.indexOf(project);
-        const next = this.app.gardenData[index + 1];
+        const shown = this.shownPlants();
+        const next = shown[shown.indexOf(project) + 1];
         if (next && this.app.sectionOf(next) !== section) column.addClass('is-section-end');
 
         const columnCard = column.createDiv("column-card");
@@ -4269,7 +4492,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         const zone = parent.createDiv(`garden-zone ${arrayName}-zone`);
         const label = zone.createDiv("garden-zone-label-row");
         const name = label.createDiv({ cls: "zone-label" });
-        setIcon(name.createSpan({ cls: "zone-icon" }), ZONE_ICONS[arrayName]);
+        zoneIcon(name, arrayName);
         name.createSpan({ text: ZONE_LABELS[arrayName] });
         const add = label.createEl('button', { cls: 'zone-add-btn', text: '+' });
         add.onclick = () => this.addNewItem(project, arrayName);
@@ -4434,7 +4657,9 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         const newIdx = evt.newDraggableIndex;
         if (oldIdx === undefined || newIdx === undefined || oldIdx === newIdx) return;
 
-        const maxIdx = this.app.gardenData.length - 1;
+        // Counted over the plants the board shows: with a tag hidden, fewer than the garden holds.
+        const shown = this.shownPlants();
+        const maxIdx = shown.length - 1;
         if (oldIdx < 0 || newIdx < 0 || oldIdx > maxIdx || newIdx > maxIdx) {
             // Out of step with the board (a sync landed mid-drag): draw it from the data again.
             this.scheduleRender();
@@ -4443,10 +4668,15 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
 
         // newIdx is where the plant ends up, counted after it left its old place,
         // so no correction: shifting it by one made every move to the right land
-        // back where it started.
-        const [movedProject] = this.app.gardenData.splice(oldIdx, 1);
-        if (!movedProject) return;
-        this.app.gardenData.splice(newIdx, 0, movedProject);
+        // back where it started. It goes beside the shown plant it lands next to,
+        // so the hidden ones keep their places among the others.
+        const movedProject = shown[oldIdx];
+        const beside = shown[newIdx];
+        const from = this.app.gardenData.indexOf(movedProject);
+        if (from === -1) return;
+        this.app.gardenData.splice(from, 1);
+        const at = this.app.gardenData.indexOf(beside);
+        this.app.gardenData.splice(newIdx > oldIdx ? at + 1 : at, 0, movedProject);
 
         // UPDATE ALL ORDERS: Assign 0, 1, 2, 3... based on current array position
         this.app.gardenData.forEach((proj, idx) => {
@@ -4493,19 +4723,12 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
      * empty, drops it. Only planting a seed still goes through a dialog.
      */
     async addNewItem(project: ProjectData, arrayName: 'flowers' | 'minerals' | 'roots' | 'stem') {
-        const placeholders: Record<string, string> = {
-            'flowers': 'Result, takeaway',
-            'stem': 'Completed task',
-            'roots': 'Motivation, reason',
-            'minerals': 'Idea, task'
-        };
-
         const list = this.shownEl(`.project-column[data-project-id="${project.id}"] .${arrayName}-zone .kanban-list`);
         if (!list) return;
         list.querySelector('.garden-item.is-draft')?.remove();
 
         const draft = createDiv('garden-item draggable-cell is-editing is-draft');
-        draft.dataset.placeholder = placeholders[arrayName] ?? '';
+        draft.dataset.placeholder = ZONE_PLACEHOLDERS[arrayName];
         draft.contentEditable = 'true';
         list.prepend(draft);
         draft.focus();
