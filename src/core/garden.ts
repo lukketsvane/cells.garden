@@ -299,6 +299,22 @@ const ZONE_LABELS: Record<LayerName, string> = {
     minerals: 'Minerals',
 };
 
+/** One of a zone's cells, as a menu offers a new one. */
+const ZONE_ONE: Record<LayerName, string> = {
+    flowers: 'Flower',
+    stem: 'Stem',
+    roots: 'Root',
+    minerals: 'Mineral',
+};
+
+/** What an empty new cell asks for, on the board and in its chip. */
+const ZONE_PLACEHOLDERS: Record<LayerName, string> = {
+    flowers: 'Result, takeaway',
+    stem: 'Completed task',
+    roots: 'Motivation, reason',
+    minerals: 'Idea, task',
+};
+
 const stemParts: string[] = [
     stem1Url, stem2Url, stem3Url, stem4Url,
     stem5Url, stem6Url, stem7Url, stem8Url
@@ -2186,6 +2202,8 @@ export class GardenView extends View {
     /** The part the chip speaks for, by the ids its board cell carries. */
     private _peek: { itemId: string; projectId: string } | null = null;
     private _peekPinned = false;
+    /** A cell a menu grew in the garden, while its chip waits for its first words (newCell). */
+    private _peekDraft: string | null = null;
     private _peekEl: HTMLElement | null = null;
     /** The part wearing the ring, and the ring (ringOf), drawn beside it on its plant. */
     private _peekPart: HTMLElement | null = null;
@@ -2396,6 +2414,7 @@ export class GardenView extends View {
             zoneIcon(chip, cell.zone, ZONE_LABELS[cell.zone]);
         }
         const text = chip.createSpan({ cls: 'garden-peek-text', text: cell.text });
+        if (cell.zone && cell.item?.id === this._peekDraft) text.dataset.placeholder = ZONE_PLACEHOLDERS[cell.zone];
         // The seed wears its plant's hue, as on the board.
         if (!cell.zone) text.style.filter = `hue-rotate(${cell.project.hue ?? 0}deg)`;
         // Its people, as on the board: after the text, never in it.
@@ -2524,6 +2543,15 @@ export class GardenView extends View {
         if (field) field.contentEditable = 'false';
         const cell = peek ? this.peekCell(peek.itemId, peek.projectId) : null;
         const text = field?.getText().trim() ?? '';
+        const draft = !!peek && peek.itemId === this._peekDraft;
+        if (draft) this._peekDraft = null;
+        if (draft && peek && (!keep || !text)) {
+            // A new cell left without words goes again, as an empty draft on the board does.
+            if (field && this.containerEl.ownerDocument.activeElement === field) field.blur();
+            this.dropDraft(peek);
+            if (this._peek === peek) this.hidePeek();
+            return;
+        }
         if (keep && peek && cell && text && text !== cell.text) {
             if (cell.item) this.keepText(cell.item, text);
             else this.renameSeed(cell.project, text);
@@ -2620,11 +2648,56 @@ export class GardenView extends View {
             const part = this.findPart(viewport, peek.itemId, peek.projectId);
             if (part && this.peeking()) {
                 this.showPeek(part, true, true);
+                if (peek.itemId === this._peekDraft) this.startPeekEdit();
             } else {
                 this._peek = null;
                 this._peekPinned = false;
+                if (peek.itemId === this._peekDraft) this.dropDraft(peek);
             }
         });
+    }
+
+    /**
+     * A new cell in `zone`, from a menu. With the board on screen it is the
+     * board's own draft (addNewItem). With the board hidden it grows in the
+     * garden at once, as a part with its chip open to write in: Enter or
+     * clicking away keeps it, and Escape, or leaving it empty, takes it away
+     * again. So the garden can be kept without the board.
+     */
+    private newCell(project: ProjectData, zone: LayerName) {
+        if (!this.boardHidden() || this.panView.active) {
+            void this.addNewItem(project, zone);
+            return;
+        }
+        const live = this.live(project);
+        const item: LayerItem = {
+            id: 'item_' + Date.now(),
+            content: '',
+            isComplete: zone === 'flowers',
+            imagePath: this.app.assetManager.assignRandomImage(zone, live.plantType) || undefined,
+        };
+        this.hidePeek();
+        live[zone].unshift(item);
+        // The garden drawn again brings the chip back on the new part, open (restorePeek).
+        this._peek = { itemId: item.id, projectId: live.id };
+        this._peekPinned = true;
+        this._peekDraft = item.id;
+        void this.save();
+    }
+
+    /** Take away a cell newCell grew that never got its words. One that got some since (a sync) stays. */
+    private dropDraft(peek: { itemId: string; projectId: string }) {
+        if (this._peekDraft === peek.itemId) this._peekDraft = null;
+        const project = this.app.gardenData.find(p => p.id === peek.projectId);
+        if (!project) return;
+        for (const zone of ['flowers', 'stem', 'roots', 'minerals'] as const) {
+            const at = project[zone].findIndex(i => i.id === peek.itemId);
+            if (at === -1) continue;
+            if (project[zone][at].content) return;
+            project[zone].splice(at, 1);
+            void this.save();
+            return;
+        }
     }
 
     /** The camera moved by itself (a resize, a re-anchor): a shown chip keeps to its part; with the board back, it goes. */
@@ -3554,7 +3627,11 @@ export class GardenView extends View {
 
     /** The plant a shortcut acts on: the selected cell's, or the first one. */
     private shortcutProject(): ProjectData | undefined {
-        return this.selectedLocations().pop()?.project ?? this.app.gardenData[0];
+        // With the board hidden nothing on it is selected: the plant whose part is pinned.
+        const pinned = this._peekPinned ? this._peek?.projectId : undefined;
+        return this.selectedLocations().pop()?.project
+            ?? this.app.gardenData.find(p => p.id === pinned)
+            ?? this.app.gardenData[0];
     }
 
     private handleShortcut = (e: KeyboardEvent) => {
@@ -3627,7 +3704,7 @@ export class GardenView extends View {
             const project = this.shortcutProject();
             if (!project) return;
             e.preventDefault();
-            void this.addNewItem(project, zones[lower]);
+            this.newCell(project, zones[lower]);
         } else if (lower === 'n') {
             e.preventDefault();
             void this.createNewProject('right');
@@ -3911,7 +3988,26 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         // The type list's stems wear the hue being picked, so it is kept at hand.
         let typeList: HTMLElement | null = null;
 
-        const items: MenuItem[] = [
+        const items: MenuItem[] = [];
+        // A cell in any zone, so a plant grows from its seed with the board hidden too.
+        // Not while it sleeps: its card hides the zones' + then.
+        if (!live.standby) {
+            items.push({
+                label: 'Add',
+                panel: (panel, menu) => {
+                    for (const zone of ['flowers', 'stem', 'roots', 'minerals'] as const) {
+                        const row = menuRow(panel, { label: ZONE_ONE[zone] }, (slot) => zoneIcon(slot, zone));
+                        row.dataset.zone = zone;
+                        row.onclick = (event) => {
+                            event.stopPropagation();
+                            menu.close();
+                            this.newCell(project, zone);
+                        };
+                    }
+                },
+            });
+        }
+        items.push(
             {
                 label: live.standby ? 'Wake up' : 'Standby',
                 onClick: () => {
@@ -3920,7 +4016,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                     void this.save();
                 },
             },
-        ];
+        );
 
         if (PLANT_TYPES.length > 1) {
             items.push({
@@ -4108,8 +4204,14 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         const allMinerals = cells.every(c => c.parentElement?.dataset.array === 'minerals');
         // A selection never spans two plants, so its people are the one plant's.
         const assign = this.assignMenuItem(one.project, locations().map(l => l.item.id));
+        // Another cell like this one: with the board hidden it grows right here in the garden.
+        const grow: MenuItem[] = this.live(one.project).standby ? [] : [{
+            label: `New ${ZONE_ONE[one.arrayName].toLowerCase()}`,
+            onClick: () => this.newCell(one.project, one.arrayName),
+        }];
 
         openMenu([
+            ...grow,
             {
                 label: 'Delete',
                 onClick: () => {
@@ -4507,19 +4609,12 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
      * empty, drops it. Only planting a seed still goes through a dialog.
      */
     async addNewItem(project: ProjectData, arrayName: 'flowers' | 'minerals' | 'roots' | 'stem') {
-        const placeholders: Record<string, string> = {
-            'flowers': 'Result, takeaway',
-            'stem': 'Completed task',
-            'roots': 'Motivation, reason',
-            'minerals': 'Idea, task'
-        };
-
         const list = this.shownEl(`.project-column[data-project-id="${project.id}"] .${arrayName}-zone .kanban-list`);
         if (!list) return;
         list.querySelector('.garden-item.is-draft')?.remove();
 
         const draft = createDiv('garden-item draggable-cell is-editing is-draft');
-        draft.dataset.placeholder = placeholders[arrayName] ?? '';
+        draft.dataset.placeholder = ZONE_PLACEHOLDERS[arrayName];
         draft.contentEditable = 'true';
         list.prepend(draft);
         draft.focus();

@@ -1413,6 +1413,13 @@
     outline: none;
 }
 
+/* A cell grown from a menu with the board hidden, before its first words. */
+.garden-peek-text:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-faint);
+    pointer-events: none;
+}
+
 .garden-peek-chip.is-editing .garden-peek-text {
     user-select: text;
     -webkit-user-select: text;
