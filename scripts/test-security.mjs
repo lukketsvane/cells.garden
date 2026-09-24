@@ -103,16 +103,23 @@ assert(!/create\s+policy[^;]*on\s+public\.notifications\s+for\s+(?:insert|delete
 assert(/grant\s+update\s*\(\s*read_at\s*\)\s+on\s+public\.notifications\s+to\s+authenticated/i.test(allSql), 'notifications: update limited to read_at');
 assert(/revoke\s+all\s+on\s+public\.notifications\s+from\s+public,\s*anon,\s*authenticated/i.test(allSql), 'notifications: default grants not revoked');
 
-// Drawn pictures (0011): the database accepts exactly the format the client
-// draws from (DRAWING_FORMAT, anchored, fixed length), nothing looser.
+// Drawn pictures (0011, 0014): the database accepts exactly the formats the
+// client draws from (DRAWING_FORMAT for 7 by 7, DRAWING_FORMAT_12 for 12 by 12,
+// each anchored with a fixed length), nothing looser.
 const pixels = read('src/core/avatar-pixels.ts');
-const drawingFormat = /DRAWING_FORMAT = \/(.+)\/;/.exec(pixels)?.[1] ?? '';
-const drawingLength = /DRAWING_LENGTH = (\d+);/.exec(pixels)?.[1] ?? '';
-assert(/^\^[^|]*\$$/.test(drawingFormat), 'DRAWING_FORMAT must be one anchored pattern');
+const formats = ['', '_12'].map((suffix) => ({
+    name: `DRAWING_FORMAT${suffix}`,
+    pattern: new RegExp(`DRAWING_FORMAT${suffix} = \\/(.+)\\/;`).exec(pixels)?.[1] ?? '',
+    length: new RegExp(`DRAWING_LENGTH${suffix} = (\\d+);`).exec(pixels)?.[1] ?? '',
+}));
+for (const f of formats) {
+    assert(/^\^[^|]*\$$/.test(f.pattern), `${f.name} must be one anchored pattern`);
+    assert(/^\d+$/.test(f.length), `${f.name} needs its fixed length`);
+}
 const drawingChecks = [...allSql.matchAll(/add\s+constraint\s+profiles_avatar_drawing_format\s+check\s*\(([\s\S]*?)\);/gi)];
-const drawingCheck = drawingChecks.at(-1)?.[1] ?? '';
-assert(drawingCheck.includes(`avatar_drawing ~ '${drawingFormat}'`), 'avatar_drawing check must use DRAWING_FORMAT exactly');
-assert(drawingCheck.includes(`length(avatar_drawing) = ${drawingLength}`), 'avatar_drawing check must pin DRAWING_LENGTH');
+const drawingCheck = (drawingChecks.at(-1)?.[1] ?? '').replace(/\s+/g, ' ').trim();
+const wantedCheck = ['avatar_drawing is null', ...formats.map((f) => `(length(avatar_drawing) = ${f.length} and avatar_drawing ~ '${f.pattern}')`)].join(' or ');
+assert(drawingCheck === wantedCheck, `avatar_drawing check must be exactly the client's formats:\n  ${drawingCheck}\n  ${wantedCheck}`);
 
 // Every function that hands out a picture, as last defined, sends the drawing before the seed.
 const latestFunctions = new Map();

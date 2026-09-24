@@ -7,11 +7,17 @@ import {
     DRAWING_FORMAT,
     DRAWING_LENGTH,
     encodeDrawing,
+    DRAWING_FORMAT_12,
+    DRAWING_LENGTH_12,
     fromSeed,
     GRID,
+    GRID_12,
     isDrawing,
     isMirrored,
     PALETTE,
+    PALETTE_12,
+    PICTURE_GRID,
+    toTwelve,
     type Drawing,
 } from './avatar-pixels';
 
@@ -194,4 +200,85 @@ test('mirroring is read row by row', () => {
     assert.ok(isMirrored(cells));
     cells[3] = 9; // the middle column mirrors onto itself
     assert.ok(isMirrored(cells));
+});
+
+// --- The 12 by 12 pictures being tried out --------------------------------------
+
+/** The markup of a 12 by 12 picture: as onlyOwnMarkup, on its 14-square. */
+function onlyOwnMarkup12(svg: string) {
+    const stripped = svg
+        .replace(/<rect x="\d+" y="\d+" width="1" height="1" fill="#[0-9a-f]{6}"\/>/g, '')
+        .replace(/<rect width="14" height="14" fill="#[0-9a-f]{6}"\/>/g, '');
+    assert.match(stripped, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 14 14" width="\d+" height="\d+" shape-rendering="crispEdges" aria-hidden="true"><clipPath id="a"><circle cx="7" cy="7" r="7"\/><\/clipPath><g clip-path="url\(#a\)"><\/g><\/svg>$/);
+}
+
+test('only a build trying them out makes pictures 12 by 12; releases stay 7 by 7', () => {
+    assert.equal(PICTURE_GRID, GRID);
+    assert.equal(fromSeed('garden').cells.length, GRID * GRID);
+});
+
+test('the palette being tried has an empty slot and fifteen distinct colours of its own', () => {
+    assert.equal(PALETTE_12.length, 16);
+    assert.equal(PALETTE_12[0].hex, '');
+    const colours = PALETTE_12.slice(1).map(c => c.hex);
+    for (const hex of colours) assert.match(hex, /^#[0-9a-f]{6}$/);
+    assert.equal(new Set(colours).size, 15);
+});
+
+test('a 12 by 12 drawing round-trips through its string, and only its exact format is one', () => {
+    const pick = random(12);
+    for (let n = 0; n < 200; n++) {
+        const drawing = { bg: 1 + pick(15), cells: Array.from({ length: GRID_12 * GRID_12 }, () => pick(16)) };
+        const text = encodeDrawing(drawing);
+        assert.equal(text.length, DRAWING_LENGTH_12);
+        assert.match(text, DRAWING_FORMAT_12);
+        assert.deepEqual(decodeDrawing(text), drawing);
+    }
+    const good = encodeDrawing({ bg: 2, cells: Array.from({ length: GRID_12 * GRID_12 }, (_, i) => i % 16) });
+    for (const text of [good.slice(0, -1), `${good}0`, good.replace('d2:', 'd1:'), `d2:0${good.slice(4)}`, good.toUpperCase(), `${good.slice(0, -1)}g`]) {
+        assert.equal(isDrawing(text), false, text.slice(0, 12));
+        assert.equal(decodeDrawing(text), null);
+    }
+    assert.throws(() => encodeDrawing({ bg: 1, cells: new Array<number>(100).fill(0) }), RangeError);
+});
+
+test('a seed\'s 12 by 12 picture is mirrored, in the new palette, and never shows its own markup', () => {
+    for (let i = 0; i < 100; i++) {
+        const drawing = fromSeed(`seed-${i}`, GRID_12);
+        assert.equal(drawing.cells.length, GRID_12 * GRID_12);
+        assert.ok(isMirrored(drawing.cells));
+        assert.ok(drawing.cells.some(Boolean), 'a picture with nothing in it');
+        assert.ok(drawing.cells.every(c => c !== drawing.bg), 'a pixel in the background colour');
+        const svg = avatarSvg(`seed-${i}`, 24, GRID_12);
+        onlyOwnMarkup12(svg);
+        assert.ok(svg.includes(`fill="${PALETTE_12[drawing.bg].hex}"`));
+    }
+    onlyOwnMarkup12(avatarSvg('"/><script>alert(1)</script>', 24, GRID_12));
+});
+
+test('a 7 by 7 drawing is drawn in its own palette wherever it turns up, and a 12 by 12 in the new one', () => {
+    const seven = encodeDrawing(fromSeed('garden', GRID));
+    assert.match(avatarSvg(seven, 24, GRID_12), /viewBox="0 0 9 9"/);
+    const twelve = encodeDrawing(fromSeed('garden', GRID_12));
+    const svg = avatarSvg(twelve, 24, GRID);
+    onlyOwnMarkup12(svg);
+});
+
+test('a 7 by 7 drawing grows to 12 by 12 with its pixels where they were, still mirrored', () => {
+    for (let i = 0; i < 100; i++) {
+        const seven = fromSeed(`seed-${i}`, GRID);
+        const twelve = toTwelve(seven);
+        assert.equal(twelve.cells.length, GRID_12 * GRID_12);
+        assert.ok(isMirrored(twelve.cells));
+        assert.ok(twelve.cells.every(c => c !== twelve.bg));
+        // Every pixel of the seven is there, and nothing that was empty is filled.
+        const map = [0, 0, 1, 1, 2, 3, 3, 4, 5, 5, 6, 6];
+        twelve.cells.forEach((c, j) => {
+            const from = seven.cells[map[Math.floor(j / GRID_12)] * GRID + map[j % GRID_12]];
+            assert.equal(!!c, !!from);
+        });
+        assert.ok(isDrawing(encodeDrawing(twelve)));
+    }
+    const already = fromSeed('garden', GRID_12);
+    assert.equal(toTwelve(already), already);
 });

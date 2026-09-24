@@ -1207,7 +1207,7 @@
     position: relative;
     flex: 0 1 336px;
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(var(--avatar-grid, 7), 1fr);
     aspect-ratio: 1;
     overflow: hidden;
     border-radius: 6px;

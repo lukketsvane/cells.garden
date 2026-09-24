@@ -13,11 +13,15 @@ export {
     DRAWING_FORMAT,
     GRID,
     PALETTE,
+    PICTURE_GRID,
     decodeDrawing,
     encodeDrawing,
     fromSeed,
+    gridOf,
     isDrawing,
     isMirrored,
+    paletteFor,
+    toTwelve,
     type Drawing,
 } from './avatar-pixels';
 
