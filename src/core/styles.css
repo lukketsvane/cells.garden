@@ -858,6 +858,12 @@
     mask-position: bottom center;
 }
 
+/* A highlighted part pulses by brightening its own colours, and an animation
+   outranks the silhouette's filter: asleep, it rests in the silhouette too. */
+.garden-stem-container.is-standby-plant .garden-part-slow-pulse {
+    animation: none;
+}
+
 /* --- Standby Mode (Kanban) --- */
 /* Hide Flowers, Stems, Roots, and Minerals completely */
 .project-column.is-standby .flowers-zone,
