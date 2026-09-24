@@ -498,7 +498,7 @@ async function scenario(browser, errors) {
     await openPlantMenu();
     const plantMenu = await page.$$eval('.garden-context-menu > .garden-menu-item .garden-menu-label', (els) => els.map((e) => e.textContent));
     console.log('plant menu:', plantMenu);
-    assert.deepEqual(plantMenu, ['Add', 'Standby', 'Plant type', 'Seed', 'Plant hue', 'Recycle plant']);
+    assert.deepEqual(plantMenu, ['Add', 'Standby', 'Plant type', 'Seed', 'Tags', 'Plant hue', 'Recycle plant']);
 
     // Plant type: every type, one stem each, the very sprite the plant's first stem becomes.
     await page.click(menuRow('Plant type'));
@@ -580,6 +580,49 @@ async function scenario(browser, errors) {
     assert(await page.$('.garden-context-menu') === null && hue.sprite === 'hue-rotate(200deg)' && hue.seed === 'hue-rotate(200deg)',
         `Escape should put the hue back: ${JSON.stringify(hue)}`);
     assert((await stored(plantId)).hue === 200, 'Escape must not keep the previewed hue');
+
+    // Tags: a plant's menu puts them on it; hiding one takes every plant with
+    // it out of the garden and off the board, on this device only, and the
+    // board says so and brings them back. The pill menu hides and shows too.
+    const plantsShown = () => page.evaluate(() => ({
+        garden: [...document.querySelectorAll('.garden-plant-wrapper')].map((w) => w.dataset.projectId),
+        board: [...document.querySelectorAll('.kanban-scroll-container > .project-column')].map((c) => c.dataset.projectId),
+        note: document.querySelector('.kanban-hidden-note')?.textContent ?? null,
+    }));
+    const allShown = await plantsShown();
+    await openPlantMenu();
+    await page.click(menuRow('Tags'));
+    await page.fill('.garden-menu-tag-field', '  Side   project ');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction((id) => JSON.stringify(JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === id).tags) === '["Side project"]', plantId);
+    const tagRows = await page.$$eval('.garden-menu-panel.is-open [data-tag]', (els) => els.map((e) => [e.dataset.tag, e.classList.contains('is-active')]));
+    assert.deepEqual(tagRows, [['Side project', true]], 'a new tag should be on the plant, ticked in its panel');
+    assert.equal(await page.$eval(`${menuRow('Tags')} .garden-menu-sub`, (el) => el.textContent), 'Side project', 'the Tags row names the plant\'s tags');
+    await page.click('.garden-menu-panel.is-open [data-hide-tag="Side project"]');
+    const hiddenPlant = (hidden) => page.waitForFunction(({ id, hidden }) => {
+        const drawn = !!document.querySelector(`.garden-plant-wrapper[data-project-id="${id}"]`);
+        return drawn !== hidden && !document.querySelector('.garden-render-stage') && !!document.querySelector('.kanban-hidden-note') === hidden;
+    }, { id: plantId, hidden }, { timeout: 5000 });
+    await hiddenPlant(true);
+    const whileHidden = await plantsShown();
+    assert(!whileHidden.garden.includes(plantId) && !whileHidden.board.includes(plantId) && whileHidden.garden.length === allShown.garden.length - 1 && whileHidden.note === '1 plant hidden',
+        `hiding a tag should take its plant out of the garden and off the board: ${JSON.stringify({ allShown, whileHidden })}`);
+    assert.deepEqual((await stored(plantId)).tags, ['Side project'], 'hiding a tag must leave the plant as it is');
+    await page.click('.kanban-hidden-note');
+    await page.click('.garden-context-menu .garden-menu-item:has(.garden-menu-label:text-is("Side project"))');
+    await hiddenPlant(false);
+    if (await page.$('.auth-pill')) {
+        await page.click('.auth-pill');
+        await page.click('.garden-context-menu > .garden-menu-item:has(.garden-menu-label:text-is("Tags"))');
+        await page.click('.garden-menu-panel.is-open [data-tag="Side project"]');
+        await hiddenPlant(true);
+        assert.equal(await page.$eval('.garden-context-menu > .garden-menu-item:has(.garden-menu-label:text-is("Tags")) .garden-menu-sub', (el) => el.textContent), '1 hidden');
+        await page.click('.garden-menu-panel.is-open [data-tag="Side project"]');
+        await hiddenPlant(false);
+        await page.keyboard.press('Escape');
+    }
+    await settled();
+    assert.deepEqual(await plantsShown(), allShown, 'showing the tag again should put the garden back as it was');
 
     // Pan + zoom on the canvas
     const viewport = await page.$('.garden-canvas-viewport');

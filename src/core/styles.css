@@ -996,6 +996,31 @@
     transform: none;
 }
 
+/* Plants out of sight behind a hidden tag (garden.ts, createHiddenNote): a
+   quiet word on the seed line, before the +, that brings them back. */
+.kanban-hidden-note {
+    align-self: flex-start;
+    flex-shrink: 0;
+    height: 32px;
+    margin: calc(var(--kanban-seed-offset, 8px) + 6px) 0 0 8px;
+    padding: 0 10px;
+    border: 1px dashed var(--background-modifier-border);
+    border-radius: 6px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-faint);
+    font: inherit;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.kanban-hidden-note:hover,
+.kanban-hidden-note:focus-visible {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+}
+
 /* With nothing planted there is no card track to size the message against. */
 .kanban-scroll-container.is-empty {
     display: flex;
@@ -1900,9 +1925,38 @@
     accent-color: var(--interactive-accent);
 }
 
+/* A plant's Tags panel (garden.ts, tagsPanel): a field for a new tag above the garden's tags. */
+.garden-menu-tag-add {
+    padding: 8px 16px;
+}
+
+.garden-menu-tags .garden-menu-tag-field {
+    display: block;
+    width: 100%;
+    height: auto;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 4px 6px;
+    font: inherit;
+    font-size: 14px;
+    color: var(--text-normal);
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    box-shadow: none;
+}
+
+.garden-menu-tags .garden-menu-tag-field:focus {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: -1px;
+    border-color: transparent;
+    box-shadow: none;
+}
+
 /* iOS zooms into any field under 16px when it gains focus. */
 @media (pointer: coarse) {
-    .garden-menu-hue .garden-menu-hue-field {
+    .garden-menu-hue .garden-menu-hue-field,
+    .garden-menu-tags .garden-menu-tag-field {
         font-size: 16px;
     }
 }

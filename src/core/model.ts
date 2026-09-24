@@ -28,6 +28,12 @@ export interface ProjectData {
     plantType: string;
     /** Set when this plant is shared (a `plants` row); its cells sync with everyone who has it. */
     sharedPlantId?: string;
+    /**
+     * Words that group this plant with others, to hide and show them together
+     * (tags.ts). Absent when it has none. Like its name, they travel with the
+     * plant; which tags are hidden is each device's own choice.
+     */
+    tags?: string[];
     roots: LayerItem[];
     stem: LayerItem[];
     flowers: LayerItem[];

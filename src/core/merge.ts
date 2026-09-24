@@ -18,7 +18,7 @@ import { settingsFrom, type Garden, type GardenSettings, type LayerName, type Pr
 type Prefer = 'local' | 'remote';
 
 const LAYERS: LayerName[] = ['roots', 'stem', 'flowers', 'minerals'];
-const PROJECT_FIELDS = ['name', 'seed', 'seedImagePath', 'standby', 'hue', 'plantType', 'sharedPlantId'] as const;
+const PROJECT_FIELDS = ['name', 'seed', 'seedImagePath', 'standby', 'hue', 'plantType', 'sharedPlantId', 'tags'] as const;
 
 /** JSON with sorted keys, so two equal objects compare equal whatever their key order. */
 function canonical(value: unknown): string {
