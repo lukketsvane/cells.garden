@@ -1402,6 +1402,7 @@ export class GardenView extends View {
             stage.remove();
             this.settleCamera(false);
             this.restorePeek();
+            if (this.isDrawingMode) this.attachDrawingMode();
             // Canvas is now ground-only; offset by old ground line to align content
             if (savedCanvasImage && this.wormTrailCanvas) {
                 const img = new Image();
@@ -1494,6 +1495,17 @@ export class GardenView extends View {
     private enterDrawingMode() {
         this.isDrawingMode = true;
         this.selectedToolEraser = false;
+        this.attachDrawingMode();
+    }
+
+    /**
+     * Drawing mode on the viewport there is now. A render builds a new one, so
+     * it gets the toolbar and the pen again, with the tool in hand kept. The
+     * board's toggle sits where the toolbar does: while drawing it steps aside
+     * (chrome.css), and the toolbar's ✕ is the way out.
+     */
+    private attachDrawingMode() {
+        this.containerEl.ownerDocument.documentElement.dataset.drawing = 'on';
         this.showDrawingToolbar();
         const viewport = this.viewport;
         if (!viewport) return;
@@ -1505,6 +1517,7 @@ export class GardenView extends View {
     private exitDrawingMode() {
         this.isDrawingMode = false;
         this.isCurrentlyDrawing = false;
+        delete this.containerEl.ownerDocument.documentElement.dataset.drawing;
         this.drawingToolbarEl?.remove();
         this.drawingToolbarEl = null;
         const viewport = this.viewport;
@@ -1771,6 +1784,7 @@ export class GardenView extends View {
     async onClose() {
         // The garden goes back into its host before anything is saved or torn down.
         this.panView.exit();
+        if (this.isDrawingMode) this.exitDrawingMode();
         this.removeShortcuts();
         this._viewportObserver?.disconnect();
         this._viewportObserver = null;
