@@ -7,7 +7,7 @@
  * paints those, in their palette, and grows a 7 by 7 drawing to go on with.
  */
 import './shim';
-import { avatarEl, decodeDrawing, encodeDrawing, fromSeed, gridOf, isMirrored, paletteFor, PICTURE_GRID, toTwelve } from './avatar';
+import { avatarEl, blankOf, decodeDrawing, encodeDrawing, fromSeed, gridOf, isMirrored, paletteFor, PICTURE_GRID, toTwelve } from './avatar';
 import { setIcon } from './icons';
 import { attempt } from './share-ui';
 import { Modal, Setting } from './ui';
@@ -65,7 +65,7 @@ export class AvatarEditorModal extends Modal {
         this.palette = paletteFor(this.grid);
         this.cursor = Math.floor((this.grid * this.grid) / 2);
         this.mirror = isMirrored(start.cells);
-        this.brush = mostUsed(start.cells, start.bg) ?? LEAF;
+        this.brush = mostUsed(start.cells, start.bg, blankOf(start)) ?? LEAF;
     }
 
     onOpen() {
@@ -85,11 +85,11 @@ export class AvatarEditorModal extends Modal {
         const palette = editor.createDiv({ cls: 'avatar-editor-palette', attr: { role: 'group', 'aria-label': 'Colours' } });
         this.swatchEls = this.palette.map((colour, i) => {
             const swatch = palette.createEl('button', {
-                cls: i === 0 ? 'avatar-swatch is-empty' : 'avatar-swatch',
+                cls: colour.hex ? 'avatar-swatch' : 'avatar-swatch is-empty',
                 type: 'button',
-                attr: { 'aria-label': i === 0 ? 'Erase' : colour.name, title: i === 0 ? 'Erase' : colour.name },
+                attr: { 'aria-label': colour.hex ? colour.name : 'Erase', title: colour.hex ? colour.name : 'Erase' },
             });
-            if (i > 0) swatch.style.backgroundColor = colour.hex;
+            if (colour.hex) swatch.style.backgroundColor = colour.hex;
             swatch.addEventListener('click', () => {
                 this.brush = i;
                 this.drawSwatches();
@@ -110,8 +110,11 @@ export class AvatarEditorModal extends Modal {
         });
         tools.addButton((b) => {
             b.setButtonText('Background').onClick(() => {
-                if (this.brush === 0) return;
+                if (!this.palette[this.brush].hex) return;
+                // In the avatar palette a blank pixel is one in the background's colour: those follow it.
+                const blank = this.blank;
                 this.bg = this.brush;
+                if (blank !== 0) this.cells = this.cells.map(c => (c === blank ? this.bg : c));
                 this.drawAll();
             });
             b.buttonEl.setAttribute('title', 'Fill the background with the chosen colour');
@@ -120,7 +123,7 @@ export class AvatarEditorModal extends Modal {
             this.bgButtonEl = b.buttonEl;
         });
         tools.addButton((b) => b.setButtonText('Clear').onClick(() => {
-            this.cells.fill(0);
+            this.cells.fill(this.blank);
             this.drawAll();
         }));
 
@@ -175,7 +178,7 @@ export class AvatarEditorModal extends Modal {
             } catch {
                 // A pointer the browser no longer tracks: paint this pixel only.
             }
-            stroke ={ pointer: e.pointerId, value: this.cells[i] === this.brush ? 0 : this.brush };
+            stroke ={ pointer: e.pointerId, value: this.cells[i] === this.brush ? this.blank : this.brush };
             this.cursor = i;
             this.paint(i, stroke.value);
         });
@@ -203,7 +206,7 @@ export class AvatarEditorModal extends Modal {
                 this.drawCells();
             } else if (e.key === ' ' || e.key === 'Enter') {
                 e.preventDefault();
-                this.paint(this.cursor, this.cells[this.cursor] === this.brush ? 0 : this.brush);
+                this.paint(this.cursor, this.cells[this.cursor] === this.brush ? this.blank : this.brush);
             }
         });
     }
@@ -228,10 +231,16 @@ export class AvatarEditorModal extends Modal {
         this.drawPreviews();
     }
 
+    /** What a pixel with nothing on it holds (blankOf): the empty slot, or in the avatar palette the background. */
+    private get blank(): number {
+        return blankOf({ bg: this.bg, cells: this.cells });
+    }
+
     private drawCells() {
         const bg = this.palette[this.bg].hex;
+        const blank = this.blank;
         this.cellEls.forEach((el, i) => {
-            el.style.backgroundColor = this.cells[i] ? this.palette[this.cells[i]].hex : bg;
+            el.style.backgroundColor = this.cells[i] === blank ? bg : this.palette[this.cells[i]].hex;
             el.toggleClass('is-cursor', i === this.cursor);
         });
     }
@@ -243,7 +252,7 @@ export class AvatarEditorModal extends Modal {
         });
         if (this.bgSwatchEl) this.bgSwatchEl.style.backgroundColor = this.palette[this.bg].hex;
         // Erasing leaves no colour to fill the background with.
-        if (this.bgButtonEl) this.bgButtonEl.disabled = this.brush === 0;
+        if (this.bgButtonEl) this.bgButtonEl.disabled = !this.palette[this.brush].hex;
     }
 
     private drawPreviews() {
@@ -255,9 +264,9 @@ export class AvatarEditorModal extends Modal {
 }
 
 /** The colour used most in a drawing, other than the background, or null for an empty one. */
-function mostUsed(cells: readonly number[], bg: number): number | null {
+function mostUsed(cells: readonly number[], bg: number, blank: number): number | null {
     const counts = new Map<number, number>();
-    for (const c of cells) if (c && c !== bg) counts.set(c, (counts.get(c) ?? 0) + 1);
+    for (const c of cells) if (c !== blank && c !== bg) counts.set(c, (counts.get(c) ?? 0) + 1);
     let best: number | null = null;
     for (const [c, n] of counts) if (best === null || n > (counts.get(best) ?? 0)) best = c;
     return best;

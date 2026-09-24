@@ -14,6 +14,7 @@ export {
     GRID,
     PALETTE,
     PICTURE_GRID,
+    blankOf,
     decodeDrawing,
     encodeDrawing,
     fromSeed,

@@ -7,6 +7,7 @@ import {
     DRAWING_FORMAT,
     DRAWING_LENGTH,
     encodeDrawing,
+    blankOf,
     DRAWING_FORMAT_12,
     DRAWING_LENGTH_12,
     fromSeed,
@@ -217,25 +218,28 @@ test('only a build trying them out makes pictures 12 by 12; releases stay 7 by 7
     assert.equal(fromSeed('garden').cells.length, GRID * GRID);
 });
 
-test('the palette being tried has an empty slot and fifteen distinct colours of its own', () => {
+test('the avatar palette is sixteen distinct colours, the designer\'s four rows of four, and no empty slot', () => {
     assert.equal(PALETTE_12.length, 16);
-    assert.equal(PALETTE_12[0].hex, '');
-    const colours = PALETTE_12.slice(1).map(c => c.hex);
+    const colours = PALETTE_12.map(c => c.hex);
     for (const hex of colours) assert.match(hex, /^#[0-9a-f]{6}$/);
-    assert.equal(new Set(colours).size, 15);
+    assert.equal(new Set(colours).size, 16);
+    assert.deepEqual(colours.slice(0, 4), ['#fc99c1', '#8df8b1', '#d9f6f4', '#fff6ff']);
+    assert.deepEqual(colours.slice(12), ['#3e1e1e', '#3f361a', '#010d10', '#574065']);
 });
 
 test('a 12 by 12 drawing round-trips through its string, and only its exact format is one', () => {
     const pick = random(12);
     for (let n = 0; n < 200; n++) {
-        const drawing = { bg: 1 + pick(15), cells: Array.from({ length: GRID_12 * GRID_12 }, () => pick(16)) };
+        const drawing = { bg: pick(16), cells: Array.from({ length: GRID_12 * GRID_12 }, () => pick(16)) };
         const text = encodeDrawing(drawing);
         assert.equal(text.length, DRAWING_LENGTH_12);
         assert.match(text, DRAWING_FORMAT_12);
         assert.deepEqual(decodeDrawing(text), drawing);
     }
-    const good = encodeDrawing({ bg: 2, cells: Array.from({ length: GRID_12 * GRID_12 }, (_, i) => i % 16) });
-    for (const text of [good.slice(0, -1), `${good}0`, good.replace('d2:', 'd1:'), `d2:0${good.slice(4)}`, good.toUpperCase(), `${good.slice(0, -1)}g`]) {
+    // Every colour a background, the first included: this palette has no empty slot.
+    const good = encodeDrawing({ bg: 0, cells: Array.from({ length: GRID_12 * GRID_12 }, (_, i) => i % 16) });
+    assert.ok(isDrawing(good));
+    for (const text of [good.slice(0, -1), `${good}0`, good.replace('d2:', 'd1:'), good.replace('d2:', 'd3:'), good.toUpperCase(), `${good.slice(0, -1)}g`, `${good.slice(0, -1)}\n`]) {
         assert.equal(isDrawing(text), false, text.slice(0, 12));
         assert.equal(decodeDrawing(text), null);
     }
@@ -247,8 +251,7 @@ test('a seed\'s 12 by 12 picture is mirrored, in the new palette, and never show
         const drawing = fromSeed(`seed-${i}`, GRID_12);
         assert.equal(drawing.cells.length, GRID_12 * GRID_12);
         assert.ok(isMirrored(drawing.cells));
-        assert.ok(drawing.cells.some(Boolean), 'a picture with nothing in it');
-        assert.ok(drawing.cells.every(c => c !== drawing.bg), 'a pixel in the background colour');
+        assert.ok(drawing.cells.some(c => c !== drawing.bg), 'a picture with nothing in it');
         const svg = avatarSvg(`seed-${i}`, 24, GRID_12);
         onlyOwnMarkup12(svg);
         assert.ok(svg.includes(`fill="${PALETTE_12[drawing.bg].hex}"`));
@@ -270,15 +273,25 @@ test('a 7 by 7 drawing grows to 12 by 12 with its pixels where they were, still 
         const twelve = toTwelve(seven);
         assert.equal(twelve.cells.length, GRID_12 * GRID_12);
         assert.ok(isMirrored(twelve.cells));
-        assert.ok(twelve.cells.every(c => c !== twelve.bg));
-        // Every pixel of the seven is there, and nothing that was empty is filled.
+        // Every pixel of the seven is there, never in the background's colour, and what was empty is blank.
         const map = [0, 0, 1, 1, 2, 3, 3, 4, 5, 5, 6, 6];
         twelve.cells.forEach((c, j) => {
             const from = seven.cells[map[Math.floor(j / GRID_12)] * GRID + map[j % GRID_12]];
-            assert.equal(!!c, !!from);
+            assert.equal(c !== blankOf(twelve), from !== 0);
         });
         assert.ok(isDrawing(encodeDrawing(twelve)));
     }
     const already = fromSeed('garden', GRID_12);
     assert.equal(toTwelve(already), already);
+});
+
+test('a blank pixel is the empty slot in a 7 by 7 drawing and the background in a 12 by 12 one, and is not drawn', () => {
+    const seven = { bg: 3, cells: new Array<number>(GRID * GRID).fill(0) };
+    assert.equal(blankOf(seven), 0);
+    const twelve = { bg: 10, cells: new Array<number>(GRID_12 * GRID_12).fill(10) };
+    assert.equal(blankOf(twelve), 10);
+    const svg = avatarSvg(encodeDrawing(twelve), 48);
+    assert.equal([...svg.matchAll(/width="1" height="1"/g)].length, 0);
+    twelve.cells[0] = 0;
+    assert.equal([...avatarSvg(encodeDrawing(twelve), 48).matchAll(/width="1" height="1"/g)].length, 1);
 });

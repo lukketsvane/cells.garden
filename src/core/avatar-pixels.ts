@@ -10,10 +10,12 @@
  * never a colour of its own, so nothing a person saves ever reaches the SVG
  * markup; anything that is not exactly this shape is treated as a seed.
  *
- * Being tried out on dev.cells.garden (EXTRAS): pictures 12 by 12 in a new
- * palette, PALETTE_12. Such a drawing is "d2:" and 145 digits. Either kind is
- * drawn wherever it turns up, each in its own palette; a build trying the
- * twelves makes new pictures, generated or drawn, in them (PICTURE_GRID).
+ * Being tried out on dev.cells.garden (EXTRAS): pictures 12 by 12 in the
+ * avatar palette, PALETTE_12. Such a drawing is "d2:" and 145 digits, every one
+ * of them a colour: that palette has sixteen and no empty slot, so a pixel
+ * with nothing on it is one in the background's colour. Either kind is drawn
+ * wherever it turns up, each in its own palette; a build trying the twelves
+ * makes new pictures, generated or drawn, in them (PICTURE_GRID).
  */
 import { EXTRAS } from './extras';
 
@@ -36,8 +38,12 @@ export const PICTURE_GRID: 7 | 12 = EXTRAS ? GRID_12 : GRID;
 export const DRAWING_FORMAT = /^d1:[1-9a-f][0-9a-f]{49}$/;
 export const DRAWING_LENGTH = 53;
 
-/** The 12 by 12 drawing: version 2, a background, then 144 pixels. Beside DRAWING_FORMAT in 0014_avatar_drawing_12.sql. */
-export const DRAWING_FORMAT_12 = /^d2:[1-9a-f][0-9a-f]{144}$/;
+/**
+ * The 12 by 12 drawing: version 2, the background, then 144 pixels, each digit
+ * one of PALETTE_12's sixteen colours. Beside DRAWING_FORMAT in
+ * 0014_avatar_drawing_12.sql.
+ */
+export const DRAWING_FORMAT_12 = /^d2:[0-9a-f]{145}$/;
 export const DRAWING_LENGTH_12 = 148;
 
 /**
@@ -67,29 +73,29 @@ export const PALETTE: readonly { name: string; hex: string }[] = [
 ];
 
 /**
- * The palette being tried out with the 12 by 12 pictures: Sweetie 16 by
- * GrafxKid, but for its dark slate (#333c57), which leaves the fifteen a
- * digit can pick. Brighter and wider than PALETTE, with warm and cold darks
- * for backgrounds. Swap the colours to try another; the order may change
- * until a drawing is kept in it for real.
+ * The avatar palette, for the 12 by 12 pictures: sixteen colours, as the
+ * designer laid them out in four rows of four, read row by row. There is no
+ * empty slot, so a drawing on it can use every one of them. A drawing stores
+ * indices into this list, so once one is kept, an entry may be retuned but
+ * never moved.
  */
 export const PALETTE_12: readonly { name: string; hex: string }[] = [
-    { name: 'Empty', hex: '' },
-    { name: 'Night', hex: '#1a1c2c' },
-    { name: 'Plum', hex: '#5d275d' },
-    { name: 'Berry', hex: '#b13e53' },
-    { name: 'Ember', hex: '#ef7d57' },
-    { name: 'Honey', hex: '#ffcd75' },
-    { name: 'Lime', hex: '#a7f070' },
-    { name: 'Fern', hex: '#38b764' },
-    { name: 'Lagoon', hex: '#257179' },
-    { name: 'Ink', hex: '#29366f' },
-    { name: 'Cobalt', hex: '#3b5dc9' },
-    { name: 'Sky', hex: '#41a6f6' },
-    { name: 'Ice', hex: '#73eff7' },
-    { name: 'Snow', hex: '#f4f4f4' },
-    { name: 'Mist', hex: '#94b0c2' },
-    { name: 'Slate', hex: '#566c86' },
+    { name: 'Blossom', hex: '#fc99c1' },
+    { name: 'Mint', hex: '#8df8b1' },
+    { name: 'Frost', hex: '#d9f6f4' },
+    { name: 'Petal', hex: '#fff6ff' },
+    { name: 'Raspberry', hex: '#a53563' },
+    { name: 'Moss', hex: '#718b51' },
+    { name: 'Lake', hex: '#559dbd' },
+    { name: 'Violet', hex: '#7234b3' },
+    { name: 'Clay', hex: '#603031' },
+    { name: 'Fern', hex: '#345827' },
+    { name: 'Deep', hex: '#192a2f' },
+    { name: 'Cobalt', hex: '#1448f9' },
+    { name: 'Bark', hex: '#3e1e1e' },
+    { name: 'Soil', hex: '#3f361a' },
+    { name: 'Night', hex: '#010d10' },
+    { name: 'Dusk', hex: '#574065' },
 ];
 
 /** The palette a drawing on `grid` is painted from. */
@@ -100,6 +106,14 @@ export function paletteFor(grid: number): readonly { name: string; hex: string }
 /** The side of a drawing's grid, from its pixels. */
 export function gridOf(cells: readonly number[]): number {
     return Math.round(Math.sqrt(cells.length));
+}
+
+/**
+ * What a pixel with nothing on it holds: 0, the empty slot, in a 7 by 7
+ * drawing; in a 12 by 12 one, whose palette has none, the background.
+ */
+export function blankOf(drawing: Drawing): number {
+    return drawing.cells.length === CELLS ? 0 : drawing.bg;
 }
 
 /**
@@ -118,7 +132,8 @@ const isIndex = (n: unknown, min: number): n is number => Number.isInteger(n) &&
 export function encodeDrawing(drawing: Drawing): string {
     const { bg, cells } = drawing;
     const version = cells.length === CELLS ? 1 : cells.length === GRID_12 * GRID_12 ? 2 : 0;
-    if (!version || !isIndex(bg, 1) || !cells.every(c => isIndex(c, 0))) {
+    // The empty slot is no background; the avatar palette has none, so any of its colours is.
+    if (!version || !isIndex(bg, version === 1 ? 1 : 0) || !cells.every(c => isIndex(c, 0))) {
         throw new RangeError('Not a drawing');
     }
     return `d${version}:${bg.toString(16)}${cells.map(c => c.toString(16)).join('')}`;
@@ -236,11 +251,12 @@ function distance(a: Rgb, b: Rgb): number {
     return (2 + r / 256) * dr * dr + 4 * dg * dg + (2 + (255 - r) / 256) * db * db;
 }
 
-/** The colour in `palette` closest to `rgb`, other than the ones already taken. */
+/** The colour in `palette` closest to `rgb`, other than the ones already taken. An empty slot is never one. */
 function nearest(rgb: Rgb, taken: number[] = [], palette = PALETTE): number {
-    let best = 1;
+    const first = palette[0].hex ? 0 : 1;
+    let best = first;
     let bestDistance = Infinity;
-    for (let i = 1; i < palette.length; i++) {
+    for (let i = first; i < palette.length; i++) {
         if (taken.includes(i)) continue;
         const d = distance(rgb, hexToRgb(palette[i].hex));
         if (d < bestDistance) [best, bestDistance] = [i, d];
@@ -261,7 +277,7 @@ export function fromSeed(seed: string, grid: number = PICTURE_GRID): Drawing {
     const bg = nearest(hslToRgb(t.bg), [], palette);
     const body = nearest(hslToRgb(t.body), [bg], palette);
     const highlight = nearest(hslToRgb(t.highlight), [bg, body], palette);
-    const cells = new Array<number>(grid * grid).fill(0);
+    const cells = new Array<number>(grid * grid).fill(grid === GRID_12 ? bg : 0);
     for (const p of g.pixels) cells[p.y * grid + p.x] = p.tone === 2 ? highlight : body;
     return { bg, cells };
 }
@@ -272,13 +288,14 @@ const SEVEN_TO_TWELVE = [0, 0, 1, 1, 2, 3, 3, 4, 5, 5, 6, 6];
 /**
  * A 7 by 7 drawing grown to 12 by 12, to go on with in the editor: every
  * pixel where it was, some of them doubled, and each colour moved to the
- * nearest in PALETTE_12, never onto the background's.
+ * nearest in PALETTE_12, never onto the background's, which the empty pixels
+ * take.
  */
 export function toTwelve(drawing: Drawing): Drawing {
     if (drawing.cells.length !== CELLS) return drawing;
     const bg = nearest(hexToRgb(PALETTE[drawing.bg].hex), [], PALETTE_12);
     const colour = new Map<number, number>();
-    const cells = new Array<number>(GRID_12 * GRID_12).fill(0);
+    const cells = new Array<number>(GRID_12 * GRID_12).fill(bg);
     for (let y = 0; y < GRID_12; y++) {
         for (let x = 0; x < GRID_12; x++) {
             const c = drawing.cells[SEVEN_TO_TWELVE[y] * GRID + SEVEN_TO_TWELVE[x]];
@@ -313,8 +330,9 @@ function generatedSvg(seed: string, size: number): string {
 function drawingSvg(drawing: Drawing, size: number): string {
     const grid = gridOf(drawing.cells);
     const palette = paletteFor(grid);
+    const blank = blankOf(drawing);
     const pixels = drawing.cells
-        .map((c, i) => (c ? pixel(i % grid, Math.floor(i / grid), palette[c].hex) : ''))
+        .map((c, i) => (c !== blank ? pixel(i % grid, Math.floor(i / grid), palette[c].hex) : ''))
         .join('');
     return frame(size, palette[drawing.bg].hex, pixels, grid);
 }
