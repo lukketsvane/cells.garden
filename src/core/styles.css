@@ -501,17 +501,19 @@
     margin-bottom: 3px;
 }
 
-/* The drawing sits on the cap height of the word beside it. */
+/* The drawing sits on the cap height of the word beside it. Pixel art on a
+   9-square (zone-icons.ts), one art pixel to one CSS pixel, so no pixel is
+   ever split across device pixels; a mask, so it takes the text colour. */
 .zone-icon {
-    display: flex;
-    flex-shrink: 0;
-}
-/* Pixel art on a 12-square (see ZONE_ICONS): one art pixel to one CSS pixel,
-   so no pixel is ever split across device pixels. */
-.zone-icon svg {
-    width: 12px;
-    height: 12px;
     display: block;
+    flex-shrink: 0;
+    width: 9px;
+    height: 9px;
+    background-color: currentColor;
+    mask-image: var(--zone-icon);
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    image-rendering: pixelated;
 }
 
 /* A zone's name, and its + pushed to the far end of the row. */
@@ -1394,9 +1396,9 @@
     color: #6e7f9c;
 }
 
-/* The zone's pixel icon on the first line, on whole pixels. */
+/* The zone's pixel icon on the middle of the first line, on whole pixels. */
 .garden-peek-chip .zone-icon {
-    margin-top: 2px;
+    margin-top: 4px;
     color: var(--text-faint);
 }
 
@@ -1434,17 +1436,13 @@
         -webkit-user-select: none;
     }
 
-    .garden-peek-chip .zone-icon {
-        margin-top: 3px;
-    }
-
     /* iOS zooms into any field under 16px when it gains focus. */
     .garden-peek-chip.is-editing {
         font-size: 16px;
     }
 
     .garden-peek-chip.is-editing .zone-icon {
-        margin-top: 4px;
+        margin-top: 6px;
     }
 }
 

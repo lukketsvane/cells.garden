@@ -67,30 +67,35 @@ async function cellMenu(page, highlight) {
     return ['Delete', highlight, ...(accounts ? ['Assign'] : []), 'Convert to stem'];
 }
 
-// The zone icons are pixel art: crisp edges, no stroke, and a whole number of
-// CSS pixels to each art pixel, so no pixel is smeared across two.
+// The zone icons are the pixel art in src/assets/pack/kanban_icons, masked in
+// the text colour: each zone its own drawing, never smoothed, and a whole
+// number of CSS pixels to each of the 9 art pixels a side, so no pixel is
+// smeared across two.
 async function checkZoneIcons(page, label) {
-    const icons = await page.$$eval('.zone-icon svg', (els) => els.map((svg) => {
-        const rect = svg.getBoundingClientRect();
-        const grid = svg.viewBox.baseVal;
+    const icons = await page.$$eval('.garden-zone .zone-icon', (els) => els.map((el) => {
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
         return {
-            zone: svg.closest('.garden-zone')?.classList[1],
-            shape: getComputedStyle(svg).shapeRendering,
-            stroked: [svg, ...svg.querySelectorAll('*')].some((el) => getComputedStyle(el).stroke !== 'none'),
-            grid: `${grid.width}x${grid.height}`,
-            scaleX: rect.width / grid.width,
-            scaleY: rect.height / grid.height,
+            zone: el.closest('.garden-zone')?.classList[1],
+            mask: style.maskImage || style.webkitMaskImage,
+            rendering: style.imageRendering,
+            scaleX: rect.width / 9,
+            scaleY: rect.height / 9,
         };
     }));
     const zones = new Set(icons.map((icon) => icon.zone));
     assert(['flowers-zone', 'stem-zone', 'roots-zone', 'minerals-zone'].every((z) => zones.has(z)), `${label}: a zone lost its icon: ${JSON.stringify(icons)}`);
+    const drawings = new Map();
     for (const icon of icons) {
-        assert(/^crispedges$/i.test(icon.shape), `${label}: a zone icon is smoothed: ${JSON.stringify(icon)}`);
-        assert(!icon.stroked, `${label}: a zone icon is stroked, not built from pixels: ${JSON.stringify(icon)}`);
+        assert(/^url\(/.test(icon.mask), `${label}: a zone icon has no drawing: ${JSON.stringify(icon)}`);
+        assert.equal(drawings.get(icon.zone) ?? icon.mask, icon.mask, `${label}: one zone shows two drawings`);
+        drawings.set(icon.zone, icon.mask);
+        assert.equal(icon.rendering, 'pixelated', `${label}: a zone icon is smoothed: ${JSON.stringify(icon)}`);
         assert(Number.isInteger(icon.scaleX) && icon.scaleX >= 1 && icon.scaleX === icon.scaleY,
             `${label}: a zone icon is not a whole number of CSS pixels per art pixel: ${JSON.stringify(icon)}`);
     }
-    console.log(`${label} zone icons:`, [...new Set(icons.map((icon) => `${icon.grid} at ${icon.scaleX}x`))].join(', '));
+    assert.equal(new Set(drawings.values()).size, drawings.size, `${label}: two zones share a drawing`);
+    console.log(`${label} zone icons:`, [...new Set(icons.map((icon) => `9x9 at ${icon.scaleX}x`))].join(', '));
 }
 
 // The garden on screen is the stored one, drawn whole: no redraw under way,

@@ -4,7 +4,8 @@ import type { GardenApp } from './app';
 import { allAssigned, assigneesOf, toggleAssignee } from './assign';
 import { PLANT_TYPES, plantTypeName } from './assets';
 import { avatarEl } from './avatar';
-import { ICONS, setIcon, ZONE_ICONS } from './icons';
+import { ICONS, setIcon } from './icons';
+import { zoneIcon } from './zone-icons';
 import { local } from './local';
 import { menuRow, openMenu, type MenuControls, type MenuItem } from './menu';
 import type { CellTarget } from './notify-core';
@@ -2378,8 +2379,7 @@ export class GardenView extends View {
         chip.toggleClass('is-seed', !cell.zone);
         chip.toggleClass('is-highlighted', !!cell.item?.highlighted);
         if (cell.zone) {
-            const icon = chip.createSpan({ cls: 'zone-icon', attr: { title: ZONE_LABELS[cell.zone] } });
-            setIcon(icon, ZONE_ICONS[cell.zone]);
+            zoneIcon(chip, cell.zone, ZONE_LABELS[cell.zone]);
         }
         const text = chip.createSpan({ cls: 'garden-peek-text', text: cell.text });
         // The seed wears its plant's hue, as on the board.
@@ -4269,7 +4269,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         const zone = parent.createDiv(`garden-zone ${arrayName}-zone`);
         const label = zone.createDiv("garden-zone-label-row");
         const name = label.createDiv({ cls: "zone-label" });
-        setIcon(name.createSpan({ cls: "zone-icon" }), ZONE_ICONS[arrayName]);
+        zoneIcon(name, arrayName);
         name.createSpan({ text: ZONE_LABELS[arrayName] });
         const add = label.createEl('button', { cls: 'zone-add-btn', text: '+' });
         add.onclick = () => this.addNewItem(project, arrayName);
