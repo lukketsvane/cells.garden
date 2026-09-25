@@ -8,6 +8,11 @@ on:
         required: false
         default: ''
         type: string
+      check_only:
+        description: 'Verify and report changes without writing artwork'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -30,8 +35,10 @@ jobs:
         env:
           FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
           FIGMA_ASSET_PATH: ${{ inputs.asset_path }}
+          FIGMA_CHECK_ONLY: ${{ inputs.check_only && '1' || '0' }}
         run: npm run sync:figma-assets
       - name: Commit changed assets
+        if: ${{ !inputs.check_only }}
         run: |
           git add src/assets figma/exports.json
           if git diff --cached --quiet; then

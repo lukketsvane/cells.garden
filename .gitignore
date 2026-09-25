@@ -10,3 +10,6 @@ dist-ext/
 /styles.css
 # Obsidian writes per-vault plugin settings here
 obsidian-plugin/data.json
+
+# Generated migration batches are tied to an exact artwork snapshot
+dist-figma-migration/
