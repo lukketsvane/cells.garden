@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+:root{font:12px/1.5 Inter,system-ui,sans-serif;color:var(--figma-color-text,#202124);background:var(--figma-color-bg,#fff)}*{box-sizing:border-box}body{margin:0;padding:20px}h1{font-size:20px;line-height:1.2;margin:0 0 8px}p{margin:8px 0 14px}.muted{color:var(--figma-color-text-secondary,#666)}button{font:inherit;border-radius:5px;min-height:36px;padding:8px 12px;border:1px solid var(--figma-color-border,#ccc);background:var(--figma-color-bg-secondary,#eee);color:inherit;cursor:pointer}button:disabled{opacity:.4;cursor:default}#ready{background:var(--figma-color-bg-brand,#0d63e5);color:var(--figma-color-text-onbrand,#fff);border:0;width:100%;margin:12px 0}label{display:block;margin:12px 0}input{vertical-align:middle}#assets{font:11px/1.6 ui-monospace,monospace;max-height:140px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:8px;border:1px solid var(--figma-color-border,#ddd)}#status{min-height:62px;margin-top:14px}#status[data-error=true]{color:var(--figma-color-text-danger,#b3261e)}.row{display:flex;gap:8px}.row button{flex:1}details{margin-top:16px;border-top:1px solid var(--figma-color-border,#ddd);padding-top:12px}summary{cursor:pointer}#connect{width:100%}button:focus-visible{outline:2px solid var(--figma-color-bg-brand,#0d63e5);outline-offset:2px}
+</style></head><body>
+<h1>cells.garden</h1><p class="muted">Approve artwork, preview it on dev, then publish production separately.</p>
+<div id="count">Checking the master file…</div><div id="assets" aria-label="Selected artwork">Select linked artwork in the canvas.</div>
+<label><input id="all" type="checkbox"> Approve the whole connected collection</label>
+<button id="ready" disabled>Dev ready</button>
+<div class="row"><button id="preview">Open dev</button><button id="runs">Publishing status</button></div>
+<div id="status" role="status" aria-live="polite"></div>
+<details><summary>First-time setup</summary><p>Connect the repository PNGs in this original master. This adds missing sources and export frames without replacing existing artwork.</p><button id="connect">Connect artwork</button></details>
+<p class="muted">Replace the original PNG image fill at its native size. Vector overlays and effects are not exported. Dev ready saves an exact checkpoint; it does not change Figma’s built-in status. Checks run approximately every 15 minutes after setup, followed by validation and deployment.</p>
+<script>
+let busy=false,connected=false,paths=[];const $=id=>document.getElementById(id);
+const send=(type,extra={})=>parent.postMessage({pluginMessage:{type,...extra}},'*');
+function controls(){$('ready').disabled=busy||!connected||(!paths.length&&!$('all').checked);$('connect').disabled=busy;$('all').disabled=busy;}
+$('ready').onclick=()=>send('ready',{all:$('all').checked});$('connect').onclick=()=>send('connect');$('preview').onclick=()=>send('open-preview');$('runs').onclick=()=>send('open-status');$('all').onchange=controls;
+window.onmessage=event=>{const m=event.data.pluginMessage;if(!m)return;if(m.type==='busy'){busy=m.value;controls();}if(m.type==='selection'){connected=m.connected;paths=m.paths;$('count').textContent=connected?`${paths.length} selected · ${m.total} connected PNGs`:'Setup required';$('assets').textContent=paths.length?paths.join('\n'):(m.message||'Select a source, export frame or folder.');controls();}if(['status','queued','error'].includes(m.type)){$('status').textContent=m.text+(m.versionId?` Version: ${m.versionId}`:'');$('status').dataset.error=String(m.type==='error');}};
+</script></body></html>

@@ -1,37 +1,19 @@
-# Figma source and migration status
+# Figma artwork
 
-The owner-confirmed master is:
+The only approved master is:
 
 https://www.figma.com/design/Q9lb9XG2ftZZHswUg5zYkS/cells.garden?node-id=27-1966
 
-Use this existing file. Do not create another copy or send the designer to the
-previous `WJgKfsKcxUpuNkDvxI9gEx` file.
+## Designer workflow
 
-## Current state
+Use the **cells.garden — Dev ready** plugin: connect the artwork once, select changed PNG sources, then approve a checkpoint. Validated approvals go to `dev.cells.garden`; production requires a separate reviewed promotion. See [PUBLISHING.md](PUBLISHING.md) for the ZIP, setup, status links and recovery.
 
-`exports.json` still records the legacy copy's export mapping so the repository
-can verify and build existing artwork without inventing new node IDs. It is
-**not an active connection to the confirmed master**. Both full and targeted
-sync reject any other source file before credentials, network or image writes.
-`scripts/figma-source.mjs` owns this guard, covered by regression tests.
+The plugin and workflows are implemented, but their existence does not establish live Figma editing access, a completed migration or a successful deployment. Run the workflow's preflight and verify the first release. Never treat queued, pushed and live as the same state.
 
-The last successful master inspection found ASSETS and existing source art,
-but no EXPORTS section, Void Tile or CATEGORY ICONS. The next write was refused
-by the file team's call limit. The file move is unverified and the live
-migration is not complete. Existing runtime artwork remains unchanged.
+## Mapping and migration
 
-## Prepared migration tooling
+`exports.json` may still record the previous copy until a complete mapping is read from an approved version of the confirmed master and verified. The normal sync rejects other file keys before credentials, network or writes. The checkpoint publisher never reads the previous copy: it reconstructs all links from the real master, validates native PNGs, then writes a verified mapping as part of the dev artwork transaction.
 
-`npm run prepare:figma-master` generates bounded, ordered Plugin API scripts
-for the whole current artwork library: 291 PNGs plus one protected animated
-GIF. It includes the missing void tile, category icons, Plume parts, logos,
-grass and gnome. Preparation is offline and does not alter the live mapping.
+All current PNGs are covered by the linker. The animated GIF remains in Git and is not flattened. Existing source artwork and layout are preserved. See [MIGRATION.md](MIGRATION.md) for the lower-level inspection/adoption tooling; the designer plugin wraps that work in Connect artwork.
 
-See [MIGRATION.md](MIGRATION.md) for execution in the authorized master,
-read-only validation, adoption and the designer workflow. The wrong-copy guard
-stays enabled until a complete live mapping is verified. Matching IDs across
-copies are not evidence of matching art; never change only the file key.
-
-Figma editor access and sync token access are separate. `FIGMA_TOKEN` must be
-able to read the confirmed master. Never paste tokens into chat, component
-descriptions, reports or committed files.
+`FIGMA_TOKEN` belongs only in GitHub Actions secrets or ignored local environment configuration. It needs file-content and version-history read access to this master. Editor permission and token permission are separate. No file move or sharing change is performed by these tools.

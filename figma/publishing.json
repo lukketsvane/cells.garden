@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "masterFileKey": "Q9lb9XG2ftZZHswUg5zYkS",
+  "notBefore": "2026-09-25T00:00:00Z",
+  "approvalLabel": "cells.garden / Dev ready",
+  "developmentBranch": "dev",
+  "developmentHost": "dev.cells.garden",
+  "productionBranch": "main",
+  "productionHost": "cells.garden"
+}

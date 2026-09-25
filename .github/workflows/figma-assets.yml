@@ -4,26 +4,19 @@ on:
   push:
     branches: [main, dev]
     paths:
-      - "figma/**"
-      - "src/assets/**"
-      - "scripts/verify-figma-assets.mjs"
-      - "scripts/sync-figma-assets.mjs"
-      - "scripts/figma-source*.mjs"
-      - "scripts/figma-migrate*.mjs"
-      - "package.json"
-      - ".github/workflows/figma-assets.yml"
-      - ".github/workflows/sync-figma-assets.yml"
+      - 'figma/**'
+      - 'src/assets/**'
+      - 'scripts/figma*.mjs'
+      - 'scripts/*figma*.mjs'
+      - 'package.json'
+      - '.github/workflows/*figma*.yml'
   pull_request:
     paths:
-      - "figma/**"
-      - "src/assets/**"
-      - "scripts/verify-figma-assets.mjs"
-      - "scripts/sync-figma-assets.mjs"
-      - "scripts/figma-source*.mjs"
-      - "scripts/figma-migrate*.mjs"
-      - "package.json"
-      - ".github/workflows/figma-assets.yml"
-      - ".github/workflows/sync-figma-assets.yml"
+      - 'figma/**'
+      - 'src/assets/**'
+      - 'scripts/*figma*.mjs'
+      - 'package.json'
+      - '.github/workflows/*figma*.yml'
 
 permissions:
   contents: read
@@ -32,16 +25,13 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           persist-credentials: false
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 24
-      - name: Security invariants
-        run: node scripts/test-security.mjs
-      - name: Check Figma sync script syntax
-        run: node --check scripts/sync-figma-assets.mjs
-      - name: Check confirmed master, migration and fail-closed sync
-        run: node --test scripts/figma-source.test.mjs scripts/figma-migrate.test.mjs
+      - run: node scripts/test-security.mjs
+      - run: node --check scripts/figma-release.mjs
+      - run: npm run test:figma-publishing
       - run: npm run verify:figma-assets

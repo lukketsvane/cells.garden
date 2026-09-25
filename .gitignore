@@ -13,3 +13,8 @@ obsidian-plugin/data.json
 
 # Generated migration batches are tied to an exact artwork snapshot
 dist-figma-migration/
+
+# Generated designer plugin and local rate-limit state
+dist-figma-publisher/
+/public/figma-publisher.zip
+.figma-publish-backoff.json

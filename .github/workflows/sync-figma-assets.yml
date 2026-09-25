@@ -1,52 +1,31 @@
-name: Sync Figma assets
+name: Inspect Figma assets (read only)
 
 on:
   workflow_dispatch:
     inputs:
       asset_path:
-        description: 'Exact asset path (leave empty to sync all assets)'
+        description: 'Exact PNG path, or empty for all mapped artwork. Publishing uses Dev ready instead.'
         required: false
         default: ''
         type: string
-      check_only:
-        description: 'Verify and report changes without writing artwork'
-        required: false
-        default: true
-        type: boolean
 
 permissions:
-  contents: write
-
-concurrency:
-  group: sync-figma-assets
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  sync:
+  inspect:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: main
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 24
-      - name: Pull native 1x assets from Figma
+      - name: Read-only diagnostic; never publish unapproved live drafts
         env:
           FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
           FIGMA_ASSET_PATH: ${{ inputs.asset_path }}
-          FIGMA_CHECK_ONLY: ${{ inputs.check_only && '1' || '0' }}
+          FIGMA_CHECK_ONLY: '1'
         run: npm run sync:figma-assets
-      - name: Commit changed assets
-        if: ${{ !inputs.check_only }}
-        run: |
-          git add src/assets figma/exports.json
-          if git diff --cached --quiet; then
-            echo "Figma assets are already current."
-            exit 0
-          fi
-          git config user.name tastefinger
-          git config user.email 41840333+lukketsvane@users.noreply.github.com
-          git commit -m "Sync assets from Figma"
-          git pull --rebase origin main
-          git push origin HEAD:main
