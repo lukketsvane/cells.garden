@@ -1,26 +1,12 @@
 name: Figma asset contract
-
 on:
   push:
     branches: [main, dev]
-    paths:
-      - 'figma/**'
-      - 'src/assets/**'
-      - 'scripts/figma*.mjs'
-      - 'scripts/*figma*.mjs'
-      - 'package.json'
-      - '.github/workflows/*figma*.yml'
+    paths: ["figma/**","src/assets/**","scripts/pull-figma-dev.mjs","scripts/promote-figma-dev.mjs",".github/workflows/figma-assets.yml"]
   pull_request:
-    paths:
-      - 'figma/**'
-      - 'src/assets/**'
-      - 'scripts/*figma*.mjs'
-      - 'package.json'
-      - '.github/workflows/*figma*.yml'
-
+    paths: ["figma/**","src/assets/**","scripts/pull-figma-dev.mjs","scripts/promote-figma-dev.mjs"]
 permissions:
   contents: read
-
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -32,6 +18,6 @@ jobs:
         with:
           node-version: 24
       - run: node scripts/test-security.mjs
-      - run: node --check scripts/figma-release.mjs
-      - run: npm run test:figma-publishing
+      - run: node --check scripts/pull-figma-dev.mjs
+      - run: node --check scripts/promote-figma-dev.mjs
       - run: npm run verify:figma-assets

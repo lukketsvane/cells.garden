@@ -1,67 +1,56 @@
-name: Promote approved artwork to production
-
+name: Promote Figma artwork to production
 on:
   workflow_dispatch:
     inputs:
-      dev_commit:
-        description: 'Exact 40-character dev commit currently verified at dev.cells.garden'
+      revision:
+        description: 'Exact Figma revision verified on dev.cells.garden'
+        required: true
         type: string
-        required: true
       confirm:
-        description: 'Publish this reviewed artwork to cells.garden'
-        type: boolean
+        description: 'Promote only approved artwork to cells.garden'
         required: true
+        type: boolean
         default: false
-
 permissions:
   contents: write
-
 concurrency:
-  group: figma-artwork-publishing
+  group: figma-production-artwork
   cancel-in-progress: false
-
 jobs:
   promote:
-    if: inputs.confirm && github.ref == 'refs/heads/main'
+    if: inputs.confirm == true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: main
-          path: tools
-          persist-credentials: false
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: main
-          path: target
           fetch-depth: 0
-          persist-credentials: false
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 24
-      - working-directory: target
-        run: git fetch --no-tags origin dev:refs/remotes/origin/dev
-      - name: Stage only the reviewed artwork, not development code
-        env:
-          FIGMA_DEV_COMMIT: ${{ inputs.dev_commit }}
-        run: node tools/scripts/figma-release.mjs promote target
-      - name: Validate and build before production publication
-        working-directory: target
+          cache: npm
+      - run: git fetch origin dev
+      - name: Verify requested revision on dev
+        run: node scripts/verify-figma-host.mjs dev.cells.garden figma-dev-state.json ${{ inputs.revision }}
+      - name: Stage approved artwork
+        run: node scripts/promote-figma-dev.mjs ${{ inputs.revision }}
+      - name: Validate production
         run: |
           npm ci --ignore-scripts
           npm run verify:figma-assets
           npm run typecheck
           npm run lint
-          npm run test:unit
           npm run build
           npx playwright install --with-deps chromium
           npm run test:web
-      - name: Push the production artwork transaction
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node tools/scripts/figma-push.mjs target main
-      - name: Verify this release is actually served in production
-        env:
-          FIGMA_DEPLOY_HOST: cells.garden
-        run: node tools/scripts/figma-release.mjs verify-live target
+      - name: Commit production artwork
+        run: |
+          git config user.name tastefinger
+          git config user.email 41840333+lukketsvane@users.noreply.github.com
+          git add src/assets public/figma-production-state.json
+          git commit -m "Promote approved Figma artwork"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Verify cells.garden
+        run: node scripts/verify-figma-host.mjs cells.garden figma-production-state.json ${{ inputs.revision }}

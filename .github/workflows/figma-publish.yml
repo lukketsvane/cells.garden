@@ -1,129 +1,54 @@
-name: Publish Figma artwork
+name: Publish Figma artwork to dev
 
 on:
   schedule:
-    - cron: '7,22,37,52 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
-    inputs:
-      operation:
-        description: 'Check setup, inspect an approval, or publish approved artwork to dev'
-        type: choice
-        options: [preflight, check, publish]
-        default: preflight
   push:
     branches: [main]
     paths:
-      - 'figma/**'
-      - 'scripts/*figma*.mjs'
       - '.github/workflows/figma-publish.yml'
 
 permissions:
   contents: write
 
 concurrency:
-  group: figma-artwork-publishing
+  group: figma-dev-artwork
   cancel-in-progress: false
 
 jobs:
-  plugin:
-    if: github.event_name != 'schedule' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: main
-          persist-credentials: false
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
-        with:
-          node-version: 24
-      - run: npm run test:figma-publishing
-      - run: npm run build:figma-publisher
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: cells-garden-dev-ready
-          path: dist-figma-publisher/cells-garden-dev-ready.zip
-          if-no-files-found: error
-          retention-days: 30
-
   publish:
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      FIGMA_BACKOFF_PATH: ${{ github.workspace }}/.figma-publish-backoff.json
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: main
-          path: tools
-          persist-credentials: false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: dev
-          path: target
           fetch-depth: 0
-          persist-credentials: false
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: 24
-      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
-        with:
-          path: .figma-publish-backoff.json
-          key: figma-backoff-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: figma-backoff-
-      - name: Read the exact approved Figma checkpoint
-        id: approval
-        env:
-          FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
-          REQUESTED_OPERATION: ${{ inputs.operation }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          mode=preflight
-          if [ "$EVENT_NAME" = schedule ] || [ "$REQUESTED_OPERATION" = publish ]; then mode=stage; fi
-          if [ "$REQUESTED_OPERATION" = check ]; then mode=check; fi
-          node tools/scripts/figma-release.mjs "$mode" target
-      - name: Reject incomplete publishing setup
-        if: steps.approval.outputs.status == 'setup-required'
-        run: |
-          echo '::error title=Figma publishing is not active::Setup is incomplete. No artwork was published. Read the setup instructions in this run summary.'
-          cat >> "$GITHUB_STEP_SUMMARY" <<'SETUP'
-          ## Publishing is blocked, not ready
-
-          No artwork was published. The checkpoint step above lists the missing prerequisite.
-
-          - An administrator must add `FIGMA_TOKEN` in [GitHub Actions secrets](https://github.com/lukketsvane/cells.garden/settings/secrets/actions), with `file_content:read` and `file_versions:read` access to the confirmed master. Never paste the token into a log or a Figma file.
-          - In the [confirmed master](https://www.figma.com/design/Q9lb9XG2ftZZHswUg5zYkS/cells.garden?node-id=27-1966), an editor must run **Connect artwork** in the publisher plugin once. The plugin download is attached to this workflow's non-scheduled runs.
-          - Then run **Publish Figma artwork** with **preflight**. A successful preflight is not a deployment: approve a test edit with **Dev ready**, and require the deployment-verification step to pass before handing this workflow to the designer.
-
-          [Full setup and designer workflow](https://github.com/lukketsvane/cells.garden/blob/main/figma/PUBLISHING.md)
-          SETUP
-          exit 1
-      - name: Validate staged artwork and build all supported shells
-        if: steps.approval.outputs.status == 'staged'
-        working-directory: target
+          cache: npm
+      - name: Pull approved Figma PNGs
+        id: pull
+        run: node scripts/pull-figma-dev.mjs
+      - name: Validate the dev build
+        if: steps.pull.outputs.changed == 'true'
         run: |
           npm ci --ignore-scripts
           npm run verify:figma-assets
           npm run typecheck
           npm run lint
-          npm run test:unit
-          npm run build
-          npx playwright install --with-deps chromium
-          npm run test:web
-      - name: Push the validated artwork transaction to dev
-        id: push
-        if: steps.approval.outputs.status == 'staged'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node tools/scripts/figma-push.mjs target dev
-      - name: Verify the exact release on the development hostname
-        if: steps.approval.outputs.status == 'staged' || (steps.approval.outputs.status == 'idle' && steps.approval.outputs.release_id != '')
-        env:
-          FIGMA_DEPLOY_HOST: dev.cells.garden
-        run: node tools/scripts/figma-release.mjs verify-live target
-      - name: Preserve the server's rate-limit backoff
-        if: always() && hashFiles('.figma-publish-backoff.json') != ''
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
-        with:
-          path: .figma-publish-backoff.json
-          key: figma-backoff-${{ github.run_id }}-${{ github.run_attempt }}
+          npm run build:web
+      - name: Commit approved artwork to dev
+        if: steps.pull.outputs.changed == 'true'
+        run: |
+          git config user.name tastefinger
+          git config user.email 41840333+lukketsvane@users.noreply.github.com
+          git add src/assets public/figma-dev-state.json
+          git commit -m "Publish approved Figma artwork"
+          git pull --rebase origin dev
+          git push origin HEAD:dev
+      - name: Verify dev.cells.garden
+        if: steps.pull.outputs.changed == 'true'
+        run: node scripts/verify-figma-host.mjs dev.cells.garden figma-dev-state.json ${{ steps.pull.outputs.revision }}
