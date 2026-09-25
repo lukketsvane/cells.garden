@@ -82,6 +82,22 @@ jobs:
           if [ "$EVENT_NAME" = schedule ] || [ "$REQUESTED_OPERATION" = publish ]; then mode=stage; fi
           if [ "$REQUESTED_OPERATION" = check ]; then mode=check; fi
           node tools/scripts/figma-release.mjs "$mode" target
+      - name: Reject incomplete publishing setup
+        if: steps.approval.outputs.status == 'setup-required'
+        run: |
+          echo '::error title=Figma publishing is not active::Setup is incomplete. No artwork was published. Read the setup instructions in this run summary.'
+          cat >> "$GITHUB_STEP_SUMMARY" <<'SETUP'
+          ## Publishing is blocked, not ready
+
+          No artwork was published. The checkpoint step above lists the missing prerequisite.
+
+          - An administrator must add `FIGMA_TOKEN` in [GitHub Actions secrets](https://github.com/lukketsvane/cells.garden/settings/secrets/actions), with `file_content:read` and `file_versions:read` access to the confirmed master. Never paste the token into a log or a Figma file.
+          - In the [confirmed master](https://www.figma.com/design/Q9lb9XG2ftZZHswUg5zYkS/cells.garden?node-id=27-1966), an editor must run **Connect artwork** in the publisher plugin once. The plugin download is attached to this workflow's non-scheduled runs.
+          - Then run **Publish Figma artwork** with **preflight**. A successful preflight is not a deployment: approve a test edit with **Dev ready**, and require the deployment-verification step to pass before handing this workflow to the designer.
+
+          [Full setup and designer workflow](https://github.com/lukketsvane/cells.garden/blob/main/figma/PUBLISHING.md)
+          SETUP
+          exit 1
       - name: Validate staged artwork and build all supported shells
         if: steps.approval.outputs.status == 'staged'
         working-directory: target
