@@ -1,6 +1,6 @@
 # Designer publishing
 
-Master: https://www.figma.com/design/0cPckxpkUOpFeL1Dx7VHCg/cells.garden-MASTER?node-id=0-1
+Master: https://www.figma.com/design/Q9lb9XG2ftZZHswUg5zYkS/cells.garden?node-id=27-1966
 
 ## Everyday workflow
 
