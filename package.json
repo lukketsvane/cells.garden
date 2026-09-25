@@ -27,7 +27,10 @@
     "verify:figma-assets": "node scripts/verify-figma-assets.mjs",
     "sync:figma-assets": "node scripts/sync-figma-assets.mjs",
     "test:security": "node scripts/test-security.mjs",
-    "audit:prod": "npm audit --omit=dev --audit-level=high"
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
+    "prepare:figma-master": "node scripts/figma-migrate.mjs prepare",
+    "adopt:figma-master": "node scripts/figma-migrate.mjs adopt",
+    "test:figma-migration": "node --test scripts/figma-source.test.mjs scripts/figma-migrate.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

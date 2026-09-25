@@ -4,22 +4,26 @@ on:
   push:
     branches: [main, dev]
     paths:
-      - "figma/exports.json"
+      - "figma/**"
       - "src/assets/**"
       - "scripts/verify-figma-assets.mjs"
       - "scripts/sync-figma-assets.mjs"
       - "scripts/figma-source*.mjs"
+      - "scripts/figma-migrate*.mjs"
       - "package.json"
       - ".github/workflows/figma-assets.yml"
+      - ".github/workflows/sync-figma-assets.yml"
   pull_request:
     paths:
-      - "figma/exports.json"
+      - "figma/**"
       - "src/assets/**"
       - "scripts/verify-figma-assets.mjs"
       - "scripts/sync-figma-assets.mjs"
       - "scripts/figma-source*.mjs"
+      - "scripts/figma-migrate*.mjs"
       - "package.json"
       - ".github/workflows/figma-assets.yml"
+      - ".github/workflows/sync-figma-assets.yml"
 
 permissions:
   contents: read
@@ -38,6 +42,6 @@ jobs:
         run: node scripts/test-security.mjs
       - name: Check Figma sync script syntax
         run: node --check scripts/sync-figma-assets.mjs
-      - name: Check confirmed master and fail-closed sync
-        run: node --test scripts/figma-source.test.mjs
+      - name: Check confirmed master, migration and fail-closed sync
+        run: node --test scripts/figma-source.test.mjs scripts/figma-migrate.test.mjs
       - run: npm run verify:figma-assets
