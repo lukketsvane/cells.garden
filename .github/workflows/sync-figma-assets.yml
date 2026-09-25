@@ -2,6 +2,12 @@ name: Sync Figma assets
 
 on:
   workflow_dispatch:
+    inputs:
+      asset_path:
+        description: 'Exact asset path (leave empty to sync all assets)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -23,6 +29,7 @@ jobs:
       - name: Pull native 1x assets from Figma
         env:
           FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
+          FIGMA_ASSET_PATH: ${{ inputs.asset_path }}
         run: npm run sync:figma-assets
       - name: Commit changed assets
         run: |

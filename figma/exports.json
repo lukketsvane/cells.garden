@@ -15,8 +15,8 @@
     "preserveRepoMetadataWhenPixelStreamMatches": true
   },
   "coverage": {
-    "assetFiles": 291,
-    "figmaExports": 277,
+    "assetFiles": 292,
+    "figmaExports": 278,
     "repoSourceReferences": 14
   },
   "references": [
@@ -88,7 +88,7 @@
       "note": "Native 9x9 white-on-clear PNG. Marked in Figma ASSETS / CATEGORY ICONS / native 9x9, node 251:412. Repo source remains authoritative; zone-icons.ts uses the alpha as a mask."
     }
   ],
-  "count": 277,
+  "count": 278,
   "items": [
     {
       "path": "src/assets/ant_walk_1.png",
@@ -1652,6 +1652,195 @@
       "exportNodeId": "186:1022"
     },
     {
+      "path": "src/assets/pack/seeds/seed_icons/seed1.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4459",
+      "exportNodeId": "186:1050"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed10.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4464",
+      "exportNodeId": "186:1051"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed11.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4468",
+      "exportNodeId": "186:1052"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed12.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4472",
+      "exportNodeId": "186:1053"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed13.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4476",
+      "exportNodeId": "186:1054"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed14.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4479",
+      "exportNodeId": "186:1055"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed15.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4456",
+      "exportNodeId": "186:1056"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed16.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4462",
+      "exportNodeId": "186:1057"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed17.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4466",
+      "exportNodeId": "186:1058"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed18.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4471",
+      "exportNodeId": "186:1059"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed19.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4475",
+      "exportNodeId": "186:1060"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed2.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4480",
+      "exportNodeId": "186:1061"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed20.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4460",
+      "exportNodeId": "186:1062"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed21.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4461",
+      "exportNodeId": "186:1063"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed22.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4467",
+      "exportNodeId": "186:1064"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed23.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4473",
+      "exportNodeId": "186:1065"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed24.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4477",
+      "exportNodeId": "186:1066"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed25.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4481",
+      "exportNodeId": "186:1067"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed26.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4458",
+      "exportNodeId": "186:1068"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed27.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4463",
+      "exportNodeId": "186:1069"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed3.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4469",
+      "exportNodeId": "186:1070"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed4.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4474",
+      "exportNodeId": "186:1071"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed5.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4478",
+      "exportNodeId": "186:1072"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed6.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4482",
+      "exportNodeId": "186:1073"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed7.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4457",
+      "exportNodeId": "186:1074"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed8.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4465",
+      "exportNodeId": "186:1075"
+    },
+    {
+      "path": "src/assets/pack/seeds/seed_icons/seed9.png",
+      "width": 5,
+      "height": 4,
+      "sourceComponentId": "29:4470",
+      "exportNodeId": "186:1076"
+    },
+    {
       "path": "src/assets/pack/seeds/seed1.png",
       "width": 35,
       "height": 7,
@@ -1841,193 +2030,11 @@
       "exportNodeId": "186:1049"
     },
     {
-      "path": "src/assets/pack/seeds/seed_icons/seed1.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4459",
-      "exportNodeId": "186:1050"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed10.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4464",
-      "exportNodeId": "186:1051"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed11.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4468",
-      "exportNodeId": "186:1052"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed12.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4472",
-      "exportNodeId": "186:1053"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed13.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4476",
-      "exportNodeId": "186:1054"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed14.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4479",
-      "exportNodeId": "186:1055"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed15.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4456",
-      "exportNodeId": "186:1056"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed16.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4462",
-      "exportNodeId": "186:1057"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed17.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4466",
-      "exportNodeId": "186:1058"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed18.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4471",
-      "exportNodeId": "186:1059"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed19.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4475",
-      "exportNodeId": "186:1060"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed2.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4480",
-      "exportNodeId": "186:1061"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed20.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4460",
-      "exportNodeId": "186:1062"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed21.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4461",
-      "exportNodeId": "186:1063"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed22.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4467",
-      "exportNodeId": "186:1064"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed23.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4473",
-      "exportNodeId": "186:1065"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed24.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4477",
-      "exportNodeId": "186:1066"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed25.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4481",
-      "exportNodeId": "186:1067"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed26.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4458",
-      "exportNodeId": "186:1068"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed27.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4463",
-      "exportNodeId": "186:1069"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed3.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4469",
-      "exportNodeId": "186:1070"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed4.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4474",
-      "exportNodeId": "186:1071"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed5.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4478",
-      "exportNodeId": "186:1072"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed6.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4482",
-      "exportNodeId": "186:1073"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed7.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4457",
-      "exportNodeId": "186:1074"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed8.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4465",
-      "exportNodeId": "186:1075"
-    },
-    {
-      "path": "src/assets/pack/seeds/seed_icons/seed9.png",
-      "width": 5,
-      "height": 4,
-      "sourceComponentId": "29:4470",
-      "exportNodeId": "186:1076"
+      "path": "src/assets/void_tile.png",
+      "width": 32,
+      "height": 32,
+      "sourceComponentId": "253:410",
+      "exportNodeId": "253:411"
     }
   ]
 }
