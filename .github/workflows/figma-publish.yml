@@ -52,3 +52,5 @@ jobs:
       - name: Verify dev.cells.garden
         if: steps.pull.outputs.changed == 'true'
         run: node scripts/verify-figma-host.mjs dev.cells.garden figma-dev-state.json ${{ steps.pull.outputs.revision }}
+
+# trigger: original-master-revision-2
