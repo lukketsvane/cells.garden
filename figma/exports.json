@@ -70,22 +70,22 @@
     {
       "path": "src/assets/pack/kanban_icons/flowers_icon.png",
       "policy": "repo-source-of-truth",
-      "note": "The board's zone icon, drawn as a 9x9 white-on-clear PNG outside Figma; zone-icons.ts uses it as a mask."
+      "note": "Native 9x9 white-on-clear PNG. Marked in Figma ASSETS / CATEGORY ICONS / native 9x9, node 251:414. Repo source remains authoritative; zone-icons.ts uses the alpha as a mask."
     },
     {
       "path": "src/assets/pack/kanban_icons/minerals_icon.png",
       "policy": "repo-source-of-truth",
-      "note": "The board's zone icon, drawn as a 9x9 white-on-clear PNG outside Figma; zone-icons.ts uses it as a mask."
+      "note": "Native 9x9 white-on-clear PNG. Marked in Figma ASSETS / CATEGORY ICONS / native 9x9, node 251:413. Repo source remains authoritative; zone-icons.ts uses the alpha as a mask."
     },
     {
       "path": "src/assets/pack/kanban_icons/roots_icon.png",
       "policy": "repo-source-of-truth",
-      "note": "The board's zone icon, drawn as a 9x9 white-on-clear PNG outside Figma; zone-icons.ts uses it as a mask."
+      "note": "Native 9x9 white-on-clear PNG. Marked in Figma ASSETS / CATEGORY ICONS / native 9x9, node 251:411. Repo source remains authoritative; zone-icons.ts uses the alpha as a mask."
     },
     {
       "path": "src/assets/pack/kanban_icons/stem_icon.png",
       "policy": "repo-source-of-truth",
-      "note": "The board's zone icon, drawn as a 9x9 white-on-clear PNG outside Figma; zone-icons.ts uses it as a mask."
+      "note": "Native 9x9 white-on-clear PNG. Marked in Figma ASSETS / CATEGORY ICONS / native 9x9, node 251:412. Repo source remains authoritative; zone-icons.ts uses the alpha as a mask."
     }
   ],
   "count": 277,

@@ -284,7 +284,7 @@ export class AuthPill {
         await this.client.auth.signOut();
     }
 
-    /** Shown instead of the email, e.g. the name of a shared garden. null: the email. */
+    /** The garden's name. Account details stay inside the menu. */
     setLabel(label: string | null) {
         this.label = label;
         this.render();
@@ -303,14 +303,14 @@ export class AuthPill {
     private render() {
         this.el.empty();
         if (this.session) {
-            const email = this.session.user.email ?? '';
+            const name = this.label || 'My garden';
             this.el.appendChild(avatarEl(this.avatar ?? this.session.user.id, 18, 'auth-pill-avatar'));
-            this.el.createSpan({ cls: 'auth-pill-label', text: this.label ?? email });
+            this.el.createSpan({ cls: 'auth-pill-label', text: name });
             this.el.toggleClass('is-shared', this.label !== null);
             const count = badgeText(this.unread);
             if (count) {
                 this.el.createSpan({ cls: 'auth-pill-badge', text: count });
-                this.el.setAttribute('aria-label', `${this.label ?? email}, ${this.unread} unread`);
+                this.el.setAttribute('aria-label', `${name}, ${this.unread} unread`);
             } else {
                 this.el.removeAttribute('aria-label');
             }

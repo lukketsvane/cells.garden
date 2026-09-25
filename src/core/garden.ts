@@ -1136,7 +1136,8 @@ export class GardenView extends View {
         this.fireflyState = [];
         parent.empty();
 
-        const count = Math.min(MAX_FIREFLIES, Math.max(0, Math.round(this.app.settings.fireflies) || 0));
+        const touch = this.containerEl.ownerDocument.defaultView?.matchMedia('(pointer: coarse)').matches;
+        const count = Math.min(MAX_FIREFLIES, Math.max(0, Math.round(touch ? this.app.settings.mobileFireflies : this.app.settings.fireflies) || 0));
         for (let i = 0; i < count; i++) {
             const el = parent.createDiv("garden-firefly");
 
@@ -1330,6 +1331,7 @@ export class GardenView extends View {
 
     private _renderGeneration = 0; // Guards against concurrent onOpen() calls
     private _renderDebounce: number | null = null;
+    private _boardDragging = false;
 
     /** onOpen, debounced, so a run of fast edits draws the garden once. */
     scheduleRender() {
@@ -1339,7 +1341,7 @@ export class GardenView extends View {
             // A sync from another tab or device must not throw away a cell being
             // written, or snatch an item from under the finger: wait until the
             // typing or the drag is done, then render.
-            if (this.isTyping() || this._itemDrag?.isConnected) this.scheduleRender();
+            if (this.isTyping() || this._boardDragging || this._itemDrag?.isConnected) this.scheduleRender();
             else void this.onOpen();
         }, 80);
     }
@@ -1350,6 +1352,7 @@ export class GardenView extends View {
     }
 
     async onOpen() {
+        if (this._boardDragging) { this.scheduleRender(); return; }
         this.installShortcuts();
         const thisGeneration = ++this._renderGeneration;
         try {
@@ -1410,6 +1413,11 @@ export class GardenView extends View {
             // If another onOpen() was triggered while we were rendering, abort this one
             if (this._renderGeneration !== thisGeneration) {
                 stage.remove();
+                return;
+            }
+            if (this._boardDragging) {
+                stage.remove();
+                this.scheduleRender();
                 return;
             }
             for (const child of Array.from(container.children)) {
@@ -2924,7 +2932,11 @@ export class GardenView extends View {
             // Only the plants move. The two + buttons are not items of the list,
             // so they stay put at either end and no plant can be dropped past them.
             draggable: '.project-column',
-            onEnd: (evt: SortableEvent) => void this.handleColumnDrop(evt)
+            onStart: () => { this._boardDragging = true; },
+            onEnd: (evt: SortableEvent) => {
+                this._boardDragging = false;
+                void this.handleColumnDrop(evt);
+            }
         });
     }
 
@@ -2978,7 +2990,7 @@ export class GardenView extends View {
         const world = viewport.createDiv("garden-world");
 
         const shown = this.shownPlants();
-        const calculatedWidth = Math.max(600, shown.length * PLANT_SPACING + WORLD_PADDING * 2);
+        const calculatedWidth = Math.max(3, shown.length) * PLANT_SPACING + WORLD_PADDING * 2;
         world.style.width = `${calculatedWidth}px`;
 
         // The backdrops are measured before they are laid out: each is drawn at its
@@ -3374,7 +3386,7 @@ export class GardenView extends View {
             const el = stemContainer.createDiv(`garden-part garden-${type}-part`);
             el.dataset.itemId = item.id;
             this.attachPlantPartEvents(el);
-            el.toggleClass('garden-part-slow-pulse', !!item.highlighted);
+            el.toggleClass('garden-part-slow-pulse', !!item.highlighted && !project.standby);
 
             let url = item.imagePath ? this.app.assetManager.getImageUrlSync(item.imagePath) : null;
             if (!url && (type === 'stem' || type === 'flower')) {
@@ -4223,7 +4235,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         // A selection never spans two plants, so its people are the one plant's.
         const assign = this.assignMenuItem(one.project, locations().map(l => l.item.id));
         // Another cell like this one: with the board hidden it grows right here in the garden.
-        const grow: MenuItem[] = this.live(one.project).standby ? [] : [{
+        const grow: MenuItem[] = this.live(one.project).standby || one.arrayName === 'stem' ? [] : [{
             label: `New ${ZONE_ONE[one.arrayName].toLowerCase()}`,
             onClick: () => this.newCell(one.project, one.arrayName),
         }];
@@ -4245,6 +4257,30 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
                 },
             },
             ...(assign ? [assign] : []),
+            {
+                label: 'Move to',
+                panel: (panel, menu) => {
+                    for (const zone of ['minerals', 'roots', 'stem', 'flowers'] as const) {
+                        const row = menuRow(panel, { label: ZONE_LABELS[zone] });
+                        row.onclick = () => {
+                            for (const location of locations()) {
+                                if (location.arrayName === zone) continue;
+                                const project = this.live(location.project);
+                                const from = project[location.arrayName];
+                                const at = from.findIndex(item => item.id === location.item.id);
+                                if (at === -1) continue;
+                                const [item] = from.splice(at, 1);
+                                item.isComplete = zone === 'flowers';
+                                item.imagePath = this.app.assetManager.assignRandomImage(zone, project.plantType) || undefined;
+                                project[zone].push(item);
+                            }
+                            menu.close();
+                            this.clearSelection();
+                            void this.save();
+                        };
+                    }
+                },
+            },
             {
                 label: 'Convert to stem',
                 disabled: !allMinerals,
@@ -4599,7 +4635,11 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
             delayOnTouchOnly: true,
             touchStartThreshold: 6,
             ghostClass: 'sortable-ghost',
-            onEnd: (evt: SortableEvent) => void this.handleDrop(evt)
+            onStart: () => { this._boardDragging = true; },
+            onEnd: (evt: SortableEvent) => {
+                this._boardDragging = false;
+                void this.handleDrop(evt);
+            }
         });
     }
 
@@ -4629,6 +4669,7 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         }
 
         const targetArray = targetProject[targetArrayName];
+        movedItem.isComplete = targetArrayName === 'flowers';
         const newIndex = evt.newIndex ?? 0;
         targetArray.splice(newIndex, 0, movedItem);
 
@@ -4670,13 +4711,22 @@ private _splitRatio = 0.5; // persisted divider position (0 = top, 1 = bottom)
         // so no correction: shifting it by one made every move to the right land
         // back where it started. It goes beside the shown plant it lands next to,
         // so the hidden ones keep their places among the others.
-        const movedProject = shown[oldIdx];
-        const beside = shown[newIdx];
+        // A sync can replace or reorder the data while the dragged DOM stays put.
+        // Resolve the dragged plant and its neighbours by id, never an old index.
+        const movedProject = this.app.gardenData.find(p => p.id === evt.item.dataset.projectId);
+        if (!movedProject) { this.scheduleRender(); return; }
+        const order = Array.from(evt.to.querySelectorAll<HTMLElement>('.project-column'))
+            .map(el => this.app.gardenData.find(p => p.id === el.dataset.projectId))
+            .filter((p): p is ProjectData => !!p);
+        const position = order.indexOf(movedProject);
+        const next = order[position + 1];
+        const previous = order[position - 1];
+        if (position < 0 || (!next && !previous)) { this.scheduleRender(); return; }
         const from = this.app.gardenData.indexOf(movedProject);
         if (from === -1) return;
         this.app.gardenData.splice(from, 1);
-        const at = this.app.gardenData.indexOf(beside);
-        this.app.gardenData.splice(newIdx > oldIdx ? at + 1 : at, 0, movedProject);
+        const at = next ? this.app.gardenData.indexOf(next) : this.app.gardenData.indexOf(previous) + 1;
+        this.app.gardenData.splice(at, 0, movedProject);
 
         // UPDATE ALL ORDERS: Assign 0, 1, 2, 3... based on current array position
         this.app.gardenData.forEach((proj, idx) => {
