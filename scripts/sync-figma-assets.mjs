@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { assertFigmaMaster } from "./figma-source.mjs";
 
 const root = process.cwd();
 
@@ -21,8 +22,9 @@ function loadEnvLocal() {
   }
 }
 
-loadEnvLocal();
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "figma", "exports.json"), "utf8"));
+assertFigmaMaster(manifest);
+loadEnvLocal();
 // An optional exact path syncs one contracted asset without touching other art.
 const requestedPath = process.env.FIGMA_ASSET_PATH?.trim();
 const items = requestedPath
