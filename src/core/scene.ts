@@ -7,6 +7,7 @@
 export type Scene = 'forest' | 'mountains';
 
 import { local } from './local';
+import './void-tile.css';
 
 const KEY = 'cells.garden/scene';
 

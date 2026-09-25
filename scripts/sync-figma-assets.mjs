@@ -23,6 +23,14 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "figma", "exports.json"), "utf8"));
+// An optional exact path syncs one contracted asset without touching other art.
+const requestedPath = process.env.FIGMA_ASSET_PATH?.trim();
+const items = requestedPath
+  ? manifest.items.filter((item) => item.path === requestedPath)
+  : manifest.items;
+if (requestedPath && items.length !== 1) {
+  throw new Error(`FIGMA_ASSET_PATH must match exactly one contracted export: ${requestedPath}`);
+}
 const token = process.env.FIGMA_TOKEN;
 
 if (!token) {
@@ -116,16 +124,16 @@ const expectedFolders = [...new Set(
 )].sort();
 const actualFolders = (exportSection.children ?? []).map((node) => node.name).sort();
 
-if (
+if (!requestedPath && (
   expectedFolders.length !== actualFolders.length
   || expectedFolders.some((name, i) => name !== actualFolders[i])
-) {
+)) {
   throw new Error(
     `Figma EXPORTS folders drifted. Expected ${JSON.stringify(expectedFolders)}, got ${JSON.stringify(actualFolders)}`
   );
 }
 
-for (const item of manifest.items) {
+for (const item of items) {
   const node = exportNodes.get(item.exportNodeId);
   if (!node) throw new Error(`${item.path}: exportNodeId ${item.exportNodeId} is not inside EXPORTS`);
   if (node.type !== "FRAME") throw new Error(`${item.path}: export node ${item.exportNodeId} must remain a FRAME`);
@@ -138,12 +146,12 @@ for (const item of manifest.items) {
 }
 
 console.log(
-  `Figma live structure OK: ${manifest.items.length} contracted export wrappers across ${actualFolders.length} repo folders.`,
+  `Figma live structure OK: ${items.length} contracted export wrappers${requestedPath ? " (targeted sync)" : ` across ${actualFolders.length} repo folders`}.`,
 );
 
 const sourceRefs = new Map();
 
-for (const batch of chunks(manifest.items, 50)) {
+for (const batch of chunks(items, 50)) {
   const ids = batch.map((item) => item.sourceComponentId);
   if (ids.some((id) => !id)) throw new Error("Every manifest item must have sourceComponentId");
 
@@ -177,7 +185,7 @@ const fillUrls = fillsPayload.images ?? fillsPayload.meta?.images ?? {};
 let changed = 0;
 let unchanged = 0;
 
-for (const item of manifest.items) {
+for (const item of items) {
   const imageRef = sourceRefs.get(item.path);
   const imageUrl = fillUrls[imageRef];
   if (!imageUrl) throw new Error(`Figma returned no image-fill URL for ${item.path} (${imageRef})`);
@@ -224,4 +232,4 @@ for (const item of manifest.items) {
 }
 
 execFileSync(process.execPath, [path.join(root, "scripts", "verify-figma-assets.mjs")], { stdio: "inherit" });
-console.log(`Figma sync complete: ${changed} changed, ${unchanged} already byte-identical, ${manifest.items.length} native 1x PNGs checked.`);
+console.log(`Figma sync complete: ${changed} changed, ${unchanged} already byte-identical, ${items.length} native 1x PNGs checked.`);
