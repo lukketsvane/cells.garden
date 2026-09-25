@@ -6,6 +6,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GardenApp } from './app';
 import { avatarEl } from './avatar';
+import { AccessibilityModal } from './accessibility';
 import { AvatarEditorModal } from './avatar-editor';
 import { hourOf, skyAt, skyGradient, timeOf } from './garden-settings';
 import { ICONS } from './icons';
@@ -131,6 +132,10 @@ export class SettingsModal extends Modal {
 
         gardenSettings(contentEl.createDiv(), this.app);
 
+        new Setting(contentEl).setName('Accessibility')
+            .setDesc('Contrast and requests for this device.')
+            .addButton(b => b.setButtonText('Open').onClick(() => new AccessibilityModal().open()));
+
         new Setting(contentEl)
             .setName('Keyboard shortcuts')
             .addButton((b) => b.setButtonText('Show').onClick(() => {
@@ -200,6 +205,7 @@ function drawGardenSettings(el: HTMLElement, app: GardenApp, heading: boolean, s
     else el.createEl('p', { cls: 'setting-item-description', text: 'Shared with everyone in this garden.' });
 
     number(new Setting(el).setName('Fireflies').setDesc('Fewer run lighter.'), s.fireflies, 0, MAX_FIREFLIES, (n) => set({ fireflies: n }));
+    number(new Setting(el).setName('Fireflies on mobile').setDesc('Used on touch devices. Fewer run lighter.'), s.mobileFireflies, 0, MAX_FIREFLIES, (n) => set({ mobileFireflies: n }));
 
     // --- Sky ---
     const isStatic = s.skyMode === 'static';

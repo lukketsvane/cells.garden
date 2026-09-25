@@ -64,7 +64,7 @@ function watchErrors(page, label, errors) {
 /** A cell's menu: another of its kind first; in a build with accounts, Assign follows the highlight. */
 async function cellMenu(page, highlight, kind) {
     const accounts = (await page.$('.auth-pill')) !== null;
-    return [`New ${kind}`, 'Delete', highlight, ...(accounts ? ['Assign'] : []), 'Convert to stem'];
+    return [`New ${kind}`, 'Delete', highlight, ...(accounts ? ['Assign'] : []), 'Move to', 'Convert to stem'];
 }
 
 // The zone icons are the pixel art in src/assets/pack/kanban_icons, masked in
@@ -741,7 +741,7 @@ async function scenario(browser, errors) {
     // a second Escape lets the chip go.
     await page.click('.garden-peek-chip.is-visible', { button: 'right' });
     await page.waitForSelector('.garden-context-menu');
-    const chipMenu = await page.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
+    const chipMenu = await page.$$eval('.garden-context-menu > .garden-menu-item > .garden-menu-label', (els) => els.map((e) => e.textContent));
     // The flower was highlighted from its menu on the board, earlier.
     assert.deepEqual(chipMenu, await cellMenu(page, 'Remove highlight', 'flower'), 'the chip should open its cell\'s menu');
     await page.keyboard.press('Escape');
@@ -815,33 +815,34 @@ async function scenario(browser, errors) {
     // keeps it. Escape takes a new one away again, as an empty draft on the
     // board goes.
     await gardenSettled(page);
-    const growFrom = await partSpot(page, '.garden-stem-part');
-    assert(growFrom, 'no stem to grow another from');
+    const rootSpot = async () => await partSpot(page, '.garden-root-part') ?? await partSpot(page, '.garden-root-part', { covered: true });
+    const growFrom = await rootSpot();
+    assert(growFrom, 'no root to grow another from');
     const growPlant = await page.evaluate((id) => document.querySelector(`.garden-plants-layer [data-item-id="${id}"]`).closest('.garden-plant-wrapper').dataset.projectId, growFrom.itemId);
-    const stemsOf = () => page.evaluate((pid) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === pid).stem.map((s) => s.content), growPlant);
-    const stemsBefore = await stemsOf();
-    const newStem = async (at) => {
+    const rootsOf = () => page.evaluate((pid) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === pid).roots.map((s) => s.content), growPlant);
+    const rootsBefore = await rootsOf();
+    const newRoot = async (at) => {
         await page.mouse.click(at.x, at.y, { button: 'right' });
         await page.waitForSelector('.garden-context-menu');
-        await page.click('.garden-context-menu .garden-menu-item:has(.garden-menu-label:text-is("New stem"))');
+        await page.click('.garden-context-menu .garden-menu-item:has(.garden-menu-label:text-is("New root"))');
         await page.waitForSelector('.garden-peek-chip.is-visible.is-editing', { timeout: 5000 });
         return chipState(page);
     };
-    const grown = await newStem(growFrom);
+    const grown = await newRoot(growFrom);
     assert(grown.pinned && grown.editing && grown.text === '' && grown.id !== growFrom.itemId && grown.markedId === grown.id,
-        `a new stem should open its own chip, empty, on its own part: ${JSON.stringify(grown)}`);
+        `a new root should open its own chip, empty, on its own part: ${JSON.stringify(grown)}`);
     await page.keyboard.type('Grown in the garden');
     await page.keyboard.press('Enter');
-    await page.waitForFunction((pid) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === pid).stem[0]?.content === 'Grown in the garden', growPlant);
-    assert.deepEqual(await stemsOf(), ['Grown in the garden', ...stemsBefore], 'Enter should keep the new stem, on top');
+    await page.waitForFunction((pid) => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === pid).roots[0]?.content === 'Grown in the garden', growPlant);
+    assert.deepEqual(await rootsOf(), ['Grown in the garden', ...rootsBefore], 'Enter should keep the new root, on top');
     await page.keyboard.press('Escape');
-    await peekGone(page, 'Escape after growing a stem');
+    await peekGone(page, 'Escape after growing a root');
     await gardenSettled(page);
-    const dropped = await newStem(await partSpot(page, '.garden-stem-part'));
+    const dropped = await newRoot(await rootSpot());
     await page.keyboard.press('Escape');
-    await peekGone(page, 'Escape on a new stem');
-    await page.waitForFunction(({ pid, id }) => !JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === pid).stem.some((s) => s.id === id), { pid: growPlant, id: dropped.id });
-    assert.deepEqual(await stemsOf(), ['Grown in the garden', ...stemsBefore], 'Escape should take the new stem away');
+    await peekGone(page, 'Escape on a new root');
+    await page.waitForFunction(({ pid, id }) => !JSON.parse(localStorage.getItem('cells.garden/v1')).projects.find((p) => p.id === pid).roots.some((s) => s.id === id), { pid: growPlant, id: dropped.id });
+    assert.deepEqual(await rootsOf(), ['Grown in the garden', ...rootsBefore], 'Escape should take the new root away');
 
     // Zooming the garden lets a pinned chip go.
     await gardenSettled(page);
@@ -1362,7 +1363,7 @@ async function scenario(browser, errors) {
 
     await holdAt('.garden-peek-chip.is-visible');
     await mpage.waitForSelector('.garden-context-menu', { timeout: 3000 });
-    const phoneChipMenu = await mpage.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
+    const phoneChipMenu = await mpage.$$eval('.garden-context-menu > .garden-menu-item > .garden-menu-label', (els) => els.map((e) => e.textContent));
     assert.deepEqual(phoneChipMenu, await cellMenu(mpage, 'Highlight', 'flower'), 'holding the chip should open its cell\'s menu');
     const phoneEmpty = await emptySpot(mpage);
     assert(phoneEmpty, 'no empty garden to tap');
@@ -1376,7 +1377,7 @@ async function scenario(browser, errors) {
     await touch('touchEnd', phoneFlower.x, phoneFlower.y);
     await mpage.waitForSelector('.garden-context-menu', { timeout: 3000 });
     const heldChip = await chipState(mpage);
-    const heldMenu = await mpage.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
+    const heldMenu = await mpage.$$eval('.garden-context-menu > .garden-menu-item > .garden-menu-label', (els) => els.map((e) => e.textContent));
     assert(heldChip.count === 1 && heldChip.pinned && heldChip.id === phoneFlower.itemId, `holding a part should pin its chip: ${JSON.stringify(heldChip)}`);
     assert.deepEqual(heldMenu, await cellMenu(mpage, 'Highlight', 'flower'), 'holding a part should open its cell\'s menu');
     await touch('touchStart', phoneEmpty.x, phoneEmpty.y);
@@ -1539,6 +1540,7 @@ async function standInSupabase(ctx) {
     const ago = (minutes) => new Date(Date.now() - minutes * 60_000).toISOString();
     const state = {
         garden: accountGarden(),
+        name: 'My garden',
         rev: 1,
         saves: 0,
         notified: [],
@@ -1589,13 +1591,15 @@ async function standInSupabase(ctx) {
         if (path === '/rest/v1/push_subscriptions' && req.method() === 'DELETE') return json(null);
         if (path === '/rest/v1/gardens') {
             if (req.method() === 'PATCH') {
-                state.garden = JSON.parse(req.postData() ?? '{}').data;
+                const patch = JSON.parse(req.postData() ?? '{}');
+                if ('name' in patch) { state.name = patch.name; return json([{ id: OWN_GARDEN }]); }
+                state.garden = patch.data;
                 state.rev += 1;
                 state.saves += 1;
                 return json([{ rev: state.rev }]);
             }
             if (select === 'id,data,updated_at,rev') return json([{ id: OWN_GARDEN, data: state.garden, updated_at: state.garden.updatedAt, rev: state.rev }]);
-            if (select === 'id,name') return json(eq('user_id') === ME ? [{ id: OWN_GARDEN, name: 'My garden' }] : []);
+            if (select === 'id,name') return json(eq('user_id') === ME ? [{ id: OWN_GARDEN, name: state.name }] : []);
             if (select === 'user_id,owner_id') return json(eq('id') === OWN_GARDEN ? [{ user_id: ME, owner_id: null }] : []);
         }
         if (path === '/rest/v1/garden_members') {
@@ -1840,6 +1844,35 @@ async function accountScenario(browser, errors) {
     await page.waitForSelector('.garden-push-setting[data-state="off"]');
     assert.equal(await page.evaluate(() => window.__pushTest.removed), 1, 'turning off revokes the browser subscription');
     await page.keyboard.press('Escape');
+    // Garden names are saved separately from the task data and survive reload.
+    await page.click('.auth-pill');
+    await page.click(rowOf('Rename garden'));
+    await page.getByRole('textbox', { name: 'Garden name' }).fill('Kitchen garden');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('.auth-pill')?.textContent.includes('Kitchen garden'));
+    assert.equal(state.name, 'Kitchen garden');
+    assert(state.garden.projects.length > 0, 'renaming preserves the garden data');
+
+    // Moving a cell changes its layer and completion status together.
+    await page.click('.kanban-scroll-container .garden-item[data-id="m_me"]', { button: 'right' });
+    await page.click(rowOf('Move to'));
+    await page.click(rowOf('Flowers'));
+    await page.waitForSelector('.kanban-list[data-array="flowers"] .garden-item[data-id="m_me"]');
+    assert(state.garden.projects[0].flowers.some(item => item.id === 'm_me' && item.isComplete));
+    await page.click('.kanban-scroll-container .garden-item[data-id="m_me"]', { button: 'right' });
+    await page.click(rowOf('Move to'));
+    await page.click(rowOf('Minerals'));
+    await page.waitForSelector('.kanban-list[data-array="minerals"] .garden-item[data-id="m_me"]');
+    assert(state.garden.projects[0].minerals.some(item => item.id === 'm_me' && !item.isComplete));
+
+    await page.click('.auth-pill');
+    await page.click(rowOf('Settings'));
+    await page.locator('.setting-item').filter({ hasText: 'Accessibility' }).getByRole('button', { name: 'Open' }).click();
+    await page.locator('.setting-item').filter({ hasText: 'High contrast' }).getByRole('switch').click();
+    assert(await page.locator('html[data-high-contrast]').count());
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => document.querySelector('.auth-pill')?.textContent.includes('Kitchen garden'));
+    assert(await page.locator('html[data-high-contrast]').count(), 'contrast preference survives reload');
     assert.deepEqual(state.unknown, [], 'requests the stand-in did not expect');
     await ctx.close();
 
@@ -1863,6 +1896,13 @@ async function accountScenario(browser, errors) {
     assert(/Home Screen/.test(phonePush.desc) && phonePush.buttons === 0, `iPhone in Safari: says how, offers no button: ${JSON.stringify(phonePush)}`);
     await phone.$eval('.garden-push-setting', (el) => el.scrollIntoView({ block: 'center' }));
     await shot(phone, '16-settings-iphone.png');
+    const mobileFireflies = phone.locator('.setting-item').filter({ hasText: 'Fireflies on mobile' }).locator('input');
+    assert.equal(await mobileFireflies.inputValue(), '4');
+    await mobileFireflies.fill('2');
+    await mobileFireflies.press('Tab');
+    await phone.keyboard.press('Escape');
+    await phone.waitForFunction(() => document.querySelectorAll('.garden-firefly').length === 2);
+
     await ictx.close();
 }
 

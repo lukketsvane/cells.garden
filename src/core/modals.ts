@@ -39,6 +39,7 @@ export class CreateProjectModal extends Modal {
     onOpen() {
         const { contentEl } = this;
         contentEl.createEl("h2", { text: "Plant a new seed" });
+        contentEl.createEl('p', { text: 'Give an idea, project or goal a place to grow. Add its next steps as cells.' });
 
         let projectSeed = "";
         const submit = () => {
@@ -49,8 +50,8 @@ export class CreateProjectModal extends Modal {
         };
 
         new Setting(contentEl)
-            .setName("Goal / seed")
-            .setDesc("This will also act as the plant's title.")
+            .setName("What would you like to grow?")
+            .setDesc("A short name for your plant. You can change it later.")
             .addTextArea((text) => {
                 text.onChange((value) => { projectSeed = value; });
                 text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {

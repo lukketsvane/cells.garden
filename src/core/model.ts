@@ -101,6 +101,8 @@ export interface GardenSettings {
     enableFireflies: boolean;
     fireflyCount: number;
     fireflies: number;
+    /** Separate count for touch devices, shared as part of the garden. */
+    mobileFireflies: number;
     /** 'static' holds the sky at the first node's colour. */
     skyMode: 'cycle' | 'static';
     /** Node 1 first, in the order they were added; the sky goes through them by hour. */
@@ -152,6 +154,7 @@ export const DEFAULT_SETTINGS: GardenSettings = {
     enableFireflies: true,
     fireflyCount: 9,
     fireflies: 8,
+    mobileFireflies: 4,
     skyMode: 'cycle',
     skyNodes: DEFAULT_SKY_NODES.map(n => ({ ...n })),
     mineralFade: false,
