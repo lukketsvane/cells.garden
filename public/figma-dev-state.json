@@ -1,0 +1,11 @@
+{
+  "revision": 1,
+  "releaseId": "b301740f-17fe-4d28-81c7-a07d5353ef6d",
+  "approved": {
+    "src/assets/void_tile.png": "49552131ad60f9f3f063b8f42fb2ce5358aefabd479078425ec4d4c694056b3a"
+  },
+  "changedPaths": [
+    "src/assets/void_tile.png"
+  ],
+  "updatedAt": "2026-09-25T21:45:23.475Z"
+}
