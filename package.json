@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run test:security && npm run verify:figma-assets && npm run build:web && npm run build:ext && npm run build:obsidian && npm run test:security",
-    "build:web": "node scripts/build-figma-publisher.mjs --web && tsc --noEmit && vite build",
+    "build:web": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src ext obsidian-plugin/main.ts",
@@ -25,15 +25,9 @@
     "typecheck:obsidian": "tsc --noEmit -p tsconfig.obsidian.json",
     "test:obsidian": "node scripts/test-obsidian.mjs",
     "verify:figma-assets": "node scripts/verify-figma-assets.mjs",
-    "sync:figma-assets": "node scripts/sync-figma-assets.mjs",
     "test:security": "node scripts/test-security.mjs",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
-    "prepare:figma-master": "node scripts/figma-migrate.mjs prepare",
-    "adopt:figma-master": "node scripts/figma-migrate.mjs adopt",
-    "test:figma-migration": "node --test scripts/figma-source.test.mjs scripts/figma-migrate.test.mjs",
-    "test:figma-publishing": "node --test scripts/figma-source.test.mjs scripts/figma-migrate.test.mjs scripts/figma-publish.test.mjs",
-    "build:figma-publisher": "node scripts/build-figma-publisher.mjs",
-    "check:figma-publishing": "node scripts/figma-release.mjs preflight"
+    "pull:figma-dev": "node scripts/pull-figma-dev.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
