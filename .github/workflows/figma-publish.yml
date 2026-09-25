@@ -1,0 +1,113 @@
+name: Publish Figma artwork
+
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Check setup, inspect an approval, or publish approved artwork to dev'
+        type: choice
+        options: [preflight, check, publish]
+        default: preflight
+  push:
+    branches: [main]
+    paths:
+      - 'figma/**'
+      - 'scripts/*figma*.mjs'
+      - '.github/workflows/figma-publish.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: figma-artwork-publishing
+  cancel-in-progress: false
+
+jobs:
+  plugin:
+    if: github.event_name != 'schedule' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+      - run: npm run test:figma-publishing
+      - run: npm run build:figma-publisher
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cells-garden-dev-ready
+          path: dist-figma-publisher/cells-garden-dev-ready.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FIGMA_BACKOFF_PATH: ${{ github.workspace }}/.figma-publish-backoff.json
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: main
+          path: tools
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: dev
+          path: target
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: .figma-publish-backoff.json
+          key: figma-backoff-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: figma-backoff-
+      - name: Read the exact approved Figma checkpoint
+        id: approval
+        env:
+          FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
+          REQUESTED_OPERATION: ${{ inputs.operation }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          mode=preflight
+          if [ "$EVENT_NAME" = schedule ] || [ "$REQUESTED_OPERATION" = publish ]; then mode=stage; fi
+          if [ "$REQUESTED_OPERATION" = check ]; then mode=check; fi
+          node tools/scripts/figma-release.mjs "$mode" target
+      - name: Validate staged artwork and build all supported shells
+        if: steps.approval.outputs.status == 'staged'
+        working-directory: target
+        run: |
+          npm ci --ignore-scripts
+          npm run verify:figma-assets
+          npm run typecheck
+          npm run lint
+          npm run test:unit
+          npm run build
+          npx playwright install --with-deps chromium
+          npm run test:web
+      - name: Push the validated artwork transaction to dev
+        id: push
+        if: steps.approval.outputs.status == 'staged'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node tools/scripts/figma-push.mjs target dev
+      - name: Verify the exact release on the development hostname
+        if: steps.approval.outputs.status == 'staged' || (steps.approval.outputs.status == 'idle' && steps.approval.outputs.release_id != '')
+        env:
+          FIGMA_DEPLOY_HOST: dev.cells.garden
+        run: node tools/scripts/figma-release.mjs verify-live target
+      - name: Preserve the server's rate-limit backoff
+        if: always() && hashFiles('.figma-publish-backoff.json') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: .figma-publish-backoff.json
+          key: figma-backoff-${{ github.run_id }}-${{ github.run_attempt }}
