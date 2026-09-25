@@ -1,39 +1,27 @@
 # Void background tile
 
-The repeating pattern outside the garden is `src/assets/void_tile.png`.
-It is a native **32 × 32** white-on-transparent PNG, consumed as an alpha mask
-by `.garden-canvas-viewport::before` in `src/core/void-tile.css`. The shared
-`scene.ts` imports this stylesheet for the web app, extension and Obsidian.
-The CSS supplies `--background-modifier-border`; the viewport retains
-`--background-primary`. The pattern cannot intercept garden gestures.
+The site consumes `src/assets/void_tile.png`, a native 32 by 32 PNG, through
+`.garden-canvas-viewport::before` in `src/core/void-tile.css`. Its alpha forms
+the repeating pattern; CSS supplies the theme color. The image remains in the
+repository and normal builds keep using it.
 
-## Figma source
+## Correct Figma destination
 
-- File: `WJgKfsKcxUpuNkDvxI9gEx`, ASSETS page `27:1966`.
-- Component: **Source/Environment/Void Tile**, node `253:410`.
-- Linked export frame: `253:411`, named `src/assets/void_tile.png` inside EXPORTS.
-- Repeated 1x preview: `253:413`. Its instances update with the source component.
-- Handoff contract: `figma/exports.json`.
+https://www.figma.com/design/Q9lb9XG2ftZZHswUg5zYkS/cells.garden?node-id=27-1966
 
-Figma: https://www.figma.com/design/WJgKfsKcxUpuNkDvxI9gEx?node-id=253-410
+The tile has **not yet been migrated to this master**. Its old source `253:410`
+and export frame `253:411` belong to a different copy; they must not be reused
+as links into the confirmed master without inspection.
 
-Replace the component's image fill with a **32 × 32 PNG**. Keep the component,
-export frame, IDs and dimensions intact. Use transparency for empty pixels;
-only the alpha controls the website pattern, not the image's RGB colors.
-The native-fill sync reads the original image fill, not a resized export.
+The full and targeted Figma sync commands are deliberately blocked while
+`figma/exports.json` still targets that copy. See [migration status](../figma/README.md).
+Do not tell the designer that edits already publish from the confirmed master.
 
-## Sync this tile
+After the tile is created and verified there, it will have a linked native-size
+export wrapper and an updated manifest entry. Replace its original image fill
+with a 32 by 32 PNG and preserve transparency. The site's mask uses alpha,
+not the image's RGB colors. Sync, commit and deployment are separate steps.
 
-Run **Sync Figma assets** in GitHub Actions with `asset_path` set to
-`src/assets/void_tile.png`, or run locally:
-
-```sh
-FIGMA_ASSET_PATH=src/assets/void_tile.png npm run sync:figma-assets
-```
-
-The normal `FIGMA_TOKEN` with file-content read access is required. A targeted
-sync validates and downloads only this contracted asset, then runs the whole
-repository asset verifier. Leave the path empty for the original all-assets sync.
-
-Figma edits are not deployed in real time: sync, commit and deploy remain
-separate steps. The workflow commits changed assets directly to `main`.
+For a local Inspector test, select `.garden-canvas-viewport::before` and replace
+`mask-image` and `-webkit-mask-image` with the test image URL. Reloading restores
+the deployed file. This does not update Figma or Git.
