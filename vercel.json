@@ -32,6 +32,12 @@
     {"source": "/chrome-extension", "destination": "/chrome-extension/", "permanent": true},
     {"source": "/chrome-extension/index.html", "destination": "/chrome-extension/", "permanent": true},
     {"source": "/obsidian", "destination": "/obsidian/", "permanent": true},
-    {"source": "/obsidian/index.html", "destination": "/obsidian/", "permanent": true}
+    {"source": "/obsidian/index.html", "destination": "/obsidian/", "permanent": true},
+    {"source": "/guide/mobile", "destination": "/guide/mobile/", "permanent": true},
+    {"source": "/guide/mobile/index.html", "destination": "/guide/mobile/", "permanent": true},
+    {"source": "/guide/sync-sharing", "destination": "/guide/sync-sharing/", "permanent": true},
+    {"source": "/guide/sync-sharing/index.html", "destination": "/guide/sync-sharing/", "permanent": true},
+    {"source": "/guide/backups", "destination": "/guide/backups/", "permanent": true},
+    {"source": "/guide/backups/index.html", "destination": "/guide/backups/", "permanent": true}
   ]
 }

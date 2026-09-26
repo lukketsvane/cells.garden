@@ -23,4 +23,9 @@ ul, ol { padding-left: 24px; }
 .note, footer { color: #b3b3b3; }
 footer { border-top: 1px solid #363636; padding-block: 24px 40px; }
 code { overflow-wrap: anywhere; font-size: .95em; }
+.breadcrumbs { margin-bottom: 24px; color: #b3b3b3; font-size: .9rem; }
+.guide-topics { margin-top: 36px; padding-top: 24px; border-top: 1px solid #363636; }
+table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+th, td { padding: 12px; border-bottom: 1px solid #484848; text-align: left; vertical-align: top; }
+thead { color: #fff; }
 @media (max-width: 420px) { header, main, footer { padding-inline: 18px; } nav { gap: 10px 18px; } }
