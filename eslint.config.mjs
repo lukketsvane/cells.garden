@@ -10,10 +10,7 @@ export default defineConfig([
             parserOptions: { project: ['tsconfig.obsidian.json', 'tsconfig.ext.json'], tsconfigRootDir: import.meta.dirname },
         },
         // The review reports this one as a warning; it misreads assertions that steer a generic call.
-        rules: {
-            '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
-            'obsidianmd/ui/sentence-case': ['warn', { brands: ['Obsidian', 'Markdown', 'Google', 'GitHub', 'Chrome', 'Max’s Garden Cells', 'Apache-2.0'] }],
-        },
+        rules: { '@typescript-eslint/no-unnecessary-type-assertion': 'warn' },
     },
     { files: ['ext/**'], languageOptions: { globals: { chrome: 'readonly' } } },
 ]);

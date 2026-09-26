@@ -24,7 +24,6 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
-import { checkAndRecycleTutorial } from './test-tutorial.mjs';
 import { loadEnv } from 'vite';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -292,8 +291,7 @@ try {
     await newtab.goto(`chrome-extension://${extId}/newtab.html`);
     await newtab.waitForSelector('.garden-canvas-viewport');
     assert(await newtab.getAttribute('html', 'data-context') === 'newtab', 'newtab.html must set data-context="newtab"');
-    await checkAndRecycleTutorial(newtab);
-    assert(/empty/i.test(await newtab.textContent('.kanban-empty-message h3')), 'recycling the tutorial leaves an empty garden');
+    assert(/empty/i.test(await newtab.textContent('.kanban-empty-message h3')), 'a fresh profile should start with an empty garden');
 
     await newtab.click('.add-column-btn-inner >> nth=1');
     await newtab.waitForSelector('.modal textarea');

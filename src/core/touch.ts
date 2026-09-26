@@ -37,16 +37,9 @@ function mouse(type: string, touch: Touch, target: EventTarget, extra: MouseEven
 export function installTouchAdapter(host: HTMLElement): void {
     let start: { x: number; y: number; t: number; cell: HTMLElement | null; wasSelected: boolean } | null = null;
     let resizing = false;
-    let resizeTouch: Touch | null = null;
-    const finishResize = () => {
-        if (resizing && resizeTouch) mouse('mouseup', resizeTouch, window);
-        resizing = false;
-        resizeTouch = null;
-    };
 
     const onStart = (e: TouchEvent) => {
         if (e.touches.length !== 1) {
-            finishResize();
             start = null;
             return;
         }
@@ -57,8 +50,6 @@ export function installTouchAdapter(host: HTMLElement): void {
         if (resizer) {
             e.preventDefault();
             resizing = true;
-            resizeTouch = touch;
-            start = null;
             mouse('mousedown', touch, resizer);
             return;
         }
@@ -75,7 +66,6 @@ export function installTouchAdapter(host: HTMLElement): void {
         const touch = e.touches[0];
         if (!touch) return;
         if (resizing) {
-            resizeTouch = touch;
             e.preventDefault();
             mouse('mousemove', touch, window);
             return;
@@ -86,8 +76,8 @@ export function installTouchAdapter(host: HTMLElement): void {
     const onEnd = (e: TouchEvent) => {
         const touch = e.changedTouches[0];
         if (resizing) {
-            if (touch) resizeTouch = touch;
-            finishResize();
+            resizing = false;
+            if (touch) mouse('mouseup', touch, window);
             return;
         }
         const s = start;
@@ -109,7 +99,7 @@ export function installTouchAdapter(host: HTMLElement): void {
 
     const onCancel = () => {
         start = null;
-        finishResize();
+        resizing = false;
     };
 
     host.addEventListener('touchstart', onStart, { passive: false });
