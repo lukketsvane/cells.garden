@@ -1,0 +1,326 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 0659fa5..1fe70a1 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -52,0 +53,2 @@ jobs:
++      - name: Static pages, offline About and tile preview
++        run: npm run test:seo
+diff --git a/README.md b/README.md
+index 6cf93aa..a1dd918 100644
+--- a/README.md
++++ b/README.md
+@@ -28 +28 @@ Choose a plant shape, change its colours and make the garden your own. Click a p
+-3. Add a plant, name its seed and use **+** in a layer to add your first cell.
++3. Explore the editable **Start here** tutorial plant, or add a plant, name its seed and use **+** in a layer to add your first cell.
+@@ -57 +57,5 @@ Already using Max's original **Garden Cells** plugin? The command **Import this
+-Found a problem or have an idea? [Open an issue](https://github.com/lukketsvane/cells.garden/issues).
++Found a problem or have an idea? Choose **Report issue** in the garden menu to open GitHub or email [cells.garden@proton.me](mailto:cells.garden@proton.me).
++
++Read [About cells.garden](https://cells.garden/about/) for credits and project information. [Support the project](https://buymeacoffee.com/cells.garden) is optional; all features remain free.
++
++**Beta milestone: 0.2.0** for the web, Chrome extension and Obsidian plugin. The later alpha milestone is 1.0.0.
+diff --git a/docs/void-tile.md b/docs/void-tile.md
+index da7a07a..bda8efc 100644
+--- a/docs/void-tile.md
++++ b/docs/void-tile.md
+@@ -13,0 +14,18 @@ For a local Inspector-only experiment, select
++
++## Preview and publish
++
++Run `npm run dev` and open `/void-preview/`. Select your exported PNG to
++check its native-size repetition and alpha mask with different theme colours.
++The preview validates the PNG, its 32 × 32 dimensions and transparency. It
++uses only local browser memory: it does not upload, persist or publish a file.
++The same preview is available at `https://cells.garden/void-preview/`.
++
++When approved, replace `src/assets/void_tile.png`, run the checks in
++`AGENTS.md` and `npm run test:unit`, and review the result on `dev` before
++promoting to `main`. The asset ships in all three distributions. The unit
++suite checks its dimensions and alpha channel, and `npm run test:seo`
++checks the preview's valid/invalid-file paths.
++
++Design files remain references only. There is no design-tool token, staging
++queue or automated publish link to restore. The manual approval and normal
++repository deployment path are the beta asset workflow.
+diff --git a/eslint.config.mjs b/eslint.config.mjs
+index 9a58402..bd83413 100644
+--- a/eslint.config.mjs
++++ b/eslint.config.mjs
+@@ -13 +13,4 @@ export default defineConfig([
+-        rules: { '@typescript-eslint/no-unnecessary-type-assertion': 'warn' },
++        rules: {
++            '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
++            'obsidianmd/ui/sentence-case': ['warn', { brands: ['Obsidian', 'Markdown', 'Google', 'GitHub', 'Chrome', 'Max’s Garden Cells', 'Apache-2.0'] }],
++        },
+diff --git a/ext/WEBSTORE.md b/ext/WEBSTORE.md
+index 3483367..8e19c35 100644
+--- a/ext/WEBSTORE.md
++++ b/ext/WEBSTORE.md
+@@ -7 +7 @@ Canonical submission notes for the cells.garden Chrome extension.
+-- Current replacement release: `0.1.6`
++- Current replacement release: `0.2.0`
+@@ -9 +9 @@ Canonical submission notes for the cells.garden Chrome extension.
+-- Homepage: `https://cells.garden`
++- Homepage: `https://cells.garden/about/`
+@@ -14 +14 @@ Canonical submission notes for the cells.garden Chrome extension.
+-The original 0.1.0 submission entered review on 18 September 2026. When 0.1.6 is ready:
++The original 0.1.0 submission entered review on 18 September 2026. When 0.2.0 is ready:
+@@ -18 +18 @@ The original 0.1.0 submission entered review on 18 September 2026. When 0.1.6 is
+-3. On **Package**, upload the 0.1.6 ZIP. `manifest.json` must be at the ZIP root.
++3. On **Package**, upload the 0.2.0 ZIP. `manifest.json` must be at the ZIP root.
+@@ -20 +20 @@ The original 0.1.0 submission entered review on 18 September 2026. When 0.1.6 is
+-5. Submit the 0.1.6 revision for review.
++5. Submit the 0.2.0 revision for review.
+@@ -95,0 +96,7 @@ The extension's use of user data is limited to its disclosed single purpose and
++
++## About and optional support
++
++Version 0.2.0 is the beta milestone. The shared garden menu includes **About** with credits, privacy and optional support links. The extension homepage is `https://cells.garden/about/`.
++
++Support: `https://buymeacoffee.com/cells.garden` (optional; no paid features).
++Email: `cells.garden@proton.me`.
+diff --git a/ext/manifest.ts b/ext/manifest.ts
+index ed19164..03b25fe 100644
+--- a/ext/manifest.ts
++++ b/ext/manifest.ts
+@@ -48 +48 @@ export function buildManifest(env: ManifestEnv): chrome.runtime.ManifestV3 {
+-        homepage_url: 'https://cells.garden',
++        homepage_url: 'https://cells.garden/about/',
+diff --git a/manifest.json b/manifest.json
+index 10536c9..fc2ee91 100644
+--- a/manifest.json
++++ b/manifest.json
+@@ -4 +4 @@
+-  "version": "0.1.17",
++  "version": "0.2.0",
+@@ -9 +9,2 @@
+-  "isDesktopOnly": false
++  "isDesktopOnly": false,
++  "fundingUrl": "https://buymeacoffee.com/cells.garden"
+diff --git a/obsidian-plugin/manifest.json b/obsidian-plugin/manifest.json
+index 10536c9..fc2ee91 100644
+--- a/obsidian-plugin/manifest.json
++++ b/obsidian-plugin/manifest.json
+@@ -4 +4 @@
+-  "version": "0.1.17",
++  "version": "0.2.0",
+@@ -9 +9,2 @@
+-  "isDesktopOnly": false
++  "isDesktopOnly": false,
++  "fundingUrl": "https://buymeacoffee.com/cells.garden"
+diff --git a/package-lock.json b/package-lock.json
+index a8653e1..5ec3948 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -3 +3 @@
+-  "version": "0.1.6",
++  "version": "0.2.0",
+@@ -9 +9 @@
+-      "version": "0.1.6",
++      "version": "0.2.0",
+diff --git a/package.json b/package.json
+index 420a4c4..2006c77 100644
+--- a/package.json
++++ b/package.json
+@@ -3 +3 @@
+-  "version": "0.1.6",
++  "version": "0.2.0",
+diff --git a/public/about/index.html b/public/about/index.html
+new file mode 100644
+index 0000000..beec570
+--- /dev/null
++++ b/public/about/index.html
+@@ -0,0 +1,51 @@
++<!doctype html>
++<html lang="en">
++<head>
++<meta charset="utf-8">
++<meta name="viewport" content="width=device-width, initial-scale=1">
++<title>About cells.garden | A garden for your projects</title>
++<meta name="description" content="Meet cells.garden, a free pixel-art project planner for the web, Chrome and Obsidian. Learn about the project, its credits, support and privacy.">
++<link rel="canonical" href="https://cells.garden/about/">
++<link rel="icon" href="/icon.svg" type="image/svg+xml">
++<link rel="stylesheet" href="/site.css">
++<meta name="theme-color" content="#1e1e1e">
++<meta property="og:type" content="website">
++<meta property="og:site_name" content="cells.garden">
++<meta property="og:title" content="About cells.garden | A garden for your projects">
++<meta property="og:description" content="Meet cells.garden, a free pixel-art project planner for the web, Chrome and Obsidian. Learn about the project, its credits, support and privacy.">
++<meta property="og:url" content="https://cells.garden/about/">
++<meta property="og:image" content="https://cells.garden/icon-512.png">
++<meta property="og:image:width" content="512">
++<meta property="og:image:height" content="512">
++<meta property="og:image:alt" content="cells.garden pixel-art plant icon">
++<meta name="twitter:card" content="summary">
++<meta name="twitter:title" content="About cells.garden | A garden for your projects">
++<meta name="twitter:description" content="Meet cells.garden, a free pixel-art project planner for the web, Chrome and Obsidian. Learn about the project, its credits, support and privacy.">
++<meta name="twitter:image" content="https://cells.garden/icon-512.png">
++</head>
++<body>
++<header><nav aria-label="Main navigation">
++<a class="brand" href="/"><img src="/icon-192.png" width="28" height="28" alt="">cells.garden</a>
++<a href="/guide/">Guide</a><a href="/chrome-extension/">Chrome</a><a href="/obsidian/">Obsidian</a><a href="/about/" aria-current="page">About</a>
++</nav></header>
++<main>
++<h1>Give your projects a place to grow</h1>
++<p class="lead">cells.garden is a project board and a pixel-art garden. Each project is a plant, and its cells hold your tasks, plans, ideas and progress.</p>
++<p>Use it on the web, in Chrome’s new tab, side panel or toolbar popup, and inside Obsidian. Start locally without an account, or sign in to sync and collaborate.</p>
++<p>Version 0.2.0 is our beta milestone across the three platforms. The garden is still growing: feedback and bug reports help shape what comes next.</p>
++<a class="button" href="/">Open your garden</a><a class="button" href="/guide/">Read the guide</a>
++<h2>Credits</h2>
++<p>Based on Max’s <strong>Garden Cells</strong>, whose garden design, pixel art and original Obsidian plugin made this project possible. The original is preserved in the <a href="https://github.com/lukketsvane/cells.garden/tree/original" target="_blank" rel="noopener noreferrer">source repository</a>.</p>
++<p>cells.garden is maintained by tastefinger and is free and open source under <a href="https://github.com/lukketsvane/cells.garden/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache-2.0</a>.</p>
++<h2>Support the project</h2>
++<p>There are no paid features, ads or analytics. Supporting the project is optional and does not unlock extra features.</p>
++<p><a href="https://buymeacoffee.com/cells.garden" target="_blank" rel="noopener noreferrer">Support cells.garden on Buy Me a Coffee</a></p>
++<h2>Questions and feedback</h2>
++<p><a href="https://github.com/lukketsvane/cells.garden/issues/new" target="_blank" rel="noopener noreferrer">Open a GitHub issue</a> or email <a href="mailto:cells.garden@proton.me">cells.garden@proton.me</a>. In the app, open the garden menu and choose <strong>Report issue</strong> for both options.</p>
++<p>Please keep passwords, sign-in links and private garden data out of public issues.</p>
++<h2>Your work stays yours</h2>
++<p>Work offline without an account. Optional sync stores your garden with the cells.garden service; shared members can see and edit what you share. Export a backup from the garden menu, and read the <a href="/privacy.html">privacy policy</a> for storage and account details.</p>
++</main>
++<footer><nav aria-label="Footer navigation"><a href="/">Open garden</a><a href="/privacy.html">Privacy</a><a href="https://github.com/lukketsvane/cells.garden">Source code</a></nav></footer>
++</body>
++</html>
+diff --git a/public/chrome-extension/index.html b/public/chrome-extension/index.html
+index ff1dcae..a758a97 100644
+--- a/public/chrome-extension/index.html
++++ b/public/chrome-extension/index.html
+@@ -28,0 +29 @@
++<a href="/about/">About</a>
+@@ -51 +52 @@
+-<li>Add a plant and give its seed a project name or goal.</li>
++<li>Explore the editable <strong>Start here</strong> tutorial, or add a plant and give its seed a project name or goal.</li>
+@@ -63,0 +65,2 @@
++<h2>About and support</h2>
++<p>Read <a href="/about/">about cells.garden and its credits</a>, or <a href="https://buymeacoffee.com/cells.garden" target="_blank" rel="noopener noreferrer">support the project</a>. Support is optional; all features remain free.</p>
+diff --git a/public/guide/index.html b/public/guide/index.html
+index 07f3559..feb6edc 100644
+--- a/public/guide/index.html
++++ b/public/guide/index.html
+@@ -28,0 +29 @@
++<a href="/about/">About</a>
+@@ -67,0 +69,2 @@
++<h2>About and support</h2>
++<p>Read <a href="/about/">about cells.garden and its credits</a>, or <a href="https://buymeacoffee.com/cells.garden" target="_blank" rel="noopener noreferrer">support the project</a>. Support is optional; all features remain free.</p>
+diff --git a/public/obsidian/index.html b/public/obsidian/index.html
+index 75149e4..3a830f5 100644
+--- a/public/obsidian/index.html
++++ b/public/obsidian/index.html
+@@ -28,0 +29 @@
++<a href="/about/">About</a>
+@@ -45 +46 @@
+-<li>Add a plant, name its seed and use <strong>+</strong> in a layer to add your first cell.</li>
++<li>Explore the editable <strong>Start here</strong> tutorial, or add a plant, name its seed and use <strong>+</strong> in a layer to add your first cell.</li>
+@@ -59,0 +61,2 @@
++<h2>About and support</h2>
++<p>Read <a href="/about/">about cells.garden and its credits</a>, or <a href="https://buymeacoffee.com/cells.garden" target="_blank" rel="noopener noreferrer">support the project</a>. Support is optional; all features remain free.</p>
+diff --git a/public/sitemap.xml b/public/sitemap.xml
+index bc54b2b..0a6d960 100644
+--- a/public/sitemap.xml
++++ b/public/sitemap.xml
+@@ -7,0 +8 @@
++  <url><loc>https://cells.garden/about/</loc></url>
+diff --git a/public/void-preview/index.html b/public/void-preview/index.html
+new file mode 100644
+index 0000000..953d2b1
+--- /dev/null
++++ b/public/void-preview/index.html
+@@ -0,0 +1,24 @@
++<!doctype html>
++<html lang="en">
++<head>
++<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
++<meta name="robots" content="noindex,nofollow"><title>Void tile preview | cells.garden</title>
++<link rel="icon" href="/icon.svg" type="image/svg+xml">
++<link rel="stylesheet" href="/site.css"><link rel="stylesheet" href="./preview.css">
++<script src="./preview.js" defer></script>
++</head>
++<body>
++<header><nav aria-label="Main navigation"><a class="brand" href="/">cells.garden</a><a href="/about/">About</a></nav></header>
++<main>
++<h1>Preview a void background</h1>
++<p>Choose a transparent 32 × 32 PNG. Its alpha becomes the repeating pattern; the two colours simulate the garden’s theme. The image stays on this device and is not uploaded or saved to your garden.</p>
++<p><label for="tile">Tile PNG</label> <input id="tile" type="file" accept="image/png,.png"></p>
++<div class="colours"><label for="ink">Pattern <input id="ink" type="color" value="#363636"></label><label for="ground">Background <input id="ground" type="color" value="#1e1e1e"></label><button id="reset" type="button">Reset preview</button></div>
++<p id="status" role="status">Choose a PNG to preview it at its native pixel size.</p>
++<div id="preview" role="img" aria-label="Repeating void tile preview"><div id="pattern"></div></div>
++<h2>Use an approved tile</h2>
++<p>Replace <code>src/assets/void_tile.png</code> in the repository with your approved 32 × 32 PNG. Run the normal checks and deploy through <code>dev</code>, then <code>main</code>. Web, Chrome and Obsidian use the same asset. Choosing a file here does not publish it.</p>
++<p>There is no automatic design-tool connection. Keep transparency in the PNG; use the theme to choose its colour. The preview repeats at 32 CSS pixels, like the garden.</p>
++</main>
++</body>
++</html>
+diff --git a/public/void-preview/preview.css b/public/void-preview/preview.css
+new file mode 100644
+index 0000000..7ccc380
+--- /dev/null
++++ b/public/void-preview/preview.css
+@@ -0,0 +1,7 @@
++.colours { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
++label { display: inline-flex; align-items: center; gap: 8px; }
++input[type="file"] { max-width: 100%; }
++button { padding: 8px 14px; font: inherit; }
++#preview { position: relative; min-height: 320px; background-color: #1e1e1e; border: 1px solid #777; overflow: hidden; }
++#pattern { position: absolute; inset: 0; background-color: #363636; mask-size: 32px 32px; -webkit-mask-size: 32px 32px; mask-repeat: repeat; -webkit-mask-repeat: repeat; mask-mode: alpha; image-rendering: pixelated; visibility: hidden; }
++#pattern.ready { visibility: visible; }
+diff --git a/public/void-preview/preview.js b/public/void-preview/preview.js
+new file mode 100644
+index 0000000..ab4010d
+--- /dev/null
++++ b/public/void-preview/preview.js
+@@ -0,0 +1,54 @@
++// Local-only preview. Decode the PNG into a small canvas before using its alpha.
++const input = document.querySelector('#tile');
++const status = document.querySelector('#status');
++const pattern = document.querySelector('#pattern');
++const preview = document.querySelector('#preview');
++let generation = 0;
++input.addEventListener('change', async () => {
++    const current = ++generation;
++    const file = input.files[0];
++    if (!file) return;
++    let url;
++    try {
++        if (file.size > 1024 * 1024) throw new Error('Choose a PNG smaller than 1 MB.');
++        const bytes = new Uint8Array(await file.arrayBuffer());
++        const signature = [137, 80, 78, 71, 13, 10, 26, 10];
++        if (!signature.every((byte, i) => bytes[i] === byte)) throw new Error('Choose a valid PNG image.');
++        url = URL.createObjectURL(file);
++        const image = new Image();
++        image.src = url;
++        await image.decode();
++        if (image.naturalWidth !== 32 || image.naturalHeight !== 32) throw new Error('The tile must be exactly 32 × 32 pixels.');
++        const canvas = document.createElement('canvas');
++        canvas.width = canvas.height = 32;
++        const ctx = canvas.getContext('2d', { willReadFrequently: true });
++        if (!ctx) throw new Error('This browser cannot preview the image.');
++        ctx.drawImage(image, 0, 0);
++        const rgba = ctx.getImageData(0, 0, 32, 32).data;
++        let transparent = false, visible = false;
++        for (let i = 3; i < rgba.length; i += 4) {
++            transparent ||= rgba[i] < 255;
++            visible ||= rgba[i] > 0;
++        }
++        if (!transparent || !visible) throw new Error('Use a PNG with both visible and transparent pixels.');
++        if (current !== generation) return;
++        const mask = `url("${canvas.toDataURL('image/png')}")`;
++        pattern.style.maskImage = mask;
++        pattern.style.webkitMaskImage = mask;
++        pattern.classList.add('ready');
++        status.textContent = `${file.name}: 32 × 32 alpha tile. Preview only; nothing has been published.`;
++    } catch (error) {
++        if (current === generation) status.textContent = error instanceof Error ? error.message : 'The image could not be previewed.';
++    } finally {
++        if (url) URL.revokeObjectURL(url);
++    }
++});
++document.querySelector('#ink').addEventListener('input', event => { pattern.style.backgroundColor = event.target.value; });
++document.querySelector('#ground').addEventListener('input', event => { preview.style.backgroundColor = event.target.value; });
++document.querySelector('#reset').addEventListener('click', () => {
++    generation++;
++    input.value = '';
++    pattern.classList.remove('ready');
++    pattern.style.maskImage = pattern.style.webkitMaskImage = '';
++    status.textContent = 'Choose a PNG to preview it at its native pixel size.';
++});
