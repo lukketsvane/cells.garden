@@ -7,5 +7,6 @@
   "changedPaths": [
     "src/assets/void_tile.png"
   ],
-  "updatedAt": "2026-09-25T23:45:34.622Z"
+  "updatedAt": "2026-09-25T23:45:34.622Z",
+  "deployTrigger": "manual-vercel-retrigger-2"
 }
