@@ -1,0 +1,70 @@
+name: Attach verified beta packages
+on:
+  push:
+    branches: [beta-workspace]
+    paths: [.github/workflows/attach-beta-packages.yml]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: beta-verified-release
+          run-id: 36247756315
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/verified
+      - name: Verify release and package integrity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: lukketsvane/cells.garden
+        shell: bash
+        run: |
+          test "$(gh api repos/lukketsvane/cells.garden/actions/runs/36247756315/jobs --jq '.jobs[] | select(.name == "verify") | .conclusion')" = success
+          test "$(gh api repos/lukketsvane/cells.garden/releases/tags/0.2.0 --jq '.target_commitish')" = 4c6fe91b52b9e79c5277c07db826612c44675b7e
+          test "$(gh api repos/lukketsvane/cells.garden/actions/runs/36248455644 --jq '.conclusion')" = success
+          cd "$RUNNER_TEMP/verified"
+          sha256sum -c SHA256SUMS
+          gh release download 0.2.0 -p main.js -p styles.css -p manifest.json -D "$RUNNER_TEMP/released"
+          unzip -q cells-garden-obsidian-0.2.0.zip -d "$RUNNER_TEMP/packaged"
+          for file in main.js styles.css manifest.json; do cmp "$RUNNER_TEMP/released/$file" "$RUNNER_TEMP/packaged/$file"; done
+          sha256sum cells-garden-*.zip > package-checksums.txt
+      - name: Attach packages without replacing existing release files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: lukketsvane/cells.garden
+        run: |
+          cd "$RUNNER_TEMP/verified"
+          gh release upload 0.2.0 cells-garden-chrome-0.2.0.zip cells-garden-obsidian-0.2.0.zip cells-garden-web-0.2.0.zip package-checksums.txt
+      - name: Add beta release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: lukketsvane/cells.garden
+        run: |
+          cat > "$RUNNER_TEMP/notes.md" <<'NOTES'
+          ## 0.2.0 beta
+
+          The beta milestone covers the web, Chrome extension and Obsidian plugin. The later alpha milestone remains 1.0.0.
+
+          ### Included
+          - Report issue submenu with GitHub and email options.
+          - Editable first-run tutorial plant; existing gardens and deliberately empty gardens remain unchanged.
+          - Shared About information, a new /about/ page and optional support links.
+          - Local-only /void-preview/ for 32 × 32 transparent PNG tiles, with a normal repository approval/deployment workflow. No automatic design integration.
+          - Temporary removal of the experimental accessibility settings panel; standard keyboard, focus and semantic behavior is retained.
+          - Mobile divider fix covering pending redraws, touch cancellation and actual divider height.
+
+          ### Verification
+          161 unit tests, all four typechecks, lint, security invariants, production dependency audit and all three builds pass. Web/PWA, Chrome, Obsidian-host and static-page browser tests also pass. The Obsidian-host test uses an API stand-in, not a native device. Production CI is green.
+
+          ### Availability
+          Web: deployed at https://cells.garden/.
+          Obsidian: released through the existing community-plugin repository; main.js, styles.css and manifest.json are the verified release files.
+          Chrome: the tested 0.2.0 ZIP is attached. Chrome Web Store submission remains pending publisher Google sign-in; this release does not imply store publication.
+
+          ZIPs and package-checksums.txt are attached for all three distributions. The Obsidian ZIP matches the individual release files byte-for-byte. Remaining design review and store-publishing tasks stay open on the development board.
+          NOTES
+          gh release edit 0.2.0 --title '0.2.0 — Beta' --notes-file "$RUNNER_TEMP/notes.md"
