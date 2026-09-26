@@ -1,0 +1,73 @@
+name: Withdraw unreviewed beta 0.2.0
+
+on:
+  push:
+    branches: ['rollback/withdraw-beta-0.2.0']
+    paths: ['.github/workflows/withdraw-unreviewed-beta.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: withdraw-unreviewed-beta-0.2.0
+  cancel-in-progress: false
+
+jobs:
+  withdraw:
+    if: github.repository == 'lukketsvane/cells.garden' && github.ref == 'refs/heads/rollback/withdraw-beta-0.2.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: write
+    steps:
+      - name: Return exactly release 397264026 to draft without deleting assets or tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          base = 'https://api.github.com/repos/lukketsvane/cells.garden'
+          release_id = 397264026
+          expected_commit = '4c6fe91b52b9e79c5277c07db826612c44675b7e'
+          headers = {
+              'Accept': 'application/vnd.github+json',
+              'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'cells-garden-user-requested-rollback',
+          }
+
+          def api(path, method='GET', body=None):
+              data = None if body is None else json.dumps(body).encode('utf-8')
+              request = urllib.request.Request(base + path, data=data, headers=headers, method=method)
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      return json.load(response)
+              except urllib.error.HTTPError as error:
+                  detail = error.read().decode('utf-8', errors='replace')
+                  raise RuntimeError(f'GitHub returned HTTP {error.code}: {detail}') from None
+
+          before = api(f'/releases/{release_id}')
+          assert before['id'] == release_id and before['tag_name'] == '0.2.0', 'Wrong release'
+          assert before['target_commitish'] == expected_commit, 'Release target changed; refusing to proceed'
+          assert not before.get('immutable', False), 'Immutable release; refusing to proceed'
+          before_tag = api('/git/ref/tags/0.2.0')['object']
+          before_assets = sorted((asset['id'], asset['name'], asset['size']) for asset in before['assets'])
+          if not before['draft']:
+              api(f'/releases/{release_id}', 'PATCH', {'draft': True, 'make_latest': 'false'})
+          after = api(f'/releases/{release_id}')
+          after_tag = api('/git/ref/tags/0.2.0')['object']
+          after_assets = sorted((asset['id'], asset['name'], asset['size']) for asset in after['assets'])
+          assert after['draft'] is True, 'Release is still published'
+          assert after['target_commitish'] == expected_commit, 'Release target unexpectedly changed'
+          assert before_tag == after_tag, 'Tag unexpectedly changed'
+          assert before_assets == after_assets, 'Release assets unexpectedly changed'
+          result = {'release_id': release_id, 'tag': '0.2.0', 'draft': after['draft'], 'assets_preserved': len(after_assets), 'tag_preserved': True}
+          print(json.dumps(result, indent=2))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write('## User-requested beta withdrawal\n\nRelease 0.2.0 is a draft. All assets and the original tag are preserved. No production code or other release was modified.\n')
+          PY
