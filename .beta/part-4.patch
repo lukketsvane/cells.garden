@@ -1,0 +1,191 @@
+diff --git a/src/core/tutorial.test.ts b/src/core/tutorial.test.ts
+new file mode 100644
+index 0000000..0b623e2
+--- /dev/null
++++ b/src/core/tutorial.test.ts
+@@ -0,0 +1,40 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { emptyGarden } from './model';
++import { gardenOnFirstOpen, tutorialGarden, TUTORIAL_TITLE } from './tutorial';
++
++test('a new garden explains every layer with editable ordinary cells', () => {
++    const garden = tutorialGarden();
++    assert.equal(garden.version, 1);
++    assert.equal(garden.projects.length, 1);
++    const plant = garden.projects[0];
++    assert.equal(plant.seed, TUTORIAL_TITLE);
++    for (const zone of ['roots', 'minerals', 'stem', 'flowers'] as const) {
++        assert(plant[zone].length > 0);
++        assert(plant[zone].every(cell => cell.content && cell.isComplete === (zone === 'stem' || zone === 'flowers')));
++    }
++    const cells = [...plant.roots, ...plant.minerals, ...plant.stem, ...plant.flowers];
++    assert.equal(new Set(cells.map(cell => cell.id)).size, cells.length);
++    assert.equal(plant.sharedPlantId, undefined);
++    assert(cells.every(cell => cell.assignees === undefined));
++});
++
++test('saved empty gardens and existing work never receive another tutorial', () => {
++    const empty = emptyGarden();
++    assert.equal(gardenOnFirstOpen(empty), empty);
++    const saved = tutorialGarden();
++    saved.projects[0].seed = 'My own project';
++    assert.equal(gardenOnFirstOpen(saved), saved);
++    assert.equal(gardenOnFirstOpen(null).projects[0].seed, TUTORIAL_TITLE);
++});
++
++test('new gardens have distinct plant/cell identities and do not share mutable data', () => {
++    const first = tutorialGarden();
++    const second = tutorialGarden();
++    assert.notEqual(first.projects[0].id, second.projects[0].id);
++    assert.notEqual(first.projects[0].minerals[0].id, second.projects[0].minerals[0].id);
++    first.projects[0].minerals.length = 0;
++    first.settings.skyNodes.length = 0;
++    assert(second.projects[0].minerals.length > 0);
++    assert(second.settings.skyNodes.length > 0);
++});
+diff --git a/src/core/tutorial.ts b/src/core/tutorial.ts
+new file mode 100644
+index 0000000..1b8e22b
+--- /dev/null
++++ b/src/core/tutorial.ts
+@@ -0,0 +1,38 @@
++/** A starter plant for a genuinely new garden, never for a saved empty one. */
++import { emptyGarden, type Garden, type LayerItem } from './model';
++
++export const TUTORIAL_TITLE = 'Welcome to your garden';
++
++export function tutorialGarden(): Garden {
++    const garden = emptyGarden();
++    const id = `proj_welcome_${crypto.randomUUID()}`;
++    let sequence = 0;
++    const cell = (content: string, isComplete = false): LayerItem => ({
++        id: `${id}_cell_${++sequence}`,
++        content,
++        isComplete,
++    });
++    garden.projects.push({
++        id,
++        name: TUTORIAL_TITLE,
++        seed: TUTORIAL_TITLE,
++        plantType: 'plant_1',
++        standby: false,
++        hue: 0,
++        order: 0,
++        roots: [cell('A plant is a project. Roots hold the reasons you want to do it.')],
++        minerals: [
++            cell('Add an idea or task with the + beside Minerals.'),
++            cell('Finish a task, then move it to Stem using its menu or by dragging it.'),
++            cell('Double-click a cell to edit. On a phone, tap it twice; hold it for its menu.'),
++        ],
++        stem: [cell('This is a completed task. Each completed task grows the plant.', true)],
++        flowers: [cell('Keep a result or takeaway in Flowers. Recycle this tutorial plant when you are ready.', true)],
++    });
++    return garden;
++}
++
++/** An existing garden, even one with no plants, belongs to its user. */
++export function gardenOnFirstOpen(saved: Garden | null): Garden {
++    return saved ?? tutorialGarden();
++}
+diff --git a/tools/void-preview.html b/tools/void-preview.html
+new file mode 100644
+index 0000000..64543e0
+--- /dev/null
++++ b/tools/void-preview.html
+@@ -0,0 +1,80 @@
++<!doctype html>
++<html lang="en">
++<head>
++<meta charset="utf-8">
++<meta name="viewport" content="width=device-width, initial-scale=1">
++<title>Void tile preview · cells.garden</title>
++<style>
++:root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #1e1e1e; color: #dadada; }
++body { max-width: 70rem; margin: 2rem auto; padding: 0 1rem; }
++label { display: block; margin: 1rem 0; }
++input { font: inherit; }
++.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1rem; }
++.sample { position: relative; height: 20rem; overflow: hidden; border: 1px solid #444; }
++.sample::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: var(--ink); -webkit-mask-image: var(--tile); mask-image: var(--tile); -webkit-mask-size: 32px 32px; mask-size: 32px 32px; -webkit-mask-repeat: repeat; mask-repeat: repeat; mask-mode: alpha; image-rendering: pixelated; }
++.dark { background: #1e1e1e; --ink: #363636; }
++.light { background: #f6f5f0; --ink: #c9c6bd; }
++.custom { background: var(--paper, #232630); --ink: var(--custom-ink, #454960); }
++#status { min-height: 3rem; }
++a { color: inherit; }
++</style>
++</head>
++<body>
++<h1>Preview a void tile</h1>
++<p>Open this file directly in a browser. Select a local 32 × 32 PNG with transparency. Nothing is uploaded, saved to the project or published. The repeating alpha mask below is the one used by the garden.</p>
++<label>PNG tile <input id="tile" type="file" accept="image/png"></label>
++<label>Custom background <input id="paper" type="color" value="#232630"></label>
++<label>Custom pattern <input id="ink" type="color" value="#454960"></label>
++<p id="status" role="status">Choose a tile to preview.</p>
++<div class="grid">
++<section><h2>Dark</h2><div class="sample dark"></div></section>
++<section><h2>Light</h2><div class="sample light"></div></section>
++<section><h2>Custom</h2><div class="sample custom"></div></section>
++</div>
++<p>To use an approved tile, replace <code>src/assets/void_tile.png</code> and run the normal tests and builds. This preview never edits the asset.</p>
++<script>
++const tile = document.querySelector('#tile');
++const status = document.querySelector('#status');
++let currentUrl;
++let selection = 0;
++tile.addEventListener('change', async () => {
++    const token = ++selection;
++    const file = tile.files[0];
++    if (!file) return;
++    if (file.type !== 'image/png' || file.size > 1024 * 1024) {
++        status.textContent = 'Choose a PNG smaller than 1 MB.';
++        return;
++    }
++    const url = URL.createObjectURL(file);
++    const image = new Image();
++    image.src = url;
++    try {
++        await image.decode();
++        if (token !== selection) { URL.revokeObjectURL(url); return; }
++        if (image.naturalWidth !== 32 || image.naturalHeight !== 32) throw new Error('The tile must be exactly 32 × 32 pixels.');
++        const canvas = document.createElement('canvas');
++        canvas.width = canvas.height = 32;
++        const ctx = canvas.getContext('2d');
++        ctx.drawImage(image, 0, 0);
++        const pixels = ctx.getImageData(0, 0, 32, 32).data;
++        let visible = false;
++        let transparent = false;
++        for (let i = 3; i < pixels.length; i += 4) { visible ||= pixels[i] > 0; transparent ||= pixels[i] < 255; }
++        if (!visible || !transparent) throw new Error('Use both visible and transparent pixels; an alpha mask needs a pattern.');
++        document.documentElement.style.setProperty('--tile', `url("${url}")`);
++        if (currentUrl) URL.revokeObjectURL(currentUrl);
++        currentUrl = url;
++        status.textContent = `${file.name}: 32 × 32, repeating at native size. RGB colors are ignored; opacity makes the pattern.`;
++    } catch (error) {
++        URL.revokeObjectURL(url);
++        if (token === selection) status.textContent = error.message || 'This PNG could not be decoded.';
++    }
++});
++for (const [id, variable] of [['paper', '--paper'], ['ink', '--custom-ink']]) {
++    document.querySelector(`#${id}`).addEventListener('input', event => {
++        document.documentElement.style.setProperty(variable, event.target.value);
++    });
++}
++</script>
++</body>
++</html>
+diff --git a/vercel.json b/vercel.json
+index 7dc51a3..9a04fc1 100644
+--- a/vercel.json
++++ b/vercel.json
+@@ -29,0 +30,2 @@
++    {"source": "/about", "destination": "/about/", "permanent": true},
++    {"source": "/about/index.html", "destination": "/about/", "permanent": true},
+diff --git a/versions.json b/versions.json
+index f8f1239..aa8d3bd 100644
+--- a/versions.json
++++ b/versions.json
+@@ -19 +19,2 @@
+-  "0.1.17": "1.8.7"
++  "0.1.17": "1.8.7",
++  "0.2.0": "1.8.7"

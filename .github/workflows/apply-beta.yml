@@ -1,0 +1,97 @@
+# Temporary, branch-scoped validation. Production is never written by this job.
+name: Validate beta 0.2.0
+
+on:
+  push:
+    branches: [beta-release]
+    paths: ['.github/workflows/apply-beta.yml', '.beta/*.patch']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: beta-validation
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.repository == 'lukketsvane/cells.garden' && github.ref == 'refs/heads/beta-release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Apply the reviewed beta changes
+        run: |
+          cat .beta/part-1.patch .beta/part-2.patch .beta/part-3.patch .beta/part-4.patch > "$RUNNER_TEMP/beta.patch"
+          echo "7b6412c3af493720373ebd8bdc35caedb87852a3727d6f448891cc90a94648e3  $RUNNER_TEMP/beta.patch" | sha256sum --check
+          git apply --index --unidiff-zero "$RUNNER_TEMP/beta.patch"
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run audit:prod
+      - run: npm run typecheck && npm run typecheck:ext && npm run typecheck:obsidian && npm run typecheck:test
+      - run: npm run lint && npm run test:unit && npm run test:security
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Validate every distribution and the public pages
+        run: |
+          failed=0
+          for check in test:web test:ext test:obsidian test:seo; do
+            if npm run "$check"; then
+              echo "$check passed"
+            else
+              failed=1
+            fi
+          done
+          exit "$failed"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: beta-verified-obsidian
+          path: |
+            obsidian-plugin/main.js
+            obsidian-plugin/styles.css
+            obsidian-plugin/manifest.json
+          retention-days: 1
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: beta-0.2.0-chrome
+          path: dist-ext/
+          retention-days: 7
+          if-no-files-found: error
+
+  commit:
+    needs: validate
+    if: github.repository == 'lukketsvane/cells.garden' && github.ref == 'refs/heads/beta-release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+      - name: Apply exactly the tested source
+        run: |
+          git fetch origin beta-release
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+          cat .beta/part-1.patch .beta/part-2.patch .beta/part-3.patch .beta/part-4.patch > "$RUNNER_TEMP/beta.patch"
+          echo "7b6412c3af493720373ebd8bdc35caedb87852a3727d6f448891cc90a94648e3  $RUNNER_TEMP/beta.patch" | sha256sum --check
+          git apply --index --unidiff-zero "$RUNNER_TEMP/beta.patch"
+          git restore --staged --worktree -- .github/workflows/beta-workspace.yml
+          git rm -- .beta/part-1.patch .beta/part-2.patch .beta/part-3.patch .beta/part-4.patch
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: beta-verified-obsidian
+          path: obsidian-plugin
+      - name: Commit only to the isolated beta branch
+        run: |
+          git add obsidian-plugin/main.js obsidian-plugin/styles.css obsidian-plugin/manifest.json
+          git config user.name tastefinger
+          git config user.email 41840333+lukketsvane@users.noreply.github.com
+          git commit -m "Prepare coordinated beta 0.2.0 release"
+          git push origin HEAD:refs/heads/beta-release

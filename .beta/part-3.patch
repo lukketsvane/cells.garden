@@ -1,0 +1,202 @@
+diff --git a/src/core/garden.ts b/src/core/garden.ts
+index f2ec44f..b571cd1 100644
+--- a/src/core/garden.ts
++++ b/src/core/garden.ts
+@@ -1334,0 +1335,2 @@ export class GardenView extends View {
++    private _splitDragging = false;
++    private _endSplitDrag: (() => void) | null = null;
+@@ -1344 +1346 @@ export class GardenView extends View {
+-            if (this.isTyping() || this._boardDragging || this._itemDrag?.isConnected) this.scheduleRender();
++            if (this.isTyping() || this._boardDragging || this._splitDragging || this._itemDrag?.isConnected) this.scheduleRender();
+@@ -1355 +1357 @@ export class GardenView extends View {
+-        if (this._boardDragging) { this.scheduleRender(); return; }
++        if (this._boardDragging || this._splitDragging) { this.scheduleRender(); return; }
+@@ -1418 +1420 @@ export class GardenView extends View {
+-            if (this._boardDragging) {
++            if (this._boardDragging || this._splitDragging) {
+@@ -1809,0 +1812 @@ export class GardenView extends View {
++        this._endSplitDrag?.();
+@@ -2849,0 +2853 @@ export class GardenView extends View {
++            if (e.button !== 0 || this._splitDragging) return;
+@@ -2850,0 +2855 @@ export class GardenView extends View {
++            this._splitDragging = true;
+@@ -2864 +2869,3 @@ export class GardenView extends View {
+-                bottomHalf.setCssProps({ '--garden-board-flex': `0 0 ${rect.height - y - 4}px` }); // -4 for the resizer height
++                // A touch divider is taller than the desktop divider. Let the board fill what remains.
++                bottomHalf.setCssProps({ '--garden-board-flex': '1 1 0' });
++                if (rect.height > 0) this._splitRatio = y / rect.height;
+@@ -2867,0 +2875,2 @@ export class GardenView extends View {
++                this._splitDragging = false;
++                this._endSplitDrag = null;
+@@ -2873 +2882 @@ export class GardenView extends View {
+-                this._splitRatio = canvasHeight / rect.height;
++                if (rect.height > 0) this._splitRatio = canvasHeight / rect.height;
+@@ -2875,0 +2885 @@ export class GardenView extends View {
++                window.removeEventListener('blur', onMouseUp);
+@@ -2877,0 +2888,2 @@ export class GardenView extends View {
++            this._endSplitDrag = onMouseUp;
++            window.addEventListener('blur', onMouseUp);
+diff --git a/src/core/help.ts b/src/core/help.ts
+new file mode 100644
+index 0000000..d4de0b1
+--- /dev/null
++++ b/src/core/help.ts
+@@ -0,0 +1,48 @@
++/** Help and project information shared by every distribution. */
++import { menuRow, type MenuItem } from './menu';
++import { RELEASE_CHANNEL, RELEASE_VERSION } from './release';
++import { Modal } from './ui';
++
++export const ISSUE_URL = 'https://github.com/lukketsvane/cells.garden/issues/new';
++export const ABOUT_URL = 'https://cells.garden/about/';
++export const SUPPORT_URL = 'https://buymeacoffee.com/cells.garden';
++export const SUPPORT_EMAIL = 'cells.garden@proton.me';
++
++export function reportIssueMenu(): MenuItem {
++    return {
++        label: 'Report issue',
++        panel: (panel, menu) => {
++            for (const [label, url] of [
++                ['Create a GitHub issue', ISSUE_URL],
++                [SUPPORT_EMAIL, `mailto:${SUPPORT_EMAIL}`],
++            ]) {
++                menuRow(panel, { label }).onclick = () => {
++                    menu.close();
++                    window.open(url, '_blank', 'noopener,noreferrer');
++                };
++            }
++        },
++    };
++}
++
++export class AboutModal extends Modal {
++    onOpen() {
++        this.modalEl.addClass('share-modal');
++        const el = this.contentEl;
++        el.createEl('h2', { text: 'About cells.garden' });
++        el.createEl('p', { text: `${RELEASE_CHANNEL} ${RELEASE_VERSION}` });
++        el.createEl('p', { text: 'Turn projects and tasks into a pixel-art garden. Work locally, or sign in to sync and share across devices and apps.' });
++        el.createEl('p', { text: 'Free and open source. Support is optional and does not unlock features.' });
++        for (const [label, href] of [
++            ['About the project', ABOUT_URL],
++            ['How to use the garden', 'https://cells.garden/guide/'],
++            ['Support cells.garden', SUPPORT_URL],
++            [SUPPORT_EMAIL, `mailto:${SUPPORT_EMAIL}`],
++        ]) {
++            el.createEl('p').createEl('a', {
++                text: label,
++                attr: { href, target: '_blank', rel: 'noopener noreferrer' },
++            });
++        }
++    }
++}
+diff --git a/src/core/release.test.ts b/src/core/release.test.ts
+new file mode 100644
+index 0000000..5b362f7
+--- /dev/null
++++ b/src/core/release.test.ts
+@@ -0,0 +1,48 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { readFileSync } from 'node:fs';
++import { RELEASE_CHANNEL, RELEASE_VERSION } from './release';
++
++const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
++const json = (path: string) => JSON.parse(read(path)) as Record<string, unknown>;
++
++test('beta 0.2.0 is coordinated across the web, Chrome and Obsidian', () => {
++    assert.equal(RELEASE_CHANNEL, 'beta');
++    assert.equal(RELEASE_VERSION, '0.2.0');
++    for (const path of ['package.json', 'package-lock.json', 'manifest.json', 'obsidian-plugin/manifest.json']) {
++        assert.equal(json(path).version, RELEASE_VERSION, path);
++    }
++    const lock = json('package-lock.json').packages as Record<string, { version: string }>;
++    assert.equal(lock[''].version, RELEASE_VERSION);
++    assert.equal(json('versions.json')[RELEASE_VERSION], json('manifest.json').minAppVersion);
++    assert.equal(json('manifest.json').minAppVersion, '1.8.7');
++    assert.equal(json('manifest.json').fundingUrl, 'https://buymeacoffee.com/cells.garden');
++    assert.equal(json('obsidian-plugin/manifest.json').fundingUrl, 'https://buymeacoffee.com/cells.garden');
++    assert(read('public/about/index.html').includes(`Beta ${RELEASE_VERSION}`));
++    assert(read('ext/WEBSTORE.md').includes(`Current replacement release: \`${RELEASE_VERSION}\``));
++});
++
++test('About has a static canonical route, redirects, support links and a sitemap entry', () => {
++    const html = read('public/about/index.html');
++    assert(html.includes('href="https://cells.garden/about/"'));
++    assert(html.includes('href="https://buymeacoffee.com/cells.garden"'));
++    assert(html.includes('href="mailto:cells.garden@proton.me"'));
++    assert(!/<script\b/i.test(html), 'the About page needs no script or third-party embed');
++    assert(read('public/sitemap.xml').includes('<loc>https://cells.garden/about/</loc>'));
++    const redirects = json('vercel.json').redirects as { source: string; destination: string }[];
++    for (const source of ['/about', '/about/index.html']) {
++        assert(redirects.some(rule => rule.source === source && rule.destination === '/about/'));
++    }
++});
++
++test('the void tile is a native 32-square PNG with an alpha channel and ships in every theme', () => {
++    const png = readFileSync(new URL('../assets/void_tile.png', import.meta.url));
++    assert.equal(png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
++    assert.equal(png.readUInt32BE(16), 32);
++    assert.equal(png.readUInt32BE(20), 32);
++    assert([4, 6].includes(png[25]), 'use grayscale+alpha or RGBA, not an opaque image');
++    const css = read('src/core/void-tile.css');
++    assert(css.includes("url('../assets/void_tile.png')"));
++    assert(css.includes('mask-mode: alpha'));
++    assert(css.includes('pointer-events: none'));
++});
+diff --git a/src/core/release.ts b/src/core/release.ts
+new file mode 100644
+index 0000000..bb4f103
+--- /dev/null
++++ b/src/core/release.ts
+@@ -0,0 +1,3 @@
++/** The coordinated release shared by the web app, Chrome and Obsidian. */
++export const RELEASE_VERSION = '0.2.0';
++export const RELEASE_CHANNEL = 'beta';
+diff --git a/src/core/settings.ts b/src/core/settings.ts
+index df6b843..b3b4e16 100644
+--- a/src/core/settings.ts
++++ b/src/core/settings.ts
+@@ -9 +8,0 @@ import { avatarEl } from './avatar';
+-import { AccessibilityModal } from './accessibility';
+@@ -135,4 +133,0 @@ export class SettingsModal extends Modal {
+-        new Setting(contentEl).setName('Accessibility')
+-            .setDesc('Contrast and requests for this device.')
+-            .addButton(b => b.setButtonText('Open').onClick(() => new AccessibilityModal().open()));
+-
+diff --git a/src/core/sharing.ts b/src/core/sharing.ts
+index f4347c6..27808e6 100644
+--- a/src/core/sharing.ts
++++ b/src/core/sharing.ts
+@@ -10 +10 @@ import type { PlantData } from './merge';
+-import { emptyGarden } from './model';
++import { tutorialGarden } from './tutorial';
+@@ -129 +129 @@ export async function createSpace(client: SupabaseClient, userId: string, name:
+-        .insert({ owner_id: userId, user_id: null, name, data: { ...emptyGarden(), updatedAt: now }, updated_at: now })
++        .insert({ owner_id: userId, user_id: null, name, data: { ...tutorialGarden(), updatedAt: now }, updated_at: now })
+diff --git a/src/core/touch.ts b/src/core/touch.ts
+index 3397f55..c1167ae 100644
+--- a/src/core/touch.ts
++++ b/src/core/touch.ts
+@@ -39,0 +40,7 @@ export function installTouchAdapter(host: HTMLElement): void {
++    let lastResizeTouch: Touch | null = null;
++    const finishResize = (touch = lastResizeTouch) => {
++        if (!resizing) return;
++        resizing = false;
++        lastResizeTouch = null;
++        if (touch) mouse('mouseup', touch, window);
++    };
+@@ -42,0 +50 @@ export function installTouchAdapter(host: HTMLElement): void {
++            finishResize();
+@@ -52,0 +61,2 @@ export function installTouchAdapter(host: HTMLElement): void {
++            start = null;
++            lastResizeTouch = touch;
+@@ -69,0 +80 @@ export function installTouchAdapter(host: HTMLElement): void {
++            lastResizeTouch = touch;
+@@ -79,2 +90 @@ export function installTouchAdapter(host: HTMLElement): void {
+-            resizing = false;
+-            if (touch) mouse('mouseup', touch, window);
++            finishResize(touch ?? lastResizeTouch);
+@@ -102 +112 @@ export function installTouchAdapter(host: HTMLElement): void {
+-        resizing = false;
++        finishResize();
