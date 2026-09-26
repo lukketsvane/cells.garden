@@ -1,0 +1,263 @@
+diff --git a/src/core/store.ts b/src/core/store.ts
+index e588162..e96e3ac 100644
+--- a/src/core/store.ts
++++ b/src/core/store.ts
+@@ -87 +87,7 @@ export class LocalStore implements GardenStore {
+-    constructor(readonly key: string = LOCAL_KEY) {}
++    readonly key: string;
++    private readonly initialize?: () => Garden;
++
++    constructor(key: string = LOCAL_KEY, initialize?: () => Garden) {
++        this.key = key;
++        this.initialize = initialize;
++    }
+@@ -91,2 +97,8 @@ export class LocalStore implements GardenStore {
+-        if (!raw) return null;
+-        return parseGarden(raw);
++        if (raw === null && this.initialize) {
++            // Only a genuinely absent garden gets a starter. A saved empty or
++            // damaged value must not be replaced by a first-run write.
++            const garden = this.initialize();
++            await this.save(garden);
++            return garden;
++        }
++        return raw ? parseGarden(raw) : null;
+diff --git a/src/core/styles.css b/src/core/styles.css
+index 4a4f1b9..2fb0685 100644
+--- a/src/core/styles.css
++++ b/src/core/styles.css
+@@ -47,15 +46,0 @@
+-:root[data-high-contrast] .garden-ground-layer { filter: brightness(0.3); }
+-:root[data-high-contrast] .garden-mineral-part {
+-    opacity: 1 !important;
+-    filter: brightness(1.5) drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff);
+-}
+-:root[data-high-contrast] .garden-item,
+-:root[data-high-contrast] .seed-content,
+-:root[data-high-contrast] .garden-menu-item,
+-:root[data-high-contrast] .garden-zone-label-row,
+-:root[data-high-contrast] .modal {
+-    color: #fff;
+-    background-color: #111;
+-    border-color: #fff;
+-}
+-:root[data-high-contrast] :focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+diff --git a/src/core/support.ts b/src/core/support.ts
+new file mode 100644
+index 0000000..82c0e29
+--- /dev/null
++++ b/src/core/support.ts
+@@ -0,0 +1,47 @@
++/** Help and project information shared by the web, extension and Obsidian. */
++import { menuRow, type MenuItem } from './menu';
++import { Modal } from './ui';
++
++export const ISSUE_URL = 'https://github.com/lukketsvane/cells.garden/issues/new';
++export const SUPPORT_EMAIL = 'cells.garden@proton.me';
++export const ABOUT_URL = 'https://cells.garden/about/';
++export const SUPPORT_URL = 'https://buymeacoffee.com/cells.garden';
++
++export function reportIssueItem(): MenuItem {
++    return {
++        label: 'Report issue',
++        panel: (panel, menu) => {
++            const github = menuRow(panel, { label: 'Open a GitHub issue' });
++            github.onclick = () => {
++                menu.close();
++                window.open(ISSUE_URL, '_blank', 'noopener,noreferrer');
++            };
++            const email = menuRow(panel, { label: SUPPORT_EMAIL });
++            email.onclick = () => {
++                menu.close();
++                window.open(`mailto:${SUPPORT_EMAIL}`, '_blank', 'noopener,noreferrer');
++            };
++        },
++    };
++}
++
++/** Available offline in every distribution; the full project page is a normal link. */
++export class AboutModal extends Modal {
++    onOpen() {
++        this.modalEl.addClass('share-modal');
++        const content = this.contentEl;
++        content.createEl('h2', { text: 'About cells.garden' });
++        content.createEl('p', { text: 'Give your projects a place to grow. A project board and pixel-art garden, available on the web, in Chrome and in Obsidian.' });
++        content.createEl('p', { text: "Based on Max’s Garden Cells, whose garden design, pixel art and original plugin made this project possible." });
++        content.createEl('p', { text: 'Free and open source under Apache-2.0. No ads or analytics. An account is optional; support is optional too and does not unlock extra features.' });
++        for (const [text, href] of [
++            ['About the project', ABOUT_URL],
++            ['Support cells.garden', SUPPORT_URL],
++            ['Source code', 'https://github.com/lukketsvane/cells.garden'],
++            ['Privacy', 'https://cells.garden/privacy.html'],
++            [SUPPORT_EMAIL, `mailto:${SUPPORT_EMAIL}`],
++        ]) {
++            content.createEl('p').createEl('a', { text, attr: { href, target: '_blank', rel: 'noopener noreferrer' } });
++        }
++    }
++}
+diff --git a/src/core/touch.ts b/src/core/touch.ts
+index 3397f55..de31e4b 100644
+--- a/src/core/touch.ts
++++ b/src/core/touch.ts
+@@ -39,0 +40,6 @@ export function installTouchAdapter(host: HTMLElement): void {
++    let resizeTouch: Touch | null = null;
++    const finishResize = () => {
++        if (resizing && resizeTouch) mouse('mouseup', resizeTouch, window);
++        resizing = false;
++        resizeTouch = null;
++    };
+@@ -42,0 +49 @@ export function installTouchAdapter(host: HTMLElement): void {
++            finishResize();
+@@ -52,0 +60,2 @@ export function installTouchAdapter(host: HTMLElement): void {
++            resizeTouch = touch;
++            start = null;
+@@ -68,0 +78 @@ export function installTouchAdapter(host: HTMLElement): void {
++            resizeTouch = touch;
+@@ -79,2 +89,2 @@ export function installTouchAdapter(host: HTMLElement): void {
+-            resizing = false;
+-            if (touch) mouse('mouseup', touch, window);
++            if (touch) resizeTouch = touch;
++            finishResize();
+@@ -102 +112 @@ export function installTouchAdapter(host: HTMLElement): void {
+-        resizing = false;
++        finishResize();
+diff --git a/src/core/tutorial.test.ts b/src/core/tutorial.test.ts
+new file mode 100644
+index 0000000..bff1c1b
+--- /dev/null
++++ b/src/core/tutorial.test.ts
+@@ -0,0 +1,70 @@
++import assert from 'node:assert/strict';
++import { beforeEach, test } from 'node:test';
++import { emptyGarden } from './model';
++import { setLocalBackend } from './local';
++import { LOCAL_KEY, LocalStore } from './store';
++import { tutorialGarden } from './tutorial';
++
++const values = new Map<string, string>();
++beforeEach(() => {
++    values.clear();
++    setLocalBackend({
++        get: key => values.get(key) ?? null,
++        set: (key, value) => { values.set(key, value); },
++        remove: key => { values.delete(key); },
++    });
++});
++
++test('the tutorial is a normal plant with a cell in every layer and no shared IDs', () => {
++    const a = tutorialGarden(), b = tutorialGarden();
++    assert.equal(a.version, 1, 'the release version does not change the storage schema');
++    assert.equal(a.projects.length, 1);
++    const ids = new Set<string>();
++    for (const garden of [a, b]) {
++        const p = garden.projects[0];
++        assert(!ids.has(p.id)); ids.add(p.id);
++        for (const layer of ['flowers', 'stem', 'roots', 'minerals'] as const) {
++            assert(p[layer].length > 0);
++            for (const cell of p[layer]) {
++                assert(!ids.has(cell.id)); ids.add(cell.id);
++                assert.equal(cell.isComplete, layer === 'flowers');
++                assert(!cell.assignees);
++            }
++        }
++        assert(!p.sharedPlantId);
++    }
++    a.projects[0].minerals.pop();
++    assert.equal(b.projects[0].minerals.length, 3);
++});
++
++test('the first local garden is saved once and survives another instance', async () => {
++    const first = await new LocalStore(LOCAL_KEY, tutorialGarden).load();
++    assert(first?.projects.length);
++    assert.deepEqual(await new LocalStore(LOCAL_KEY, tutorialGarden).load(), first);
++});
++
++test('a deliberately emptied garden never gets the tutorial again', async () => {
++    const store = new LocalStore(LOCAL_KEY, tutorialGarden);
++    await store.load();
++    const empty = emptyGarden();
++    await store.save(empty);
++    assert.deepEqual(await new LocalStore(LOCAL_KEY, tutorialGarden).load(), empty);
++});
++
++test('existing gardens are not rewritten and user mirrors are not initialized', async () => {
++    const garden = tutorialGarden(); garden.projects[0].seed = 'My existing project';
++    const raw = JSON.stringify(garden); values.set(LOCAL_KEY, raw);
++    const loaded = await new LocalStore(LOCAL_KEY, tutorialGarden).load();
++    assert.equal(loaded?.projects[0].seed, 'My existing project');
++    assert.equal(values.get(LOCAL_KEY), raw);
++    assert.equal(await new LocalStore(`${LOCAL_KEY}/user/test`).load(), null);
++    assert(!values.has(`${LOCAL_KEY}/user/test`));
++});
++
++test('a damaged or empty stored value is not overwritten by onboarding', async () => {
++    for (const raw of ['{}', '']) {
++        values.set(LOCAL_KEY, raw);
++        assert.equal(await new LocalStore(LOCAL_KEY, tutorialGarden).load(), null);
++        assert.equal(values.get(LOCAL_KEY), raw);
++    }
++});
+diff --git a/src/core/tutorial.ts b/src/core/tutorial.ts
+new file mode 100644
+index 0000000..0b03187
+--- /dev/null
++++ b/src/core/tutorial.ts
+@@ -0,0 +1,24 @@
++import { emptyGarden, type Garden, type LayerItem } from './model';
++
++/** A normal, editable plant. Removing it never changes how a saved garden loads. */
++export function tutorialGarden(): Garden {
++    const cell = (content: string, isComplete = false): LayerItem => ({
++        id: `item_${crypto.randomUUID()}`, content, isComplete,
++    });
++    return {
++        ...emptyGarden(),
++        updatedAt: new Date().toISOString(),
++        projects: [{
++            id: `proj_${crypto.randomUUID()}`,
++            name: 'Start here', seed: 'Start here',
++            standby: false, hue: 0, order: 0, plantType: 'plant_1',
++            flowers: [cell('Small wins bloom here. Make this garden your own.', true)],
++            stem: [cell('Move a cell between layers: drag it, or use its Move to menu.')],
++            roots: [cell('Double-click a cell to edit. On a phone, tap it twice.'),
++                cell('Right-click or press and hold a cell for its menu.')],
++            minerals: [cell('Add your first idea with + in any layer.'),
++                cell('Add a project with + beside the board. The seed is its name.'),
++                cell('This is an example plant. Edit it or use Recycle plant in its seed menu.')],
++        }],
++    };
++}
+diff --git a/src/core/void-tile.test.ts b/src/core/void-tile.test.ts
+new file mode 100644
+index 0000000..8d7e35d
+--- /dev/null
++++ b/src/core/void-tile.test.ts
+@@ -0,0 +1,11 @@
++import assert from 'node:assert/strict';
++import { readFileSync } from 'node:fs';
++import { test } from 'node:test';
++
++test('the shared void tile stays a native 32-square PNG with an alpha channel', () => {
++    const png = readFileSync(new URL('../assets/void_tile.png', import.meta.url));
++    assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
++    assert.equal(png.readUInt32BE(16), 32);
++    assert.equal(png.readUInt32BE(20), 32);
++    assert([4, 6].includes(png[25]), 'the CSS mask requires an alpha channel');
++});
+diff --git a/vercel.json b/vercel.json
+index 7dc51a3..7c48f38 100644
+--- a/vercel.json
++++ b/vercel.json
+@@ -35 +35,3 @@
+-    {"source": "/obsidian/index.html", "destination": "/obsidian/", "permanent": true}
++    {"source": "/obsidian/index.html", "destination": "/obsidian/", "permanent": true},
++    {"source": "/about", "destination": "/about/", "permanent": true},
++    {"source": "/about/index.html", "destination": "/about/", "permanent": true}
+diff --git a/versions.json b/versions.json
+index f8f1239..aa8d3bd 100644
+--- a/versions.json
++++ b/versions.json
+@@ -19 +19,2 @@
+-  "0.1.17": "1.8.7"
++  "0.1.17": "1.8.7",
++  "0.2.0": "1.8.7"
