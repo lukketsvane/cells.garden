@@ -39,9 +39,11 @@ jobs:
           47bb1da73c1ab8598511778552f2e393ff86fb0ef4886bf5a24b0c8f0c8e582f  01.patch
           b77e4a54a559b4a94a5bf077f6f3dfbbe82e66bcfc16d6b0c5c0dc923f2a2627  02.patch
           51df98fc6b60156e068b78c504955607acb5ee3eb8aa69e7e362140e8ecb6b78  03.patch
+          2ba33f10ea793108a9c5afadf4ed6b463f156a8a413e08ed3a38d31f2fbca714  04.patch
           HASHES
           cd ../../app
           git apply --unidiff-zero --index ../proposal/changes/01.patch ../proposal/changes/02.patch ../proposal/changes/03.patch
+          git apply --index ../proposal/changes/04.patch
           git diff --cached --check
           git diff --cached --stat
           mkdir -p "$RUNNER_TEMP/beta-results/screenshots"
