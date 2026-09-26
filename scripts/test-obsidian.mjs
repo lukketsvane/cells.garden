@@ -16,6 +16,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { checkAndRecycleTutorial } from './test-tutorial.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'obsidian-plugin');
@@ -168,6 +169,9 @@ try {
             } });
         }
     });
+    // Obsidian supplies Modal/Setting shell styles; the API stand-in must supply them too.
+    // Keep the real pointer hit test: no forced clicks or product CSS overrides.
+    await page.addStyleTag({ content: readFileSync(join(ROOT, 'src/core/ui.css'), 'utf8') });
     await page.addStyleTag({ content: css });
     await page.evaluate((md) => { window.__plantMd = md; }, PLANT_MD);
     await page.addScriptTag({ content: STUB });
@@ -218,6 +222,10 @@ try {
         assert(shell.groundRatio > 0.42 && shell.groundRatio < 0.86,
             `the Obsidian garden horizon is misplaced: ${shell.groundRatio}`);
     }
+
+    await checkAndRecycleTutorial(page, { reload: false });
+    const afterTutorial = await page.evaluate(() => JSON.parse(window.__pluginData.local['cells.garden/v1']));
+    assert.equal(afterTutorial.projects.length, 0, 'recycling the tutorial saves through Plugin.saveData');
 
     await page.evaluate(async () => { await window.__commands.find((c) => c.id === 'import-vault-garden').callback(); });
     await page.waitForFunction(() => [...document.querySelectorAll('.seed-content')].some((el) => el.textContent === 'From the vault'), null, { timeout: 5000 });

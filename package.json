@@ -1,13 +1,13 @@
 {
   "name": "cells.garden",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "private": true,
   "description": "Your tasks grow into a pixel-art garden: a board on every new tab, in the side panel and the toolbar, synced across devices.",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run test:security && npm run verify:figma-assets && npm run build:web && npm run build:ext && npm run build:obsidian && npm run test:security",
+    "build": "npm run test:security && npm run build:web && npm run build:ext && npm run build:obsidian && npm run test:security",
     "build:web": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -24,10 +24,8 @@
     "build:obsidian": "vite build --config vite.obsidian.config.ts",
     "typecheck:obsidian": "tsc --noEmit -p tsconfig.obsidian.json",
     "test:obsidian": "node scripts/test-obsidian.mjs",
-    "verify:figma-assets": "node scripts/verify-figma-assets.mjs",
     "test:security": "node scripts/test-security.mjs",
-    "audit:prod": "npm audit --omit=dev --audit-level=high",
-    "pull:figma-dev": "node scripts/pull-figma-dev.mjs"
+    "audit:prod": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

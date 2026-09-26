@@ -32,6 +32,8 @@
     {"source": "/chrome-extension", "destination": "/chrome-extension/", "permanent": true},
     {"source": "/chrome-extension/index.html", "destination": "/chrome-extension/", "permanent": true},
     {"source": "/obsidian", "destination": "/obsidian/", "permanent": true},
-    {"source": "/obsidian/index.html", "destination": "/obsidian/", "permanent": true}
+    {"source": "/obsidian/index.html", "destination": "/obsidian/", "permanent": true},
+    {"source": "/about", "destination": "/about/", "permanent": true},
+    {"source": "/about/index.html", "destination": "/about/", "permanent": true}
   ]
 }

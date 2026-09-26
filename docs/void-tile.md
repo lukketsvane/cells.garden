@@ -4,22 +4,28 @@ The site consumes `src/assets/void_tile.png`, a native 32 by 32 PNG, through
 `.garden-canvas-viewport::before` in `src/core/void-tile.css`. Its alpha forms
 the repeating pattern; CSS supplies the theme color.
 
-## Canonical Figma source
-
-https://www.figma.com/design/0cPckxpkUOpFeL1Dx7VHCg/cells.garden-MASTER?node-id=4-924
-
-- Source component: `4:924`
-- Export frame: `4:925`
-- Native size: 32 × 32
-- Repo destination: `src/assets/void_tile.png`
-
-Replace only the source component's image fill and keep it 32 × 32 with
-transparency. Select the component or its export and use **cells.garden — Dev
-ready**. The approved PNG is queued, validated, committed to `dev`, built, and
-verified at https://dev.cells.garden. Production remains unchanged until the
-separate production promotion is confirmed.
+Keep the asset at 32 × 32 with transparency. Replacing
+`src/assets/void_tile.png` changes the deployed pattern after the normal build
+and deployment flow.
 
 For a local Inspector-only experiment, select
 `.garden-canvas-viewport::before` and replace `mask-image` and
-`-webkit-mask-image`. Reloading restores the deployed asset; Inspector changes
-do not update Figma or Git.
+`-webkit-mask-image`. Reloading restores the deployed asset.
+
+## Preview and publish
+
+Run `npm run dev` and open `/void-preview/`. Select your exported PNG to
+check its native-size repetition and alpha mask with different theme colours.
+The preview validates the PNG, its 32 × 32 dimensions and transparency. It
+uses only local browser memory: it does not upload, persist or publish a file.
+The same preview is available at `https://cells.garden/void-preview/`.
+
+When approved, replace `src/assets/void_tile.png`, run the checks in
+`AGENTS.md` and `npm run test:unit`, and review the result on `dev` before
+promoting to `main`. The asset ships in all three distributions. The unit
+suite checks its dimensions and alpha channel, and `npm run test:seo`
+checks the preview's valid/invalid-file paths.
+
+Design files remain references only. There is no design-tool token, staging
+queue or automated publish link to restore. The manual approval and normal
+repository deployment path are the beta asset workflow.
