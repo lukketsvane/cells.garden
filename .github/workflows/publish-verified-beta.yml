@@ -1,0 +1,41 @@
+name: Publish verified beta tree
+on:
+  push:
+    branches: [beta-workspace]
+    paths: [.github/workflows/publish-verified-beta.yml]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: beta-0.2
+      - name: Require the successful verification job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(gh api repos/lukketsvane/cells.garden/actions/runs/36247756315/jobs --jq '.jobs[] | select(.name == "verify") | .conclusion')" = success
+          test "$(git rev-parse HEAD)" = c55481bb4a8eac3300867f9dadf41689c788ceda
+          test "$(git hash-object .github/workflows/ci.yml)" = 1fe70a121b758a709b5ab484702c49c147e53e05
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: beta-verified-release
+          run-id: 36247756315
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/verified
+      - name: Commit the exact tested tree
+        shell: bash
+        run: |
+          (cd "$RUNNER_TEMP/verified" && sha256sum -c SHA256SUMS)
+          git -c apply.whitespace=nowarn apply --index --exclude=.github/workflows/ci.yml "$RUNNER_TEMP/verified/verified.patch"
+          test "$(git write-tree)" = 81776bb3bb9a3bde7dc99bd9e55b85af71a97d7c
+          test -z "$(git diff --cached --name-only -- .github/workflows)"
+          git config user.name tastefinger
+          git config user.email 41840333+lukketsvane@users.noreply.github.com
+          git commit -m "Prepare 0.2.0 beta across web, Chrome and Obsidian"
+          git push origin HEAD:beta-0.2
+          git rev-parse HEAD
