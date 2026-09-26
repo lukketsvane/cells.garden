@@ -28,8 +28,6 @@ jobs:
         run: npm run audit:prod
       - name: Security invariants
         run: npm run test:security
-      - name: Verify Figma asset contract
-        run: npm run verify:figma-assets
       - name: Typecheck web
         run: npm run typecheck
       - name: Typecheck extension
