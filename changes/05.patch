@@ -1,0 +1,30 @@
+diff --git a/scripts/test-obsidian.mjs b/scripts/test-obsidian.mjs
+--- a/scripts/test-obsidian.mjs
++++ b/scripts/test-obsidian.mjs
+@@ -169,6 +169,9 @@
+             } });
+         }
+     });
++    // Obsidian supplies Modal/Setting shell styles; the API stand-in must supply them too.
++    // Keep the real pointer hit test: no forced clicks or product CSS overrides.
++    await page.addStyleTag({ content: readFileSync(join(ROOT, 'src/core/ui.css'), 'utf8') });
+     await page.addStyleTag({ content: css });
+     await page.evaluate((md) => { window.__plantMd = md; }, PLANT_MD);
+     await page.addScriptTag({ content: STUB });
+diff --git a/scripts/test-seo.mjs b/scripts/test-seo.mjs
+--- a/scripts/test-seo.mjs
++++ b/scripts/test-seo.mjs
+@@ -94,9 +94,13 @@
+     assert.equal(missing.status(), 404, 'unknown page must not become an app-shell soft 404');
+     if (process.env.SEO_SCREENSHOTS) {
+         await app.setViewportSize({ width: 1280, height: 900 });
++        await app.goto(base + '/about/');
++        await app.screenshot({ path: process.env.SEO_SCREENSHOTS + '/about-desktop.png', fullPage: true });
+         await app.goto(base + '/guide/');
+         await app.screenshot({ path: process.env.SEO_SCREENSHOTS + '/guide-desktop.png', fullPage: true });
+         await app.setViewportSize({ width: 390, height: 844 });
++        await app.goto(base + '/about/');
++        await app.screenshot({ path: process.env.SEO_SCREENSHOTS + '/about-mobile.png', fullPage: true });
+         await app.goto(base + '/chrome-extension/');
+         await app.screenshot({ path: process.env.SEO_SCREENSHOTS + '/chrome-mobile.png', fullPage: true });
+     }
