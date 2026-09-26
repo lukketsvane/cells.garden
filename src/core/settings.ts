@@ -6,7 +6,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GardenApp } from './app';
 import { avatarEl } from './avatar';
-import { AccessibilityModal } from './accessibility';
 import { AvatarEditorModal } from './avatar-editor';
 import { hourOf, skyAt, skyGradient, timeOf } from './garden-settings';
 import { ICONS } from './icons';
@@ -131,10 +130,6 @@ export class SettingsModal extends Modal {
         select.addEventListener('change', () => setScene(select.value as Scene));
 
         gardenSettings(contentEl.createDiv(), this.app);
-
-        new Setting(contentEl).setName('Accessibility')
-            .setDesc('Contrast and requests for this device.')
-            .addButton(b => b.setButtonText('Open').onClick(() => new AccessibilityModal().open()));
 
         new Setting(contentEl)
             .setName('Keyboard shortcuts')

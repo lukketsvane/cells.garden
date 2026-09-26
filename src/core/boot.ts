@@ -8,7 +8,7 @@
 import './shim';
 import { GardenApp, type Account } from './app';
 import { assignNotice } from './assign';
-import { applyAccessibility, ISSUE_URL } from './accessibility';
+import { AboutModal, reportIssueItem } from './support';
 import { AuthPill, type AuthOptions } from './auth';
 import { menuRow, type MenuItem } from './menu';
 import { gardenTags, tagKey } from './tags';
@@ -53,6 +53,7 @@ import {
 } from './store';
 import { createSupabase, SupabaseStore } from './supabase';
 import { installTouchAdapter } from './touch';
+import { tutorialGarden } from './tutorial';
 import { BoardToggleButton, GardenFilesButton, openGardenFiles } from './transfer';
 import { forgetDevice, listenForOpenedCells, setAppBadge, syncPush } from './web-push';
 
@@ -117,7 +118,8 @@ function notify(host: HTMLElement, text: string) {
 /** `options.redirectTo`: where a magic link should land. Defaults to the current page. */
 export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): Promise<GardenApp> {
     applyScene();
-    applyAccessibility();
+    // The experimental contrast panel is deferred beyond beta; keep its stored preference.
+    document.documentElement.removeAttribute('data-high-contrast');
     // Extension pages never receive a link, so only the web app looks.
     const inExtension = !!(window as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
     if (!inExtension) stashInviteFromUrl();
@@ -125,7 +127,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
     let pendingCell: CellTarget | null = inExtension ? null : takeCellFromUrl();
 
     // Always start local so the garden shows instantly, signed in or not.
-    const anonymous = new LocalStore();
+    const anonymous = new LocalStore(LOCAL_KEY, tutorialGarden);
     const app = new GardenApp(anonymous);
 
     try {
@@ -401,7 +403,8 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         const petCount = activePetCount(app.settings);
         const itemCount = shownItems(app.settings).length;
         const common: MenuItem[] = [
-            { label: 'Report issue', onClick: () => window.open(ISSUE_URL, '_blank', 'noopener,noreferrer') },
+            reportIssueItem(),
+            { label: 'About', onClick: () => new AboutModal().open() },
             { label: 'Export or import', onClick: () => openGardenFiles(app) },
             // Items wait for Max's approval, so only a build with the extras offers them.
             ...(EXTRAS ? [{

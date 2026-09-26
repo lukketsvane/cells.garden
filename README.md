@@ -25,7 +25,7 @@ Choose a plant shape, change its colours and make the garden your own. Click a p
 
 1. Open **Settings → Community plugins → Browse**, search for **cells.garden**, then install and enable it.
 2. Select the sprout in the ribbon, or run **cells.garden: Open garden** from the command palette.
-3. Add a plant, name its seed and use **+** in a layer to add your first cell.
+3. Explore the editable **Start here** tutorial plant, or add a plant, name its seed and use **+** in a layer to add your first cell.
 4. Move a cell into Flowers when it is done.
 
 Works on Obsidian desktop and mobile. An account is optional: you can begin immediately and keep your garden on your device.
@@ -54,7 +54,11 @@ Already using Max's original **Garden Cells** plugin? The command **Import this 
 
 ## Help and credits
 
-Found a problem or have an idea? [Open an issue](https://github.com/lukketsvane/cells.garden/issues).
+Found a problem or have an idea? Choose **Report issue** in the garden menu to open GitHub or email [cells.garden@proton.me](mailto:cells.garden@proton.me).
+
+Read [About cells.garden](https://cells.garden/about/) for credits and project information. [Support the project](https://buymeacoffee.com/cells.garden) is optional; all features remain free.
+
+**Beta milestone: 0.2.0** for the web, Chrome extension and Obsidian plugin. The later alpha milestone is 1.0.0.
 
 Based on Max's **Garden Cells**, whose garden design, pixel art and original plugin made this project possible. The original is preserved on the [`original` branch](https://github.com/lukketsvane/cells.garden/tree/original). Licensed under [Apache-2.0](LICENSE).
 
