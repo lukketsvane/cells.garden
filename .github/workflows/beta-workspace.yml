@@ -1,0 +1,42 @@
+name: Prepare beta verification workspace
+
+on:
+  push:
+    branches: [beta-workspace]
+    paths: [.github/workflows/beta-workspace.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  workspace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: 41960b42002f03bb5b0ec9a9da8dcab91286a8e9
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:security && npm run audit:prod
+      - name: Package source and installed dependencies
+        run: |
+          mkdir -p "$RUNNER_TEMP/beta-workspace/tools"
+          cp "$(command -v node)" "$RUNNER_TEMP/beta-workspace/tools/node"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/beta-workspace"
+          cp -a node_modules "$RUNNER_TEMP/beta-workspace/node_modules"
+          git bundle create "$RUNNER_TEMP/beta-workspace/repository.bundle" --all
+          tar -czf "$RUNNER_TEMP/beta-workspace.tar.gz" -C "$RUNNER_TEMP/beta-workspace" .
+          sha256sum "$RUNNER_TEMP/beta-workspace.tar.gz"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: beta-verification-workspace
+          path: ${{ runner.temp }}/beta-workspace.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
