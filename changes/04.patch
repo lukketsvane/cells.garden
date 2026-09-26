@@ -1,0 +1,71 @@
+diff --git a/src/core/tutorial.ts b/src/core/tutorial.ts
+--- a/src/core/tutorial.ts
++++ b/src/core/tutorial.ts
+@@ -1,15 +1,20 @@
+ import { emptyGarden, type Garden, type LayerItem } from './model';
++
++// getRandomValues also works in embedded hosts where randomUUID is unavailable.
++function randomId(): string {
++    return Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
++}
+ 
+ /** A normal, editable plant. Removing it never changes how a saved garden loads. */
+ export function tutorialGarden(): Garden {
+     const cell = (content: string, isComplete = false): LayerItem => ({
+-        id: `item_${crypto.randomUUID()}`, content, isComplete,
++        id: `item_${randomId()}`, content, isComplete,
+     });
+     return {
+         ...emptyGarden(),
+         updatedAt: new Date().toISOString(),
+         projects: [{
+-            id: `proj_${crypto.randomUUID()}`,
++            id: `proj_${randomId()}`,
+             name: 'Start here', seed: 'Start here',
+             standby: false, hue: 0, order: 0, plantType: 'plant_1',
+             flowers: [cell('Small wins bloom here. Make this garden your own.', true)],
+diff --git a/src/core/tutorial.test.ts b/src/core/tutorial.test.ts
+--- a/src/core/tutorial.test.ts
++++ b/src/core/tutorial.test.ts
+@@ -68,3 +68,16 @@
+         assert.equal(values.get(LOCAL_KEY), raw);
+     }
+ });
++
++test('onboarding works in an embedded host without randomUUID', () => {
++    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
++    const getRandomValues = crypto.getRandomValues.bind(crypto);
++    try {
++        Object.defineProperty(globalThis, 'crypto', { configurable: true, value: { getRandomValues } });
++        const garden = tutorialGarden();
++        assert.match(garden.projects[0].id, /^proj_[a-f0-9]{32}$/);
++        assert.equal(garden.projects[0].minerals.length, 3);
++    } finally {
++        if (descriptor) Object.defineProperty(globalThis, 'crypto', descriptor);
++    }
++});
+diff --git a/ext/WEBSTORE.md b/ext/WEBSTORE.md
+--- a/ext/WEBSTORE.md
++++ b/ext/WEBSTORE.md
+@@ -9,17 +9,17 @@
+ - Homepage: `https://cells.garden/about/`
+ - Support: `https://github.com/lukketsvane/cells.garden/issues`
+ 
+-## Review replacement
++## Beta update submission
+ 
+-The original 0.1.0 submission entered review on 18 September 2026. When 0.2.0 is ready:
++Upload 0.2.0 to the existing item after the release checks pass:
+ 
+ 1. Open the item in the Chrome Web Store Developer Dashboard.
+-2. On **Store listing**, open the three-dot menu and choose **Cancel review**.
++2. Check the current package and review state. Only cancel a pending review if it must be replaced; do not cancel a published release.
+ 3. On **Package**, upload the 0.2.0 ZIP. `manifest.json` must be at the ZIP root.
+ 4. Re-check Store listing and Privacy practices against the copy below.
+ 5. Submit the 0.2.0 revision for review.
+ 
+-Do not submit 0.1.0 again.
++Do not create a second store item. A built ZIP is not a published store update: confirm the review and publication state in the dashboard.
+ 
+ ## Single purpose
+ 
