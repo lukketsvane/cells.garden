@@ -84,12 +84,24 @@ export function claimAnonymousGarden(userId: string): void {
 
 /** Works without login. One key on this device, the whole garden as JSON. */
 export class LocalStore implements GardenStore {
-    constructor(readonly key: string = LOCAL_KEY) {}
+    readonly key: string;
+    private readonly initialize?: () => Garden;
+
+    constructor(key: string = LOCAL_KEY, initialize?: () => Garden) {
+        this.key = key;
+        this.initialize = initialize;
+    }
 
     async load(): Promise<Garden | null> {
         const raw = local.get(this.key);
-        if (!raw) return null;
-        return parseGarden(raw);
+        if (raw === null && this.initialize) {
+            // Only a genuinely absent garden gets a starter. A saved empty or
+            // damaged value must not be replaced by a first-run write.
+            const garden = this.initialize();
+            await this.save(garden);
+            return garden;
+        }
+        return raw ? parseGarden(raw) : null;
     }
 
     async save(garden: Garden): Promise<void> {

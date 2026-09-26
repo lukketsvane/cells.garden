@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Void tile preview | cells.garden</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css"><link rel="stylesheet" href="./preview.css">
+<script src="./preview.js" defer></script>
+</head>
+<body>
+<header><nav aria-label="Main navigation"><a class="brand" href="/">cells.garden</a><a href="/about/">About</a></nav></header>
+<main>
+<h1>Preview a void background</h1>
+<p>Choose a transparent 32 × 32 PNG. Its alpha becomes the repeating pattern; the two colours simulate the garden’s theme. The image stays on this device and is not uploaded or saved to your garden.</p>
+<p><label for="tile">Tile PNG</label> <input id="tile" type="file" accept="image/png,.png"></p>
+<div class="colours"><label for="ink">Pattern <input id="ink" type="color" value="#363636"></label><label for="ground">Background <input id="ground" type="color" value="#1e1e1e"></label><button id="reset" type="button">Reset preview</button></div>
+<p id="status" role="status">Choose a PNG to preview it at its native pixel size.</p>
+<div id="preview" role="img" aria-label="Repeating void tile preview"><div id="pattern"></div></div>
+<h2>Use an approved tile</h2>
+<p>Replace <code>src/assets/void_tile.png</code> in the repository with your approved 32 × 32 PNG. Run the normal checks and deploy through <code>dev</code>, then <code>main</code>. Web, Chrome and Obsidian use the same asset. Choosing a file here does not publish it.</p>
+<p>There is no automatic design-tool connection. Keep transparency in the PNG; use the theme to choose its colour. The preview repeats at 32 CSS pixels, like the garden.</p>
+</main>
+</body>
+</html>

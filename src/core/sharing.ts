@@ -7,7 +7,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isDrawing } from './avatar-pixels';
 import type { PlantData } from './merge';
-import { emptyGarden } from './model';
+import { tutorialGarden } from './tutorial';
 
 /** Where invite links point. Every build talks to the same project, so one origin serves all. */
 export const APP_URL = 'https://cells.garden/';
@@ -126,7 +126,7 @@ export async function createSpace(client: SupabaseClient, userId: string, name: 
     const now = new Date().toISOString();
     const { data, error } = await client
         .from('gardens')
-        .insert({ owner_id: userId, user_id: null, name, data: { ...emptyGarden(), updatedAt: now }, updated_at: now })
+        .insert({ owner_id: userId, user_id: null, name, data: { ...tutorialGarden(), updatedAt: now }, updated_at: now })
         .select('id, name');
     if (error) fail(error);
     const row = ((data ?? []) as { id: string; name: string }[])[0];
