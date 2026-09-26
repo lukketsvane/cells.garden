@@ -1,6 +1,6 @@
-/* Figma Source/Environment/Void Tile (253:410). The original 32px PNG is
-   used as an alpha mask so theme colors stay in CSS, including in Obsidian.
-   The root qualifier overrides the legacy gradient regardless of CSS bundling order. */
+/* The 32px PNG is used as an alpha mask so theme colors stay in CSS,
+   including in Obsidian. The root qualifier overrides the legacy gradient
+   regardless of CSS bundling order. */
 :root .garden-canvas-viewport {
     background-image: none;
 }

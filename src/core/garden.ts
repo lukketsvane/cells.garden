@@ -1,4 +1,5 @@
 import './shim';
+import { splitHeight } from './split';
 import Sortable, { SortableEvent } from 'sortablejs';
 import type { GardenApp } from './app';
 import { allAssigned, assigneesOf, toggleAssignee } from './assign';
@@ -1332,6 +1333,7 @@ export class GardenView extends View {
     private _renderGeneration = 0; // Guards against concurrent onOpen() calls
     private _renderDebounce: number | null = null;
     private _boardDragging = false;
+    private _resizeCleanup: (() => void) | null = null;
 
     /** onOpen, debounced, so a run of fast edits draws the garden once. */
     scheduleRender() {
@@ -1341,7 +1343,7 @@ export class GardenView extends View {
             // A sync from another tab or device must not throw away a cell being
             // written, or snatch an item from under the finger: wait until the
             // typing or the drag is done, then render.
-            if (this.isTyping() || this._boardDragging || this._itemDrag?.isConnected) this.scheduleRender();
+            if (this.isTyping() || this._boardDragging || this._resizeCleanup || this._itemDrag?.isConnected) this.scheduleRender();
             else void this.onOpen();
         }, 80);
     }
@@ -1352,7 +1354,7 @@ export class GardenView extends View {
     }
 
     async onOpen() {
-        if (this._boardDragging) { this.scheduleRender(); return; }
+        if (this._boardDragging || this._resizeCleanup) { this.scheduleRender(); return; }
         this.installShortcuts();
         const thisGeneration = ++this._renderGeneration;
         try {
@@ -1415,11 +1417,14 @@ export class GardenView extends View {
                 stage.remove();
                 return;
             }
-            if (this._boardDragging) {
+            if (this._boardDragging || this._resizeCleanup) {
                 stage.remove();
                 this.scheduleRender();
                 return;
             }
+            // A drag may have ended while this off-screen stage loaded its images.
+            // Adopt the current split instead of restoring the ratio from render start.
+            stage.querySelector<HTMLElement>('.garden-canvas-area')?.setCssProps({ '--garden-canvas-flex': `0 0 ${this._splitRatio * 100}%` });
             for (const child of Array.from(container.children)) {
                 if (child !== stage) child.remove();
             }
@@ -1807,6 +1812,7 @@ export class GardenView extends View {
     }
 
     async onClose() {
+        this._resizeCleanup?.();
         // The garden goes back into its host before anything is saved or torn down.
         this.panView.exit();
         if (this.isDrawingMode) this.exitDrawingMode();
@@ -2845,38 +2851,38 @@ export class GardenView extends View {
         const resizer = splitContainer.createDiv("garden-resizer");
         const bottomHalf = splitContainer.createDiv("garden-bottom-half");
 
-        // --- Resizer Drag Logic ---
+        // A touch is translated by touch.ts. Keep this divider alive through
+        // pending redraws and store the ratio on every move, not just on release.
         resizer.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
             e.preventDefault();
+            this._resizeCleanup?.();
+            const doc = resizer.ownerDocument;
+            const win = doc.defaultView || window;
+            const previousCursor = doc.body.style.cursor;
+            const previousSelection = doc.body.style.userSelect;
             resizer.addClass('is-dragging');
-            document.body.setCssStyles({ cursor: 'row-resize', userSelect: 'none' }); // Prevent text highlighting while dragging
+            doc.body.setCssStyles({ cursor: 'row-resize', userSelect: 'none' });
 
             const onMouseMove = (ev: MouseEvent) => {
                 const rect = splitContainer.getBoundingClientRect();
-                // Calculate mouse position relative to the container
-                let y = ev.clientY - rect.top;
-                
-                // Clamp values so neither pane gets completely squished
-                y = Math.max(100, Math.min(rect.height - 100, y));
-                
-                // Apply explicit pixel heights instead of flex
-                canvasParent.setCssProps({ '--garden-canvas-flex': `0 0 ${y}px` });
-                bottomHalf.setCssProps({ '--garden-board-flex': `0 0 ${rect.height - y - 4}px` }); // -4 for the resizer height
+                if (!splitContainer.isConnected || rect.height <= 0) return;
+                const y = splitHeight(rect.height, resizer.getBoundingClientRect().height, ev.clientY - rect.top);
+                this._splitRatio = y / rect.height;
+                canvasParent.setCssProps({ '--garden-canvas-flex': `0 0 ${this._splitRatio * 100}%` });
             };
-
-            const onMouseUp = () => {
+            const finish = () => {
                 resizer.removeClass('is-dragging');
-                document.body.setCssStyles({ cursor: '', userSelect: '' });
-                // Save the split ratio so it persists across re-renders
-                const rect = splitContainer.getBoundingClientRect();
-                const canvasHeight = canvasParent.getBoundingClientRect().height;
-                this._splitRatio = canvasHeight / rect.height;
-                window.removeEventListener('mousemove', onMouseMove);
-                window.removeEventListener('mouseup', onMouseUp);
+                doc.body.setCssStyles({ cursor: previousCursor, userSelect: previousSelection });
+                win.removeEventListener('mousemove', onMouseMove);
+                win.removeEventListener('mouseup', finish);
+                win.removeEventListener('blur', finish);
+                this._resizeCleanup = null;
             };
-
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
+            this._resizeCleanup = finish;
+            win.addEventListener('mousemove', onMouseMove);
+            win.addEventListener('mouseup', finish);
+            win.addEventListener('blur', finish);
         });
 
         const scrollContainer = bottomHalf.createDiv("kanban-scroll-container");
