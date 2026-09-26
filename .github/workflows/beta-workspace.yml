@@ -1,0 +1,40 @@
+name: Prepare beta workspace
+
+on:
+  push:
+    branches: [beta-release]
+    paths: ['.github/workflows/beta-workspace.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck && npm run typecheck:ext && npm run typecheck:obsidian && npm run typecheck:test && npm run lint && npm run test:unit && npm run test:security && npm run build
+      - name: Package tracked source and offline development tools
+        run: |
+          directory="$RUNNER_TEMP/beta-workspace"
+          mkdir -p "$directory/.tools"
+          git archive HEAD | tar -x -C "$directory"
+          cp -a node_modules "$directory/node_modules"
+          cp "$(command -v node)" "$directory/.tools/node"
+          printf '%s\n' "$(git rev-parse HEAD)" > "$directory/.tools/source-sha"
+          tar -czf "$RUNNER_TEMP/beta-workspace.tgz" -C "$directory" .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: beta-workspace
+          path: ${{ runner.temp }}/beta-workspace.tgz
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 0
