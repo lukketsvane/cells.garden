@@ -18,7 +18,7 @@ src/web/       index.html, main.ts, app.css (theme tokens), service-worker regis
 src/assets/    sprites; pack/<plantType>/<category>/ is what Garden-Assets/ was in the vault
 ext/           Chrome extension (Manifest V3), see ext/README.md
 public/        icons (SVG + PNG); the web manifest is generated at build time
-scripts/       the icon generator, the three browser tests, the .ts loader for the unit tests
+scripts/       icon generation, tests and development/release helpers
 supabase/      migrations + README (auth, RLS, sharing)
 obsidian-plugin/  the synced Obsidian plugin; main.js and styles.css are its committed build
 main.js, styles.css  copies of that build beside manifest.json (ignored)
@@ -59,7 +59,7 @@ interface GardenStore {
 - First sign-in on a device offers the anonymous garden to an account that has none yet, once.
 - Camera, kanban scroll and the divider between them are per surface (web, new tab, side panel) and stay on the device.
 
-The `.env` file carries the Supabase URL and publishable key on purpose; both are public by design and RLS protects the data. Anything private for local tooling goes in `.env.local`, which git ignores. See `supabase/README.md` for the migrations and the dashboard settings.
+The `.env` file carries the Supabase URL and publishable key on purpose; both are public by design and RLS protects the data. Private credentials must never enter the repository. See `supabase/README.md` for the migrations and dashboard settings.
 
 ## Assets
 
@@ -78,11 +78,6 @@ pack/seeds/seed_icons/seed<n>.png               27
 
 `PLANT_TYPES` in `assets.ts` is whatever the pack holds, so a new plant folder is a new plant type with no code change. Sprite sizes are per plant (35×7 for `plant_1`, roots, minerals and seeds; 45×7 for `plant_3`; down to 15×8 for a `plant_7` stem) and the view reads each one's natural size before scaling it by `PIXEL_SCALE`, so a folder can hold whatever the drawing needs.
 
-A plant's menu names each type from `PLANT_TYPE_NAMES` in `assets.ts` (Bell, Branch, Vine, Spray, Arch, Fork, Starburst and Cluster come from Figma; `plant_9` is Plume); a folder without a name goes by its own. Its seed list shows `seeds/seed_icons/seed<n>.png` for the seed `seeds/seed<n>.png`.
-
-### Figma handoff
-
-The production Figma library keeps source sprites at exact native 1x size. Its `EXPORTS` section maps export frames to repo destinations; `figma/exports.json` is the machine-readable copy of that contract. Run `npm run verify:figma-assets` after changing sprites or the Figma export surface. It checks all mapped PNG paths and native dimensions, and requires every file under `src/assets/**` to be represented either by a Figma export or an explicit repo-source-only reference. With `FIGMA_TOKEN` in the environment or ignored `.env.local`, `npm run sync:figma-assets` reads the original image fill from each of the 277 mapped atomic source components and writes it to the manifest destination. It does not render or resample the pixel art, and it preserves the existing repo PNG when Figma differs only by ancillary metadata while the PNG IDAT pixel stream is identical. `stars_pattern.gif` and the original brand PNGs remain repo-source-of-truth rather than Figma round-trips.
+A plant's menu names each type from `PLANT_TYPE_NAMES` in `assets.ts` (Bell, Branch, Vine, Spray, Arch, Fork, Starburst, Cluster and Plume); a folder without a name goes by its own. Its seed list shows `seeds/seed_icons/seed<n>.png` for the seed `seeds/seed<n>.png`.
 
 The first web build carried the twelve `plant_1` sprites bundled with the plugin, under their names there (`plant_1_part3.png`, `plant_1_flower2.png`). Gardens saved then still hold those paths, so `asset-paths.ts` maps them onto the same ordinal in the vault naming and they keep rendering.
-
