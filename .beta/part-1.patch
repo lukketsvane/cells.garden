@@ -1,0 +1,224 @@
+diff --git a/.github/workflows/beta-workspace.yml b/.github/workflows/beta-workspace.yml
+deleted file mode 100644
+index ffc63e5..0000000
+--- a/.github/workflows/beta-workspace.yml
++++ /dev/null
+@@ -1,40 +0,0 @@
+-name: Prepare beta workspace
+-
+-on:
+-  push:
+-    branches: [beta-release]
+-    paths: ['.github/workflows/beta-workspace.yml']
+-
+-permissions:
+-  contents: read
+-
+-jobs:
+-  prepare:
+-    runs-on: ubuntu-latest
+-    timeout-minutes: 15
+-    steps:
+-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+-        with:
+-          persist-credentials: false
+-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+-        with:
+-          node-version: 24
+-          cache: npm
+-      - run: npm ci --ignore-scripts
+-      - run: npm run typecheck && npm run typecheck:ext && npm run typecheck:obsidian && npm run typecheck:test && npm run lint && npm run test:unit && npm run test:security && npm run build
+-      - name: Package tracked source and offline development tools
+-        run: |
+-          directory="$RUNNER_TEMP/beta-workspace"
+-          mkdir -p "$directory/.tools"
+-          git archive HEAD | tar -x -C "$directory"
+-          cp -a node_modules "$directory/node_modules"
+-          cp "$(command -v node)" "$directory/.tools/node"
+-          printf '%s\n' "$(git rev-parse HEAD)" > "$directory/.tools/source-sha"
+-          tar -czf "$RUNNER_TEMP/beta-workspace.tgz" -C "$directory" .
+-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+-        with:
+-          name: beta-workspace
+-          path: ${{ runner.temp }}/beta-workspace.tgz
+-          retention-days: 1
+-          if-no-files-found: error
+-          compression-level: 0
+diff --git a/README.md b/README.md
+index 6cf93aa..ec6172f 100644
+--- a/README.md
++++ b/README.md
+@@ -61,0 +62,12 @@ For development, see [Contributing](CONTRIBUTING.md) and the [architecture notes
++
++## About and support
++
++Read about the project at https://cells.garden/about/. Optional support:
++https://buymeacoffee.com/cells.garden. Report a problem through GitHub issues
++or email cells.garden@proton.me. Support does not unlock paid features.
++
++## Release milestones
++
++The coordinated beta release is **0.2.0** for the website, Obsidian plugin and
++Chrome extension. The later named milestone is **alpha 1.0.0**. These are the
++project's release labels; the garden data format remains version 1.
+diff --git a/docs/void-tile.md b/docs/void-tile.md
+index da7a07a..b8f8641 100644
+--- a/docs/void-tile.md
++++ b/docs/void-tile.md
+@@ -3,3 +3,4 @@
+-The site consumes `src/assets/void_tile.png`, a native 32 by 32 PNG, through
+-`.garden-canvas-viewport::before` in `src/core/void-tile.css`. Its alpha forms
+-the repeating pattern; CSS supplies the theme color.
++The shared renderer consumes `src/assets/void_tile.png`, a native 32 × 32 PNG,
++through `.garden-canvas-viewport::before` in `src/core/void-tile.css`. The alpha
++channel makes the repeating pattern; CSS supplies the theme color. The same
++source ships in the web, Chrome and Obsidian builds.
+@@ -7,3 +8 @@ the repeating pattern; CSS supplies the theme color.
+-Keep the asset at 32 × 32 with transparency. Replacing
+-`src/assets/void_tile.png` changes the deployed pattern after the normal build
+-and deployment flow.
++## Draw and preview
+@@ -11 +10,22 @@ and deployment flow.
+-For a local Inspector-only experiment, select
++Make a 32 × 32 canvas with transparent and visible pixels in any pixel editor.
++Export RGBA or grayscale-with-alpha PNG at native size, without scaling.
++Colors do not affect the rendered pattern; opacity does.
++
++Open `tools/void-preview.html` directly in a browser and choose the PNG. It
++checks dimensions and transparency and repeats the tile against dark, light
++and adjustable backgrounds. It reads the selected file locally, makes no
++network requests, and neither edits the repository nor publishes anything.
++
++## Apply an approved pattern
++
++Replace `src/assets/void_tile.png` with the approved PNG. Keep its name and
++32 × 32 dimensions. Run `npm run test:unit`, `npm run typecheck`, `npm run lint`,
++`npm run build`, `npm run test:web`, `npm run test:ext` and
++`npm run test:obsidian`. The release checks verify the tile header and the
++shared alpha-mask CSS; browser tests verify the built application.
++
++Review the development build before the normal production release from
++`main`. Reverting the asset commit restores the previous pattern. There is no
++design-tool token, synchronization service or staging pipeline to configure.
++
++For a temporary Inspector-only experiment, select
+@@ -13 +33 @@ For a local Inspector-only experiment, select
+-`-webkit-mask-image`. Reloading restores the deployed asset.
++`-webkit-mask-image`. Reloading restores the built asset.
+diff --git a/ext/WEBSTORE.md b/ext/WEBSTORE.md
+index 3483367..ef3d38a 100644
+--- a/ext/WEBSTORE.md
++++ b/ext/WEBSTORE.md
+@@ -7 +7 @@ Canonical submission notes for the cells.garden Chrome extension.
+-- Current replacement release: `0.1.6`
++- Current replacement release: `0.2.0`
+@@ -95,0 +96,6 @@ The extension's use of user data is limited to its disclosed single purpose and
++
++## About and support
++
++Read about the project at https://cells.garden/about/. Optional support:
++https://buymeacoffee.com/cells.garden. Report a problem through GitHub issues
++or email cells.garden@proton.me. Support does not unlock paid features.
+diff --git a/ext/manifest.ts b/ext/manifest.ts
+index ed19164..03b25fe 100644
+--- a/ext/manifest.ts
++++ b/ext/manifest.ts
+@@ -48 +48 @@ export function buildManifest(env: ManifestEnv): chrome.runtime.ManifestV3 {
+-        homepage_url: 'https://cells.garden',
++        homepage_url: 'https://cells.garden/about/',
+diff --git a/manifest.json b/manifest.json
+index 10536c9..fc2ee91 100644
+--- a/manifest.json
++++ b/manifest.json
+@@ -4 +4 @@
+-  "version": "0.1.17",
++  "version": "0.2.0",
+@@ -9 +9,2 @@
+-  "isDesktopOnly": false
++  "isDesktopOnly": false,
++  "fundingUrl": "https://buymeacoffee.com/cells.garden"
+diff --git a/obsidian-plugin/manifest.json b/obsidian-plugin/manifest.json
+index 10536c9..fc2ee91 100644
+--- a/obsidian-plugin/manifest.json
++++ b/obsidian-plugin/manifest.json
+@@ -4 +4 @@
+-  "version": "0.1.17",
++  "version": "0.2.0",
+@@ -9 +9,2 @@
+-  "isDesktopOnly": false
++  "isDesktopOnly": false,
++  "fundingUrl": "https://buymeacoffee.com/cells.garden"
+diff --git a/package-lock.json b/package-lock.json
+index a8653e1..5ec3948 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -3 +3 @@
+-  "version": "0.1.6",
++  "version": "0.2.0",
+@@ -9 +9 @@
+-      "version": "0.1.6",
++      "version": "0.2.0",
+diff --git a/package.json b/package.json
+index 420a4c4..2006c77 100644
+--- a/package.json
++++ b/package.json
+@@ -3 +3 @@
+-  "version": "0.1.6",
++  "version": "0.2.0",
+diff --git a/public/about/index.html b/public/about/index.html
+new file mode 100644
+index 0000000..a32693b
+--- /dev/null
++++ b/public/about/index.html
+@@ -0,0 +1,51 @@
++<!doctype html>
++<html lang="en">
++<head>
++<meta charset="utf-8">
++<meta name="viewport" content="width=device-width, initial-scale=1">
++<title>About and Support | cells.garden</title>
++<meta name="description" content="About cells.garden, a free and open-source pixel-art project planner for the web, Chrome and Obsidian. Find support, report an issue or support development.">
++<link rel="canonical" href="https://cells.garden/about/">
++<link rel="icon" href="/icon.svg" type="image/svg+xml">
++<link rel="stylesheet" href="/site.css">
++<meta name="theme-color" content="#1e1e1e">
++<meta property="og:type" content="website">
++<meta property="og:site_name" content="cells.garden">
++<meta property="og:title" content="About and Support | cells.garden">
++<meta property="og:description" content="About cells.garden, a free and open-source pixel-art project planner for the web, Chrome and Obsidian. Find support, report an issue or support development.">
++<meta property="og:url" content="https://cells.garden/about/">
++<meta property="og:image" content="https://cells.garden/icon-512.png">
++<meta property="og:image:width" content="512">
++<meta property="og:image:height" content="512">
++<meta property="og:image:alt" content="cells.garden pixel-art plant icon">
++<meta name="twitter:card" content="summary">
++<meta name="twitter:title" content="About and Support | cells.garden">
++<meta name="twitter:description" content="About cells.garden, a free and open-source pixel-art project planner for the web, Chrome and Obsidian. Find support, report an issue or support development.">
++<meta name="twitter:image" content="https://cells.garden/icon-512.png">
++</head>
++<body>
++<header><nav aria-label="Main navigation">
++<a class="brand" href="/"><img src="/icon-192.png" width="28" height="28" alt="">cells.garden</a>
++<a href="/guide/">Guide</a>
++<a href="/chrome-extension/">Chrome</a>
++<a href="/obsidian/">Obsidian</a>
++<a href="/about/" aria-current="page">About</a>
++</nav></header>
++<main>
++<h1>About cells.garden</h1>
++<p class="lead">A place for projects and tasks to grow into a pixel-art garden.</p>
++<p>Beta 0.2.0 brings the same garden to the web, Chrome and Obsidian. Use it locally without an account, or sign in to sync across devices and collaborate.</p>
++<p>Minerals hold ideas and tasks. Roots hold your reasons. Completed work grows the stem, and results become flowers. A starter plant introduces the layers in a new garden.</p>
++<h2>Free and open source</h2>
++<p>cells.garden is developed by tastefinger, building on Max's original Garden Cells plugin. The source is available under the <a href="https://github.com/lukketsvane/cells.garden/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0 license</a>.</p>
++<h2>Support the project</h2>
++<p><a href="https://buymeacoffee.com/cells.garden" target="_blank" rel="noopener noreferrer">Support cells.garden on Buy Me a Coffee</a>. Contributions are optional. There are no paid features to unlock.</p>
++<h2>Report a problem</h2>
++<p><a href="https://github.com/lukketsvane/cells.garden/issues/new" target="_blank" rel="noopener noreferrer">Create a GitHub issue</a> or email <a href="mailto:cells.garden@proton.me">cells.garden@proton.me</a>. Include the app you are using, its version and steps to reproduce the problem. Do not include passwords, sign-in links or private garden data.</p>
++<h2>Your work stays yours</h2>
++<p>Local gardens stay on the device. Signing in enables optional cloud sync and sharing. Use Export or import in the garden menu to keep a backup. Read the <a href="/privacy.html">privacy policy</a> for details.</p>
++<p><a class="button" href="/">Open the garden</a><a href="/guide/">Read the guide</a></p>
++</main>
++<footer><a href="/privacy.html">Privacy</a> · <a href="https://github.com/lukketsvane/cells.garden">Source code</a></footer>
++</body>
++</html>

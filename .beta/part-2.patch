@@ -1,0 +1,158 @@
+diff --git a/public/chrome-extension/index.html b/public/chrome-extension/index.html
+index ff1dcae..1232c70 100644
+--- a/public/chrome-extension/index.html
++++ b/public/chrome-extension/index.html
+@@ -31,0 +32 @@
++<a href="/about/">About</a>
+diff --git a/public/guide/index.html b/public/guide/index.html
+index 07f3559..4ffa365 100644
+--- a/public/guide/index.html
++++ b/public/guide/index.html
+@@ -31,0 +32 @@
++<a href="/about/">About</a>
+diff --git a/public/obsidian/index.html b/public/obsidian/index.html
+index 75149e4..2d21fc5 100644
+--- a/public/obsidian/index.html
++++ b/public/obsidian/index.html
+@@ -31,0 +32 @@
++<a href="/about/">About</a>
+diff --git a/public/sitemap.xml b/public/sitemap.xml
+index bc54b2b..0a6d960 100644
+--- a/public/sitemap.xml
++++ b/public/sitemap.xml
+@@ -7,0 +8 @@
++  <url><loc>https://cells.garden/about/</loc></url>
+diff --git a/scripts/test-ext.mjs b/scripts/test-ext.mjs
+index a5d96c5..7c8e8e8 100644
+--- a/scripts/test-ext.mjs
++++ b/scripts/test-ext.mjs
+@@ -79,0 +80,2 @@ assert(manifest.manifest_version === 3, 'manifest_version must be 3');
++assert.equal(manifest.version, '0.2.0');
++assert.equal(manifest.homepage_url, 'https://cells.garden/about/');
+@@ -294 +296,7 @@ try {
+-    assert(/empty/i.test(await newtab.textContent('.kanban-empty-message h3')), 'a fresh profile should start with an empty garden');
++    assert.equal(await newtab.textContent('.seed-content'), 'Welcome to your garden', 'the extension shares the first-run tutorial');
++    await newtab.evaluate(async () => {
++        const garden = window.garden.toGarden();
++        garden.projects = [];
++        await window.garden.replaceGarden(garden);
++    });
++    await newtab.waitForSelector('.kanban-empty-message');
+diff --git a/scripts/test-obsidian.mjs b/scripts/test-obsidian.mjs
+index be9449f..4fde759 100644
+--- a/scripts/test-obsidian.mjs
++++ b/scripts/test-obsidian.mjs
+@@ -221,0 +222 @@ try {
++    assert.equal(await page.textContent('.seed-content'), 'Welcome to your garden', 'Obsidian shares the starter plant');
+diff --git a/scripts/test-seo.mjs b/scripts/test-seo.mjs
+index 30d65bd..e9457f5 100644
+--- a/scripts/test-seo.mjs
++++ b/scripts/test-seo.mjs
+@@ -33 +33 @@ try {
+-    assert.equal(urls.length, 5);
++    assert.equal(urls.length, 6);
+@@ -68 +68 @@ try {
+-    for (const path of ['/guide/', '/chrome-extension/', '/obsidian/', '/privacy.html']) {
++    for (const path of ['/guide/', '/chrome-extension/', '/obsidian/', '/about/', '/privacy.html']) {
+diff --git a/scripts/test-web.mjs b/scripts/test-web.mjs
+index 9e40e57..64d5f47 100644
+--- a/scripts/test-web.mjs
++++ b/scripts/test-web.mjs
+@@ -369,0 +370,9 @@ async function scenario(browser, errors) {
++    assert.equal(await page.textContent('.seed-content'), 'Welcome to your garden');
++    const starter = await page.evaluate(() => window.garden.toGarden());
++    assert.equal(starter.projects.length, 1, 'one starter plant on first open');
++    await page.evaluate(async () => {
++        const garden = window.garden.toGarden();
++        garden.projects = [];
++        await window.garden.replaceGarden(garden);
++    });
++    await page.reload({ waitUntil: 'networkidle' });
+@@ -370,0 +380 @@ async function scenario(browser, errors) {
++    assert.equal(await page.locator('.project-column').count(), 0, 'a removed tutorial stays removed');
+@@ -1029,0 +1040,7 @@ async function scenario(browser, errors) {
++    assert.equal(await mpage.textContent('.seed-content'), 'Welcome to your garden');
++    await mpage.evaluate(async () => {
++        const garden = window.garden.toGarden();
++        garden.projects = [];
++        await window.garden.replaceGarden(garden);
++    });
++    await mpage.waitForSelector('.kanban-empty-message');
+@@ -1224 +1241,2 @@ async function scenario(browser, errors) {
+-    // Drag the divider with a finger.
++    // Wait for the seed change to finish its redraw, then drag with a finger.
++    await gardenSettled(mpage);
+@@ -1227,0 +1246,3 @@ async function scenario(browser, errors) {
++    // A sync/render request during the drag must not replace the divider under the finger.
++    await mpage.evaluate(() => window.garden.view.scheduleRender());
++    await mpage.waitForTimeout(120);
+@@ -1233,0 +1255,9 @@ async function scenario(browser, errors) {
++    await gardenSettled(mpage);
++    const [cx, cy] = await center('.garden-resizer');
++    await touch('touchStart', cx, cy);
++    await mpage.evaluate(() => window.garden.view.scheduleRender());
++    await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
++    await mpage.waitForTimeout(200);
++    assert.equal(await mpage.locator('.garden-resizer.is-dragging').count(), 0, 'cancelling touch releases the divider');
++    assert.equal(await mpage.evaluate(() => document.body.style.userSelect), '', 'cancelling touch restores text selection');
++
+@@ -1870,3 +1900,2 @@ async function accountScenario(browser, errors) {
+-    await page.locator('.setting-item').filter({ hasText: 'Accessibility' }).getByRole('button', { name: 'Open' }).click();
+-    await page.locator('.setting-item').filter({ hasText: 'High contrast' }).getByRole('switch').click();
+-    assert(await page.locator('html[data-high-contrast]').count());
++    assert.equal(await page.locator('.setting-item').filter({ hasText: 'Accessibility' }).count(), 0, 'experimental accessibility controls are absent in beta');
++    await page.evaluate(() => localStorage.setItem('cells.garden/high-contrast', 'true'));
+@@ -1875 +1904,26 @@ async function accountScenario(browser, errors) {
+-    assert(await page.locator('html[data-high-contrast]').count(), 'contrast preference survives reload');
++    assert.equal(await page.locator('html[data-high-contrast]').count(), 0, 'beta does not activate the paused contrast mode');
++    assert.equal(await page.evaluate(() => localStorage.getItem('cells.garden/high-contrast')), 'true', 'saved preferences are preserved');
++    await page.click('.auth-pill');
++    await page.click(rowOf('Report issue'));
++    assert.equal(await page.getAttribute(rowOf('Report issue'), 'aria-expanded'), 'true');
++    assert(await page.isVisible(rowOf('Create a GitHub issue')));
++    assert(await page.isVisible(rowOf('cells.garden@proton.me')));
++    await page.evaluate(() => {
++        window.__helpOpen = window.open;
++        window.__helpLinks = [];
++        window.open = (url, target, features) => { window.__helpLinks.push({ url, target, features }); return null; };
++    });
++    await page.click(rowOf('Create a GitHub issue'));
++    await page.click('.auth-pill');
++    await page.click(rowOf('Report issue'));
++    await page.click(rowOf('cells.garden@proton.me'));
++    assert.deepEqual(await page.evaluate(() => window.__helpLinks), [
++        { url: 'https://github.com/lukketsvane/cells.garden/issues/new', target: '_blank', features: 'noopener,noreferrer' },
++        { url: 'mailto:cells.garden@proton.me', target: '_blank', features: 'noopener,noreferrer' },
++    ]);
++    await page.evaluate(() => { window.open = window.__helpOpen; delete window.__helpOpen; delete window.__helpLinks; });
++    await page.click('.auth-pill');
++    await page.click(rowOf('About'));
++    assert(await page.getByRole('heading', { name: 'About cells.garden' }).isVisible());
++    assert(await page.getByText('beta 0.2.0', { exact: true }).isVisible());
++    assert.equal(await page.getByRole('link', { name: 'Support cells.garden', exact: true }).getAttribute('href'), 'https://buymeacoffee.com/cells.garden');
+diff --git a/src/core/app.ts b/src/core/app.ts
+index 2e7cc40..423cda3 100644
+--- a/src/core/app.ts
++++ b/src/core/app.ts
+@@ -9,0 +10 @@ import { tagKey } from './tags';
++import { gardenOnFirstOpen } from './tutorial';
+@@ -160 +161 @@ export class GardenApp {
+-        this.applyGarden((await this.store.load()) ?? emptyGarden());
++        this.applyGarden(gardenOnFirstOpen(await this.store.load()));
+@@ -239 +240 @@ export class GardenApp {
+-                chosen = mine ?? emptyGarden();
++                chosen = gardenOnFirstOpen(mine);
+diff --git a/src/core/boot.ts b/src/core/boot.ts
+index ccb5e77..2b08670 100644
+--- a/src/core/boot.ts
++++ b/src/core/boot.ts
+@@ -11 +11 @@ import { assignNotice } from './assign';
+-import { applyAccessibility, ISSUE_URL } from './accessibility';
++import { AboutModal, reportIssueMenu } from './help';
+@@ -120 +119,0 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}):
+-    applyAccessibility();
+@@ -404 +403 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}):
+-            { label: 'Report issue', onClick: () => window.open(ISSUE_URL, '_blank', 'noopener,noreferrer') },
++            reportIssueMenu(),
+@@ -417,0 +417 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}):
++            { label: 'About', onClick: () => new AboutModal().open() },
