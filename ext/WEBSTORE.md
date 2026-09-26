@@ -4,22 +4,22 @@ Canonical submission notes for the cells.garden Chrome extension.
 
 - Item ID: `cighiofbnmdgppphnofkgfoneldalbbf`
 - Publisher: `iverfinne`
-- Current replacement release: `0.1.6`
+- Current replacement release: `0.2.0`
 - Privacy policy: `https://cells.garden/privacy.html`
-- Homepage: `https://cells.garden`
+- Homepage: `https://cells.garden/about/`
 - Support: `https://github.com/lukketsvane/cells.garden/issues`
 
-## Review replacement
+## Beta update submission
 
-The original 0.1.0 submission entered review on 18 September 2026. When 0.1.6 is ready:
+Upload 0.2.0 to the existing item after the release checks pass:
 
 1. Open the item in the Chrome Web Store Developer Dashboard.
-2. On **Store listing**, open the three-dot menu and choose **Cancel review**.
-3. On **Package**, upload the 0.1.6 ZIP. `manifest.json` must be at the ZIP root.
+2. Check the current package and review state. Only cancel a pending review if it must be replaced; do not cancel a published release.
+3. On **Package**, upload the 0.2.0 ZIP. `manifest.json` must be at the ZIP root.
 4. Re-check Store listing and Privacy practices against the copy below.
-5. Submit the 0.1.6 revision for review.
+5. Submit the 0.2.0 revision for review.
 
-Do not submit 0.1.0 again.
+Do not create a second store item. A built ZIP is not a published store update: confirm the review and publication state in the dashboard.
 
 ## Single purpose
 
@@ -93,3 +93,10 @@ The extension's use of user data is limited to its disclosed single purpose and 
 - Optional account sync uses Supabase over HTTPS/WSS.
 - Google sign-in uses a nonce-gated cells.garden web return bridge and `externally_connectable` restricted to `https://cells.garden/*`.
 - The extension works locally without an account.
+
+## About and optional support
+
+Version 0.2.0 is the beta milestone. The shared garden menu includes **About** with credits, privacy and optional support links. The extension homepage is `https://cells.garden/about/`.
+
+Support: `https://buymeacoffee.com/cells.garden` (optional; no paid features).
+Email: `cells.garden@proton.me`.
