@@ -1,0 +1,317 @@
+diff --git a/scripts/test-ext.mjs b/scripts/test-ext.mjs
+index a5d96c5..435fbf4 100644
+--- a/scripts/test-ext.mjs
++++ b/scripts/test-ext.mjs
+@@ -26,0 +27 @@ import { chromium } from 'playwright';
++import { checkAndRecycleTutorial } from './test-tutorial.mjs';
+@@ -294 +295,2 @@ try {
+-    assert(/empty/i.test(await newtab.textContent('.kanban-empty-message h3')), 'a fresh profile should start with an empty garden');
++    await checkAndRecycleTutorial(newtab);
++    assert(/empty/i.test(await newtab.textContent('.kanban-empty-message h3')), 'recycling the tutorial leaves an empty garden');
+diff --git a/scripts/test-obsidian.mjs b/scripts/test-obsidian.mjs
+index be9449f..d6247c4 100644
+--- a/scripts/test-obsidian.mjs
++++ b/scripts/test-obsidian.mjs
+@@ -18,0 +19 @@ import { chromium } from 'playwright';
++import { checkAndRecycleTutorial } from './test-tutorial.mjs';
+@@ -221,0 +223,4 @@ try {
++    await checkAndRecycleTutorial(page, { reload: false });
++    const afterTutorial = await page.evaluate(() => JSON.parse(window.__pluginData.local['cells.garden/v1']));
++    assert.equal(afterTutorial.projects.length, 0, 'recycling the tutorial saves through Plugin.saveData');
++
+diff --git a/scripts/test-seo.mjs b/scripts/test-seo.mjs
+index 30d65bd..1d5a941 100644
+--- a/scripts/test-seo.mjs
++++ b/scripts/test-seo.mjs
+@@ -33 +33 @@ try {
+-    assert.equal(urls.length, 5);
++    assert.equal(urls.length, 6);
+@@ -68 +68 @@ try {
+-    for (const path of ['/guide/', '/chrome-extension/', '/obsidian/', '/privacy.html']) {
++    for (const path of ['/guide/', '/chrome-extension/', '/obsidian/', '/about/', '/privacy.html']) {
+@@ -72,0 +73,12 @@ try {
++    // The authoring preview validates files locally and never writes garden data.
++    await app.goto(base + '/void-preview/');
++    assert.match(await app.locator('meta[name="robots"]').getAttribute('content'), /noindex/);
++    await app.locator('#tile').setInputFiles({ name: 'invalid.png', mimeType: 'image/png', buffer: Buffer.from('not a PNG') });
++    await app.waitForFunction(() => document.querySelector('#status').textContent === 'Choose a valid PNG image.');
++    await app.locator('#tile').setInputFiles(resolve('src/assets/pack/kanban_icons/stem_icon.png'));
++    await app.waitForFunction(() => document.querySelector('#status').textContent.includes('exactly 32'));
++    await app.locator('#tile').setInputFiles(resolve('src/assets/void_tile.png'));
++    await app.waitForSelector('#pattern.ready');
++    assert.match(await app.locator('#status').innerText(), /nothing has been published/);
++    await app.locator('#reset').click();
++    assert.equal(await app.locator('#pattern.ready').count(), 0);
+@@ -75,0 +88,2 @@ try {
++    await app.goto(base + '/about/');
++    assert.match(await app.locator('h1').innerText(), /projects a place to grow/);
+@@ -89 +103 @@ try {
+-    console.log('SEO checks passed: 5 crawlable pages, unique metadata, mobile layout, internal links, utility noindex, service-worker navigation, offline app and guide, true 404.');
++    console.log('SEO checks passed: 6 crawlable pages, unique metadata, mobile layout, internal links, utility noindex, service-worker navigation, offline app and guide, true 404.');
+diff --git a/scripts/test-tutorial.mjs b/scripts/test-tutorial.mjs
+new file mode 100644
+index 0000000..c75de2d
+--- /dev/null
++++ b/scripts/test-tutorial.mjs
+@@ -0,0 +1,27 @@
++import assert from 'node:assert/strict';
++
++/** First-run coverage shared by all distributions; recycle through the real UI. */
++export async function checkAndRecycleTutorial(page, { reload = true } = {}) {
++    const seed = page.locator('.seed-content').filter({ hasText: /^Start here$/ });
++    await seed.waitFor();
++    assert.equal(await page.locator('.project-column').count(), 1);
++    assert.equal(await page.locator('.garden-item').count(), 7);
++    const id = await seed.getAttribute('data-id');
++    for (const layer of ['flowers', 'stem', 'roots', 'minerals']) {
++        assert(await page.locator(`.${layer}-zone .garden-item`).count() > 0, layer);
++    }
++    if (reload) {
++        await page.reload({ waitUntil: 'load' });
++        await seed.waitFor();
++        assert.equal(await seed.getAttribute('data-id'), id, 'the tutorial is kept, not recreated');
++    }
++    await seed.click({ button: 'right' });
++    await page.getByRole('button', { name: 'Recycle plant', exact: true }).click();
++    await page.getByRole('button', { name: 'Recycle', exact: true }).click();
++    await page.waitForSelector('.kanban-empty-message');
++    if (reload) {
++        await page.reload({ waitUntil: 'load' });
++        await page.waitForSelector('.kanban-empty-message');
++        assert.equal(await page.locator('.project-column').count(), 0, 'an intentionally empty garden stays empty');
++    }
++}
+diff --git a/scripts/test-web.mjs b/scripts/test-web.mjs
+index 9e40e57..7b1a45e 100644
+--- a/scripts/test-web.mjs
++++ b/scripts/test-web.mjs
+@@ -23,0 +24 @@ import { chromium } from 'playwright';
++import { checkAndRecycleTutorial } from './test-tutorial.mjs';
+@@ -369,0 +371 @@ async function scenario(browser, errors) {
++    await checkAndRecycleTutorial(page);
+@@ -1029,0 +1032 @@ async function scenario(browser, errors) {
++    await checkAndRecycleTutorial(mpage);
+@@ -1227,0 +1231,3 @@ async function scenario(browser, errors) {
++    await mpage.evaluate(() => window.garden.view.scheduleRender());
++    await mpage.waitForTimeout(120);
++    assert(await mpage.locator('.garden-resizer.is-dragging').count(), 'a queued redraw must not replace the held divider');
+@@ -1234,0 +1241,8 @@ async function scenario(browser, errors) {
++    await gardenSettled(mpage);
++    const [cx, cy] = await center('.garden-resizer');
++    await touch('touchStart', cx, cy);
++    await touch('touchMove', cx, cy - 20);
++    await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
++    assert.equal(await mpage.locator('.garden-resizer.is-dragging').count(), 0, 'touch cancellation releases the divider');
++    assert.notEqual(await mpage.evaluate(() => document.body.style.cursor), 'row-resize');
++
+@@ -1870,3 +1884,2 @@ async function accountScenario(browser, errors) {
+-    await page.locator('.setting-item').filter({ hasText: 'Accessibility' }).getByRole('button', { name: 'Open' }).click();
+-    await page.locator('.setting-item').filter({ hasText: 'High contrast' }).getByRole('switch').click();
+-    assert(await page.locator('html[data-high-contrast]').count());
++    assert.equal(await page.locator('.setting-item').filter({ hasText: 'Accessibility' }).count(), 0, 'the experimental panel is deferred');
++    await page.evaluate(() => localStorage.setItem('cells.garden/high-contrast', 'true'));
+@@ -1875 +1888,12 @@ async function accountScenario(browser, errors) {
+-    assert(await page.locator('html[data-high-contrast]').count(), 'contrast preference survives reload');
++    assert.equal(await page.locator('html[data-high-contrast]').count(), 0, 'old contrast preferences are inactive during beta');
++    assert.equal(await page.evaluate(() => localStorage.getItem('cells.garden/high-contrast')), 'true', 'deferral does not erase a personal preference');
++    await page.click('.auth-pill');
++    await page.click(rowOf('Report issue'));
++    const reportPanel = page.locator('.garden-menu-panel.is-open');
++    assert.equal(await reportPanel.getByRole('button', { name: 'Open a GitHub issue', exact: true }).count(), 1);
++    assert.equal(await reportPanel.getByRole('button', { name: 'cells.garden@proton.me', exact: true }).count(), 1);
++    assert((await reportPanel.innerText()).includes('cells.garden@proton.me'));
++    await page.click(rowOf('About'));
++    await page.getByRole('heading', { name: 'About cells.garden' }).waitFor();
++    assert.equal(await page.getByRole('link', { name: 'Support cells.garden' }).getAttribute('href'), 'https://buymeacoffee.com/cells.garden');
++    assert.equal(await page.getByRole('link', { name: 'About the project' }).getAttribute('href'), 'https://cells.garden/about/');
+diff --git a/src/core/accessibility.ts b/src/core/accessibility.ts
+ deleted file mode 100644
+index de006a1..0000000
+--- a/src/core/accessibility.ts
++++ /dev/null
+@@ -1,29 +0,0 @@
+-/** Personal display preferences. They never change a collaborator's garden. */
+-import { local } from './local';
+-import { Modal, Setting } from './ui';
+-
+-const KEY = 'cells.garden/high-contrast';
+-export const ISSUE_URL = 'https://github.com/lukketsvane/cells.garden/issues/new';
+-
+-export function applyAccessibility() {
+-    document.documentElement.toggleAttribute('data-high-contrast', local.get(KEY) === 'true');
+-}
+-
+-export class AccessibilityModal extends Modal {
+-    onOpen() {
+-        this.modalEl.addClass('share-modal');
+-        this.contentEl.createEl('h2', { text: 'Accessibility' });
+-        this.contentEl.createEl('p', { text: 'Display choices for this device. Your garden stays the same for everyone else.' });
+-        new Setting(this.contentEl)
+-            .setName('High contrast')
+-            .setDesc('Darken the soil, outline minerals, and strengthen text and focus indicators. Layers keep their names and distinct icons, so color is never the only cue.')
+-            .addToggle(t => t.setValue(local.get(KEY) === 'true').onChange(on => {
+-                local.set(KEY, String(on));
+-                document.documentElement.toggleAttribute('data-high-contrast', on);
+-            }));
+-        this.contentEl.createEl('a', {
+-            text: 'Request an accessibility improvement',
+-            attr: { href: `${ISSUE_URL}?title=Accessibility%3A%20&body=What%20would%20make%20the%20garden%20easier%20to%20use%3F%0A%0A`, target: '_blank', rel: 'noopener noreferrer' },
+-        });
+-    }
+-}
+diff --git a/src/core/boot.ts b/src/core/boot.ts
+index ccb5e77..267418f 100644
+--- a/src/core/boot.ts
++++ b/src/core/boot.ts
+@@ -11 +11 @@ import { assignNotice } from './assign';
+-import { applyAccessibility, ISSUE_URL } from './accessibility';
++import { AboutModal, reportIssueItem } from './support';
+@@ -55,0 +56 @@ import { installTouchAdapter } from './touch';
++import { tutorialGarden } from './tutorial';
+@@ -120 +121,2 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}):
+-    applyAccessibility();
++    // The experimental contrast panel is deferred beyond beta; keep its stored preference.
++    document.documentElement.removeAttribute('data-high-contrast');
+@@ -128 +130 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}):
+-    const anonymous = new LocalStore();
++    const anonymous = new LocalStore(LOCAL_KEY, tutorialGarden);
+@@ -404 +406,2 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}):
+-            { label: 'Report issue', onClick: () => window.open(ISSUE_URL, '_blank', 'noopener,noreferrer') },
++            reportIssueItem(),
++            { label: 'About', onClick: () => new AboutModal().open() },
+diff --git a/src/core/garden.ts b/src/core/garden.ts
+index f2ec44f..4e9b536 100644
+--- a/src/core/garden.ts
++++ b/src/core/garden.ts
+@@ -1,0 +2 @@ import './shim';
++import { splitHeight } from './split';
+@@ -1334,0 +1336 @@ export class GardenView extends View {
++    private _resizeCleanup: (() => void) | null = null;
+@@ -1344 +1346 @@ export class GardenView extends View {
+-            if (this.isTyping() || this._boardDragging || this._itemDrag?.isConnected) this.scheduleRender();
++            if (this.isTyping() || this._boardDragging || this._resizeCleanup || this._itemDrag?.isConnected) this.scheduleRender();
+@@ -1355 +1357 @@ export class GardenView extends View {
+-        if (this._boardDragging) { this.scheduleRender(); return; }
++        if (this._boardDragging || this._resizeCleanup) { this.scheduleRender(); return; }
+@@ -1418 +1420 @@ export class GardenView extends View {
+-            if (this._boardDragging) {
++            if (this._boardDragging || this._resizeCleanup) {
+@@ -1422,0 +1425,3 @@ export class GardenView extends View {
++            // A drag may have ended while this off-screen stage loaded its images.
++            // Adopt the current split instead of restoring the ratio from render start.
++            stage.querySelector<HTMLElement>('.garden-canvas-area')?.setCssProps({ '--garden-canvas-flex': `0 0 ${this._splitRatio * 100}%` });
+@@ -1809,0 +1815 @@ export class GardenView extends View {
++        this._resizeCleanup?.();
+@@ -2848 +2854,2 @@ export class GardenView extends View {
+-        // --- Resizer Drag Logic ---
++        // A touch is translated by touch.ts. Keep this divider alive through
++        // pending redraws and store the ratio on every move, not just on release.
+@@ -2849,0 +2857 @@ export class GardenView extends View {
++            if (e.button !== 0) return;
+@@ -2850,0 +2859,5 @@ export class GardenView extends View {
++            this._resizeCleanup?.();
++            const doc = resizer.ownerDocument;
++            const win = doc.defaultView || window;
++            const previousCursor = doc.body.style.cursor;
++            const previousSelection = doc.body.style.userSelect;
+@@ -2852 +2865 @@ export class GardenView extends View {
+-            document.body.setCssStyles({ cursor: 'row-resize', userSelect: 'none' }); // Prevent text highlighting while dragging
++            doc.body.setCssStyles({ cursor: 'row-resize', userSelect: 'none' });
+@@ -2856,9 +2869,4 @@ export class GardenView extends View {
+-                // Calculate mouse position relative to the container
+-                let y = ev.clientY - rect.top;
+-                
+-                // Clamp values so neither pane gets completely squished
+-                y = Math.max(100, Math.min(rect.height - 100, y));
+-                
+-                // Apply explicit pixel heights instead of flex
+-                canvasParent.setCssProps({ '--garden-canvas-flex': `0 0 ${y}px` });
+-                bottomHalf.setCssProps({ '--garden-board-flex': `0 0 ${rect.height - y - 4}px` }); // -4 for the resizer height
++                if (!splitContainer.isConnected || rect.height <= 0) return;
++                const y = splitHeight(rect.height, resizer.getBoundingClientRect().height, ev.clientY - rect.top);
++                this._splitRatio = y / rect.height;
++                canvasParent.setCssProps({ '--garden-canvas-flex': `0 0 ${this._splitRatio * 100}%` });
+@@ -2866,2 +2874 @@ export class GardenView extends View {
+-
+-            const onMouseUp = () => {
++            const finish = () => {
+@@ -2869,7 +2876,5 @@ export class GardenView extends View {
+-                document.body.setCssStyles({ cursor: '', userSelect: '' });
+-                // Save the split ratio so it persists across re-renders
+-                const rect = splitContainer.getBoundingClientRect();
+-                const canvasHeight = canvasParent.getBoundingClientRect().height;
+-                this._splitRatio = canvasHeight / rect.height;
+-                window.removeEventListener('mousemove', onMouseMove);
+-                window.removeEventListener('mouseup', onMouseUp);
++                doc.body.setCssStyles({ cursor: previousCursor, userSelect: previousSelection });
++                win.removeEventListener('mousemove', onMouseMove);
++                win.removeEventListener('mouseup', finish);
++                win.removeEventListener('blur', finish);
++                this._resizeCleanup = null;
+@@ -2877,3 +2882,4 @@ export class GardenView extends View {
+-
+-            window.addEventListener('mousemove', onMouseMove);
+-            window.addEventListener('mouseup', onMouseUp);
++            this._resizeCleanup = finish;
++            win.addEventListener('mousemove', onMouseMove);
++            win.addEventListener('mouseup', finish);
++            win.addEventListener('blur', finish);
+diff --git a/src/core/settings.ts b/src/core/settings.ts
+index df6b843..b3b4e16 100644
+--- a/src/core/settings.ts
++++ b/src/core/settings.ts
+@@ -9 +8,0 @@ import { avatarEl } from './avatar';
+-import { AccessibilityModal } from './accessibility';
+@@ -135,4 +133,0 @@ export class SettingsModal extends Modal {
+-        new Setting(contentEl).setName('Accessibility')
+-            .setDesc('Contrast and requests for this device.')
+-            .addButton(b => b.setButtonText('Open').onClick(() => new AccessibilityModal().open()));
+-
+diff --git a/src/core/sharing.ts b/src/core/sharing.ts
+index f4347c6..27808e6 100644
+--- a/src/core/sharing.ts
++++ b/src/core/sharing.ts
+@@ -10 +10 @@ import type { PlantData } from './merge';
+-import { emptyGarden } from './model';
++import { tutorialGarden } from './tutorial';
+@@ -129 +129 @@ export async function createSpace(client: SupabaseClient, userId: string, name:
+-        .insert({ owner_id: userId, user_id: null, name, data: { ...emptyGarden(), updatedAt: now }, updated_at: now })
++        .insert({ owner_id: userId, user_id: null, name, data: { ...tutorialGarden(), updatedAt: now }, updated_at: now })
+diff --git a/src/core/split.test.ts b/src/core/split.test.ts
+new file mode 100644
+index 0000000..1d58360
+--- /dev/null
++++ b/src/core/split.test.ts
+@@ -0,0 +1,17 @@
++import assert from 'node:assert/strict';
++import { test } from 'node:test';
++import { splitHeight } from './split';
++
++test('a divider leaves room for both panes and its actual touch height', () => {
++    assert.equal(splitHeight(844, 12, 542), 542);
++    assert.equal(splitHeight(844, 12, -50), 100);
++    assert.equal(splitHeight(844, 12, 900), 732);
++    assert.equal(splitHeight(844, 4, 900), 740);
++});
++test('a short viewport does not create a negative or overflowing pane', () => {
++    assert.equal(splitHeight(150, 12, 140), 69);
++    assert.equal(splitHeight(8, 12, 4), 0);
++    assert.equal(splitHeight(0, 12, 100), 0);
++    assert.equal(splitHeight(Number.NaN, 12, 100), 0);
++    assert.equal(splitHeight(800, 12, Number.NaN), 394);
++});
+diff --git a/src/core/split.ts b/src/core/split.ts
+new file mode 100644
+index 0000000..551ff8e
+--- /dev/null
++++ b/src/core/split.ts
+@@ -0,0 +1,9 @@
++/** Canvas height during a split drag. Leave room for the actual divider and both panes. */
++export function splitHeight(total: number, divider: number, wanted: number): number {
++    if (!Number.isFinite(total) || total <= 0) return 0;
++    const grip = Number.isFinite(divider) ? Math.max(0, Math.min(total, divider)) : 0;
++    const available = total - grip;
++    const minimum = Math.min(100, available / 2);
++    const height = Number.isFinite(wanted) ? wanted : available / 2;
++    return Math.max(minimum, Math.min(available - minimum, height));
++}
