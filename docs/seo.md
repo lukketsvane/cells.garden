@@ -43,9 +43,6 @@ search alone. No analytics or tracking was added to the app.
 
 ## Existing validation limits found during this change
 
-- The aggregate build stops at the asset contract: four PNGs in
-  `src/assets/pack/kanban_icons/` are absent from `figma/exports.json` (287 listed,
-  291 actual). The SEO change does not modify these assets or the contract.
 - Individual web, extension and Obsidian builds pass, as do typecheck, lint,
   security checks and the SEO browser checks.
 - The web smoke test passes its desktop, mobile and offline scenarios here, but
