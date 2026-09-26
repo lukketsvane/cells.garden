@@ -30,7 +30,7 @@ try {
     browser = await chromium.launch();
     const sitemap = await (await fetch(base + '/sitemap.xml')).text();
     const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m => new URL(m[1]));
-    assert.equal(urls.length, 5);
+    assert.equal(urls.length, 6);
     const robots = await (await fetch(base + '/robots.txt')).text();
     assert(robots.includes('Sitemap: https://cells.garden/sitemap.xml'));
     const titles = new Set();
@@ -65,14 +65,28 @@ try {
     await app.evaluate(() => navigator.serviceWorker.ready);
     await app.reload();
     assert(await app.evaluate(() => !!navigator.serviceWorker.controller), 'worker must control the browser');
-    for (const path of ['/guide/', '/chrome-extension/', '/obsidian/', '/privacy.html']) {
+    for (const path of ['/guide/', '/chrome-extension/', '/obsidian/', '/about/', '/privacy.html']) {
         await app.goto(base + path);
         assert.equal(await app.locator('h1').count(), 1, 'worker swallowed ' + path);
         assert.equal(await app.locator('#app').count(), 0, 'app shell replaced ' + path);
     }
+    // The authoring preview validates files locally and never writes garden data.
+    await app.goto(base + '/void-preview/');
+    assert.match(await app.locator('meta[name="robots"]').getAttribute('content'), /noindex/);
+    await app.locator('#tile').setInputFiles({ name: 'invalid.png', mimeType: 'image/png', buffer: Buffer.from('not a PNG') });
+    await app.waitForFunction(() => document.querySelector('#status').textContent === 'Choose a valid PNG image.');
+    await app.locator('#tile').setInputFiles(resolve('src/assets/pack/kanban_icons/stem_icon.png'));
+    await app.waitForFunction(() => document.querySelector('#status').textContent.includes('exactly 32'));
+    await app.locator('#tile').setInputFiles(resolve('src/assets/void_tile.png'));
+    await app.waitForSelector('#pattern.ready');
+    assert.match(await app.locator('#status').innerText(), /nothing has been published/);
+    await app.locator('#reset').click();
+    assert.equal(await app.locator('#pattern.ready').count(), 0);
     await context.setOffline(true);
     await app.goto(base + '/guide/');
     assert.match(await app.locator('h1').innerText(), /project planner/);
+    await app.goto(base + '/about/');
+    assert.match(await app.locator('h1').innerText(), /projects a place to grow/);
     await app.goto(base + '/?offline-check=1');
     await app.waitForFunction(() => !!window.garden);
     await context.setOffline(false);
@@ -80,13 +94,17 @@ try {
     assert.equal(missing.status(), 404, 'unknown page must not become an app-shell soft 404');
     if (process.env.SEO_SCREENSHOTS) {
         await app.setViewportSize({ width: 1280, height: 900 });
+        await app.goto(base + '/about/');
+        await app.screenshot({ path: process.env.SEO_SCREENSHOTS + '/about-desktop.png', fullPage: true });
         await app.goto(base + '/guide/');
         await app.screenshot({ path: process.env.SEO_SCREENSHOTS + '/guide-desktop.png', fullPage: true });
         await app.setViewportSize({ width: 390, height: 844 });
+        await app.goto(base + '/about/');
+        await app.screenshot({ path: process.env.SEO_SCREENSHOTS + '/about-mobile.png', fullPage: true });
         await app.goto(base + '/chrome-extension/');
         await app.screenshot({ path: process.env.SEO_SCREENSHOTS + '/chrome-mobile.png', fullPage: true });
     }
-    console.log('SEO checks passed: 5 crawlable pages, unique metadata, mobile layout, internal links, utility noindex, service-worker navigation, offline app and guide, true 404.');
+    console.log('SEO checks passed: 6 crawlable pages, unique metadata, mobile layout, internal links, utility noindex, service-worker navigation, offline app and guide, true 404.');
 } finally {
     await browser?.close();
     await new Promise(resolve => server.close(resolve));

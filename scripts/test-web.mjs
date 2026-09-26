@@ -21,6 +21,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { checkAndRecycleTutorial } from './test-tutorial.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.TEST_WEB_PORT) || 4173;
@@ -367,6 +368,7 @@ async function scenario(browser, errors) {
 
     await page.goto(BASE, { waitUntil: 'networkidle' });
     await page.waitForSelector('.garden-canvas-viewport');
+    await checkAndRecycleTutorial(page);
     console.log('empty msg:', await page.textContent('.kanban-empty-message h3'));
     await shot(page, '01-empty.png');
 
@@ -1027,6 +1029,7 @@ async function scenario(browser, errors) {
     watchErrors(mpage, 'mobile', errors);
     await mpage.goto(BASE, { waitUntil: 'networkidle' });
     await mpage.waitForSelector('.garden-canvas-viewport');
+    await checkAndRecycleTutorial(mpage);
     const cdp = await mctx.newCDPSession(mpage);
     const touch = async (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
     // A re-render swaps the garden in whole, so an element found a moment ago can be
@@ -1225,12 +1228,23 @@ async function scenario(browser, errors) {
     const before = await mpage.$eval('.garden-canvas-area', (el) => el.getBoundingClientRect().height);
     const [rx, ry] = await center('.garden-resizer');
     await touch('touchStart', rx, ry);
+    await mpage.evaluate(() => window.garden.view.scheduleRender());
+    await mpage.waitForTimeout(120);
+    assert(await mpage.locator('.garden-resizer.is-dragging').count(), 'a queued redraw must not replace the held divider');
     for (let i = 1; i <= 6; i++) await touch('touchMove', rx, ry + i * 20);
     await touch('touchEnd', rx, ry + 120);
     await mpage.waitForTimeout(150);
     const after = await mpage.$eval('.garden-canvas-area', (el) => el.getBoundingClientRect().height);
     console.log('divider drag:', Math.round(before), '->', Math.round(after));
     assert(after > before + 60, `dragging the divider did not resize the canvas: ${before} -> ${after}`);
+
+    await gardenSettled(mpage);
+    const [cx, cy] = await center('.garden-resizer');
+    await touch('touchStart', cx, cy);
+    await touch('touchMove', cx, cy - 20);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+    assert.equal(await mpage.locator('.garden-resizer.is-dragging').count(), 0, 'touch cancellation releases the divider');
+    assert.notEqual(await mpage.evaluate(() => document.body.style.cursor), 'row-resize');
 
     // Pan view: the garden alone on the whole screen, where a finger pans it
     // and no touch reaches the page, so Obsidian or the browser never swipe.
@@ -1867,12 +1881,22 @@ async function accountScenario(browser, errors) {
 
     await page.click('.auth-pill');
     await page.click(rowOf('Settings'));
-    await page.locator('.setting-item').filter({ hasText: 'Accessibility' }).getByRole('button', { name: 'Open' }).click();
-    await page.locator('.setting-item').filter({ hasText: 'High contrast' }).getByRole('switch').click();
-    assert(await page.locator('html[data-high-contrast]').count());
+    assert.equal(await page.locator('.setting-item').filter({ hasText: 'Accessibility' }).count(), 0, 'the experimental panel is deferred');
+    await page.evaluate(() => localStorage.setItem('cells.garden/high-contrast', 'true'));
     await page.reload({ waitUntil: 'load' });
     await page.waitForFunction(() => document.querySelector('.auth-pill')?.textContent.includes('Kitchen garden'));
-    assert(await page.locator('html[data-high-contrast]').count(), 'contrast preference survives reload');
+    assert.equal(await page.locator('html[data-high-contrast]').count(), 0, 'old contrast preferences are inactive during beta');
+    assert.equal(await page.evaluate(() => localStorage.getItem('cells.garden/high-contrast')), 'true', 'deferral does not erase a personal preference');
+    await page.click('.auth-pill');
+    await page.click(rowOf('Report issue'));
+    const reportPanel = page.locator('.garden-menu-panel.is-open');
+    assert.equal(await reportPanel.getByRole('button', { name: 'Open a GitHub issue', exact: true }).count(), 1);
+    assert.equal(await reportPanel.getByRole('button', { name: 'cells.garden@proton.me', exact: true }).count(), 1);
+    assert((await reportPanel.innerText()).includes('cells.garden@proton.me'));
+    await page.click(rowOf('About'));
+    await page.getByRole('heading', { name: 'About cells.garden' }).waitFor();
+    assert.equal(await page.getByRole('link', { name: 'Support cells.garden' }).getAttribute('href'), 'https://buymeacoffee.com/cells.garden');
+    assert.equal(await page.getByRole('link', { name: 'About the project' }).getAttribute('href'), 'https://cells.garden/about/');
     assert.deepEqual(state.unknown, [], 'requests the stand-in did not expect');
     await ctx.close();
 

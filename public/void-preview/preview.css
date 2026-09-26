@@ -1,0 +1,7 @@
+.colours { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+label { display: inline-flex; align-items: center; gap: 8px; }
+input[type="file"] { max-width: 100%; }
+button { padding: 8px 14px; font: inherit; }
+#preview { position: relative; min-height: 320px; background-color: #1e1e1e; border: 1px solid #777; overflow: hidden; }
+#pattern { position: absolute; inset: 0; background-color: #363636; mask-size: 32px 32px; -webkit-mask-size: 32px 32px; mask-repeat: repeat; -webkit-mask-repeat: repeat; mask-mode: alpha; image-rendering: pixelated; visibility: hidden; }
+#pattern.ready { visibility: visible; }
