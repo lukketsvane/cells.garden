@@ -1,17 +1,13 @@
 name: Verify beta 0.2 proposal
-
 on:
   push:
     branches: [beta-workspace]
     paths: [.github/workflows/beta-workspace.yml, 'changes/**']
-
 permissions:
   contents: read
-
 concurrency:
   group: beta-proposal
   cancel-in-progress: true
-
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -30,7 +26,7 @@ jobs:
         with:
           path: proposal
           persist-credentials: false
-      - name: Verify proposal integrity and apply to the pinned baseline
+      - name: Verify and apply the proposal
         run: |
           test "$(git rev-parse HEAD)" = 41960b42002f03bb5b0ec9a9da8dcab91286a8e9
           sed -i 's/^ deleted file mode /deleted file mode /' ../proposal/changes/02.patch
@@ -40,12 +36,12 @@ jobs:
           b77e4a54a559b4a94a5bf077f6f3dfbbe82e66bcfc16d6b0c5c0dc923f2a2627  02.patch
           51df98fc6b60156e068b78c504955607acb5ee3eb8aa69e7e362140e8ecb6b78  03.patch
           2ba33f10ea793108a9c5afadf4ed6b463f156a8a413e08ed3a38d31f2fbca714  04.patch
+          830a1927da5a6e1b8b96b62572372c5a244d9bbfdfddb0efc2c8362b3baba315  05.patch
           HASHES
           cd ../../app
           git apply --unidiff-zero --index ../proposal/changes/01.patch ../proposal/changes/02.patch ../proposal/changes/03.patch
-          git apply --index ../proposal/changes/04.patch
+          git apply --index ../proposal/changes/04.patch ../proposal/changes/05.patch
           git diff --cached --check
-          git diff --cached --stat
           mkdir -p "$RUNNER_TEMP/beta-results/screenshots"
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
@@ -53,36 +49,23 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci --ignore-scripts
-      - name: Dependency audit and security invariants
+      - name: Audit, security, typechecks, lint, unit tests and all builds
         run: |
-          npm run audit:prod | tee "$RUNNER_TEMP/beta-results/audit.log"
-          npm run test:security | tee "$RUNNER_TEMP/beta-results/security.log"
-      - name: Four typechecks and lint
-        run: |
-          for check in typecheck typecheck:ext typecheck:obsidian typecheck:test lint; do
+          for check in audit:prod test:security typecheck typecheck:ext typecheck:obsidian typecheck:test lint test:unit build; do
             npm run "$check" 2>&1 | tee "$RUNNER_TEMP/beta-results/${check//:/-}.log"
           done
-      - name: Unit tests
-        run: npm run test:unit 2>&1 | tee "$RUNNER_TEMP/beta-results/unit.log"
-      - name: Build web, Chrome and Obsidian
-        run: npm run build 2>&1 | tee "$RUNNER_TEMP/beta-results/build.log"
-      - name: Install browser
+      - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Web and PWA smoke including mobile regression
+      - name: Web, Chrome, Obsidian and static-page browser tests
         env:
           SCREENSHOTS: ${{ runner.temp }}/beta-results/screenshots
-        run: npm run test:web 2>&1 | tee "$RUNNER_TEMP/beta-results/web.log"
-      - name: Chrome extension smoke
-        env:
           EXT_TEST_SCREENSHOTS: ${{ runner.temp }}/beta-results/screenshots
-        run: npm run test:ext 2>&1 | tee "$RUNNER_TEMP/beta-results/extension.log"
-      - name: Obsidian plugin smoke
-        run: npm run test:obsidian 2>&1 | tee "$RUNNER_TEMP/beta-results/obsidian.log"
-      - name: Static pages and offline About, local tile preview
-        env:
           SEO_SCREENSHOTS: ${{ runner.temp }}/beta-results/screenshots
-        run: npm run test:seo 2>&1 | tee "$RUNNER_TEMP/beta-results/seo.log"
-      - name: Package only the verified outputs
+        run: |
+          for check in test:web test:ext test:obsidian test:seo; do
+            npm run "$check" 2>&1 | tee "$RUNNER_TEMP/beta-results/${check//:/-}.log"
+          done
+      - name: Package verified outputs
         run: |
           mkdir -p "$RUNNER_TEMP/beta-verified"
           git add obsidian-plugin/main.js obsidian-plugin/styles.css obsidian-plugin/manifest.json
@@ -106,7 +89,6 @@ jobs:
           path: ${{ runner.temp }}/beta-verified/
           retention-days: 3
           if-no-files-found: error
-
   publish:
     needs: verify
     runs-on: ubuntu-latest
@@ -120,7 +102,7 @@ jobs:
         with:
           name: beta-verified-release
           path: ${{ runner.temp }}/beta-verified
-      - name: Commit verified beta changes without touching production
+      - name: Commit only the verified beta branch
         shell: bash
         run: |
           test "$(git rev-parse HEAD)" = 41960b42002f03bb5b0ec9a9da8dcab91286a8e9
