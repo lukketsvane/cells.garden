@@ -101,13 +101,12 @@ Search Console is not connected. Until owner access is available, report public
 observations and technical checks only, not invented impressions, clicks, ranking
 gains or conversion figures. There is no page-count or traffic-multiplier target.
 
-## Existing validation limits found during this change
+## Current validation status (27 September 2026)
 
-- The aggregate build stops at the asset contract: four PNGs in
-  `src/assets/pack/kanban_icons/` are absent from `figma/exports.json` (287 listed,
-  291 actual). The SEO change does not modify these assets or the contract.
-- Individual web, extension and Obsidian builds pass, as do typecheck, lint,
-  security checks and the SEO browser checks.
+- The aggregate build, including web, extension and Obsidian targets, passes,
+  as do typecheck, lint, security checks and the eight-page SEO browser checks.
+  The obsolete asset-contract gate was removed upstream before this refresh;
+  this SEO batch did not remove or weaken any check.
 - The web smoke test passes its desktop, mobile and offline scenarios here, but
   full Chromium cannot start for the account/push scenario because this runtime
   disallows its process-singleton socket. That scenario remains unverified here.

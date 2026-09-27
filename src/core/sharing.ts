@@ -242,8 +242,11 @@ export const listMembers = (c: SupabaseClient, gardenId: string) => members(c, G
 export const removeMember = (c: SupabaseClient, gardenId: string, userId: string) => removeFrom(c, GARDEN, gardenId, userId);
 
 export async function renameGarden(client: SupabaseClient, gardenId: string, name: string): Promise<void> {
-    const { error } = await client.from('gardens').update({ name }).eq('id', gardenId);
+    const next = name.trim();
+    if (!next || next.length > 120) throw new ShareError('Use a garden name between 1 and 120 characters.');
+    const { data, error } = await client.from('gardens').update({ name: next }).eq('id', gardenId).select('id');
     if (error) fail(error);
+    if (!data?.length) throw new ShareError('This garden could not be renamed.');
 }
 
 // --- Collaborative plants (migration 0007) -----------------------------------

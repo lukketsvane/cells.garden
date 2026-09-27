@@ -16,11 +16,47 @@ import {
 import { attempt, inviteSection } from './share-ui';
 import { Modal, Setting } from './ui';
 
+/** Rename without opening or changing sharing permissions. */
+export class RenameGardenModal extends Modal {
+    constructor(private readonly name: string, private readonly onSave: (name: string) => Promise<void>) { super(); }
+
+    onOpen() {
+        this.contentEl.createEl('h2', { text: 'Rename garden' });
+        let name = this.name;
+        let busy = false;
+        const status = this.contentEl.createDiv({ cls: 'auth-status', attr: { role: 'status' } });
+        const save = async () => {
+            const next = name.trim();
+            if (busy) return;
+            if (!next) { status.setText('Give the garden a name.'); return; }
+            busy = true;
+            try {
+                await this.onSave(next);
+                this.close();
+            } catch {
+                status.setText('Could not save the name. Try again.');
+            } finally { busy = false; }
+        };
+        new Setting(this.contentEl).setName('Name').addText(t => {
+            t.setValue(name);
+            t.inputEl.maxLength = 120;
+            t.inputEl.setAttribute('aria-label', 'Garden name');
+            t.onChange(value => { name = value; });
+            t.inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') void save(); });
+            window.setTimeout(() => { t.inputEl.focus(); t.inputEl.select(); }, 0);
+        });
+        new Setting(this.contentEl)
+            .addButton(b => b.setButtonText('Cancel').onClick(() => this.close()))
+            .addButton(b => b.setButtonText('Save').setCta().onClick(() => void save()));
+    }
+}
+
 export class ShareGardenModal extends Modal {
     constructor(
         private readonly client: SupabaseClient,
         private readonly gardenId: string,
         private name: string,
+        private readonly onRename?: (name: string) => void,
     ) {
         super();
     }
@@ -47,6 +83,7 @@ export class ShareGardenModal extends Modal {
                     void attempt(say, 'rename', async () => {
                         await renameGarden(this.client, this.gardenId, next);
                         this.name = next;
+                        this.onRename?.(next);
                         say('Name saved.');
                     });
                 });

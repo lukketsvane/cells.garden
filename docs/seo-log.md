@@ -71,11 +71,51 @@
 
 ### Next actions
 
-1. Resolve the existing asset-contract discrepancy with verified source mapping,
-   then pass the full repository checks and review the deployment preview.
+1. Complete hosted CI and review the protected deployment preview. The old
+   asset-contract blocker was resolved upstream; see the 27 September entry.
 2. Publish this batch only after the required checks pass, verify live canonical
    URLs and redirects, then submit only changed pages to IndexNow.
 3. With owner-authorized Search Console access, submit the sitemap and establish
    an impressions/clicks/indexing baseline for `cells garden` in Norway on
    mobile and desktop, for 7- and 28-day comparisons. Inspect the homepage's
    Google-selected canonical and request indexing after the published change.
+
+
+## 2026-09-27 — Refresh pending SEO batch against current production
+
+- Continued PR #20 instead of creating another content batch. Merged production
+  main `7f8adb1806192c876e6e4a0d9b2aa45ed01d9fc6` into the pending branch.
+  The diff against main remains limited to the existing SEO files; no beta
+  application code, generated plugin bundle or asset changes were introduced.
+  The 26 September production rollback and removal of the obsolete Figma
+  integration are preserved. No release checks were removed by this refresh.
+- Verified production homepage HTTP 200, self-canonical, readable initial HTML
+  and no noindex response header. The four other published sitemap pages return
+  200 with matching canonicals. robots.txt allows crawling and advertises the
+  five-URL sitemap. An unknown route and the unpublished mobile guide return 404.
+  Production still has the original homepage title, without the spaced brand.
+- General searches for both brand spellings found official Chrome and Obsidian
+  listings, but provide no measured Google Norway position. Search Console is
+  still unavailable. Google's public DNS resolver returned no TXT answer for
+  cells.garden; DNS verification was not modified in this cycle.
+- Rechecked pending feature instructions against current transfer, vault,
+  sharing, notification and Obsidian code. No further pages were added.
+- Passed locally: npm run typecheck, npm run lint, npm run build (all three
+  targets plus security invariants), npm run test:seo (all eight pages), and
+  git diff --check. Reviewed generated desktop guide and mobile Chrome-page
+  screenshots; content is readable without horizontal overflow.
+- npm run test:web completed the initial headless-browser scenarios, then failed
+  launching full Chromium for account/push coverage: process_singleton_posix.cc,
+  socket() failed: Operation not permitted. That coverage remains unverified
+  locally. Browser binaries were installed, but the runtime restriction remains;
+  no test was skipped or weakened. Hosted CI must pass before release.
+- Vercel's production fetch tool still returned an access error even though
+  direct public HTTP inspection succeeded. Protected preview access must be
+  verified before publishing.
+- Production URLs changed this cycle: none. Pending public changes remain `/`,
+  `/guide/`, `/chrome-extension/`, `/obsidian/`, plus the three unpublished guides
+  `/guide/mobile/`, `/guide/sync-sharing/`, and `/guide/backups/`.
+  No IndexNow submission, Google sitemap submission or recrawl request was made.
+- Next: obtain passing hosted checks on this refreshed PR and verify its preview.
+  Keep the batch in review until those gates pass. After publication, verify
+  production before submitting only materially changed canonical URLs.

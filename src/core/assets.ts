@@ -46,7 +46,7 @@ export const PLANT_TYPES: string[] = Array.from(
     )
 ).sort();
 
-/** What each plant type is called, from the Figma file. plant_9 has no name there; its leaves are plumes. */
+/** Product labels for the bundled plant types. */
 export const PLANT_TYPE_NAMES: Readonly<Record<string, string>> = {
     plant_1: 'Bell',
     plant_2: 'Branch',
