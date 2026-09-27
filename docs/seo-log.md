@@ -109,13 +109,24 @@
   socket() failed: Operation not permitted. That coverage remains unverified
   locally. Browser binaries were installed, but the runtime restriction remains;
   no test was skipped or weakened. Hosted CI must pass before release.
-- Vercel's production fetch tool still returned an access error even though
-  direct public HTTP inspection succeeded. Protected preview access must be
-  verified before publishing.
+- Preview deployment `dpl_5kCVBZhGino95CDmgxX7d96HYpnS` for commit
+  `07bc8bdb67335a84b21339f60653ae7a0aca3217` is READY. Vercel's fetch tool
+  returned an access error, but direct public requests succeeded: all eight
+  canonical page bodies, robots.txt and sitemap.xml returned 200 and exactly
+  matched the locally tested build. Preview:
+  https://cellsgarden-1j2np3hu2-iverfinnes-projects.vercel.app/
+- Hosted SEO run 36301654973 passed. Full CI run 36301654976 passed dependency
+  audit, security, all typechecks, lint, unit tests and the aggregate build, then
+  failed Web/PWA smoke at scripts/test-web.mjs:1233: dragging the mobile divider
+  did not resize the canvas (422 -> 422). Extension and Obsidian smoke stages
+  were consequently skipped. This differs from the local Chromium launch limit
+  and needs investigation; neither the application code nor this test changed
+  in the SEO diff. CI: https://github.com/lukketsvane/cells.garden/actions/runs/36301654976
 - Production URLs changed this cycle: none. Pending public changes remain `/`,
   `/guide/`, `/chrome-extension/`, `/obsidian/`, plus the three unpublished guides
   `/guide/mobile/`, `/guide/sync-sharing/`, and `/guide/backups/`.
   No IndexNow submission, Google sitemap submission or recrawl request was made.
-- Next: obtain passing hosted checks on this refreshed PR and verify its preview.
-  Keep the batch in review until those gates pass. After publication, verify
-  production before submitting only materially changed canonical URLs.
+- Next: investigate the hosted mobile-divider failure and obtain passing full
+  CI before publishing this draft. Preview content verification is complete.
+  After publication, verify production before submitting only materially
+  changed canonical URLs.
