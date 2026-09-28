@@ -45,10 +45,6 @@
 }
 
 :root[data-high-contrast] .garden-ground-layer { filter: brightness(0.3); }
-/* The plants must sit ABOVE the ground (6) and grass (7), but below the worm/fireflies (9) */
-.garden-plants-layer {
-    z-index: 8;
-}
 :root[data-high-contrast] .garden-mineral-part {
     opacity: 1 !important;
     filter: brightness(1.5) drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff);
@@ -99,12 +95,12 @@
 }
 
 .garden-sky-color-layer {
-    z-index: 0;
+    z-index: -8;
     transition: background-color 30s ease;
 }
 
 .garden-shooting-star-layer {
-    z-index: 2;
+    z-index: 1.45;
 }
 
 .garden-shooting-star-layer canvas {
@@ -116,13 +112,13 @@
 }
 
 .garden-satellite-layer {
-    z-index: 3;
+    z-index: -6;
     /* Clipped, so a satellite can never leave the sky. */
     overflow: hidden;
 }
 
 .garden-stars-layer {
-    z-index: 1;
+    z-index: -7;
     background-repeat: repeat;
     mix-blend-mode: screen;
     image-rendering: pixelated;
@@ -130,14 +126,14 @@
 }
 
 .garden-mountains-layer {
-    z-index: 5;
+    z-index: 0;
     background-repeat: repeat-x;
     background-position: left bottom;
     image-rendering: pixelated;
 }
 
 .garden-bg-layer {
-    z-index: 6;
+    z-index: 3;
     background-repeat: repeat-x;
     background-position: left bottom;
     image-rendering: pixelated;
@@ -154,7 +150,7 @@
 }
 
 .garden-cloud-layer {
-    z-index: 4;
+    z-index: 2;
     opacity: 0.5;
     background-repeat: repeat-x;
     background-position: bottom left;
@@ -169,7 +165,7 @@
     left: 0;
     right: 0;
     height: var(--ground);
-    z-index: 6;
+    z-index: 2;
     background-repeat: repeat;
     background-position: 0 0;
     image-rendering: pixelated;
@@ -183,7 +179,7 @@
     right: 0;
     bottom: 0;
     left: 0;
-    z-index: 7;
+    z-index: 3;
     pointer-events: none;
 }
 
@@ -197,7 +193,7 @@
 .garden-worm-layer {
     position: absolute;
     inset: 0;
-    z-index: 9;
+    z-index: 4;
 }
 
 /*
@@ -253,14 +249,14 @@
 /* The worm's squares, and the one box that catches the pointer over them. */
 .garden-worm-segment {
     position: absolute;
-    z-index: 8;
+    z-index: 1;
     pointer-events: none;
     image-rendering: pixelated;
 }
 
 .garden-worm-hitbox {
     position: absolute;
-    z-index: 5;
+    z-index: 2;
     cursor: pointer;
 }
 
