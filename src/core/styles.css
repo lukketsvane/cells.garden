@@ -165,7 +165,7 @@
     left: 0;
     right: 0;
     height: var(--ground);
-    z-index: 6
+    z-index: 6;
     background-repeat: repeat;
     background-position: 0 0;
     image-rendering: pixelated;
