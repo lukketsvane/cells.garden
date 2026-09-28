@@ -100,7 +100,7 @@
 }
 
 .garden-shooting-star-layer {
-    z-index: 1.45;
+    z-index: 2;
 }
 
 .garden-shooting-star-layer canvas {
@@ -112,13 +112,13 @@
 }
 
 .garden-satellite-layer {
-    z-index: 1.1;
+    z-index: 3;
     /* Clipped, so a satellite can never leave the sky. */
     overflow: hidden;
 }
 
 .garden-stars-layer {
-    z-index: 1.4;
+    z-index: 1;
     background-repeat: repeat;
     mix-blend-mode: screen;
     image-rendering: pixelated;
@@ -126,14 +126,14 @@
 }
 
 .garden-mountains-layer {
-    z-index: 1.6;
+    z-index: 5;
     background-repeat: repeat-x;
     background-position: left bottom;
     image-rendering: pixelated;
 }
 
 .garden-bg-layer {
-    z-index: 2;
+    z-index: 6;
     background-repeat: repeat-x;
     background-position: left bottom;
     image-rendering: pixelated;
@@ -150,7 +150,7 @@
 }
 
 .garden-cloud-layer {
-    z-index: 2;
+    z-index: 4;
     opacity: 0.5;
     background-repeat: repeat-x;
     background-position: bottom left;
@@ -165,7 +165,7 @@
     left: 0;
     right: 0;
     height: var(--ground);
-    z-index: 2;
+    z-index: 6
     background-repeat: repeat;
     background-position: 0 0;
     image-rendering: pixelated;
@@ -179,7 +179,7 @@
     right: 0;
     bottom: 0;
     left: 0;
-    z-index: 3;
+    z-index: 7;
     pointer-events: none;
 }
 
@@ -193,7 +193,7 @@
 .garden-worm-layer {
     position: absolute;
     inset: 0;
-    z-index: 4;
+    z-index: 9;
 }
 
 /*
@@ -249,14 +249,14 @@
 /* The worm's squares, and the one box that catches the pointer over them. */
 .garden-worm-segment {
     position: absolute;
-    z-index: 1;
+    z-index: 8;
     pointer-events: none;
     image-rendering: pixelated;
 }
 
 .garden-worm-hitbox {
     position: absolute;
-    z-index: 2;
+    z-index: 5;
     cursor: pointer;
 }
 
