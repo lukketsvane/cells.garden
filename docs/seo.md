@@ -101,7 +101,7 @@ Search Console is not connected. Until owner access is available, report public
 observations and technical checks only, not invented impressions, clicks, ranking
 gains or conversion figures. There is no page-count or traffic-multiplier target.
 
-## Current validation status (27 September 2026)
+## Current validation status (28 September 2026)
 
 - The aggregate build, including web, extension and Obsidian targets, passes,
   as do typecheck, lint, security checks and the eight-page SEO browser checks.
@@ -110,6 +110,8 @@ gains or conversion figures. There is no page-count or traffic-multiplier target
 - The web smoke test passes its desktop, mobile and offline scenarios here, but
   full Chromium cannot start for the account/push scenario because this runtime
   disallows its process-singleton socket. That scenario remains unverified here.
+- Hosted CI and the separate SEO workflow passed on the 27 September PR revision.
+  A later main refresh must pass the same gates before publication.
 
 References: [Google JavaScript SEO](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics),
 [Google recrawl guidance](https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl),

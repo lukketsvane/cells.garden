@@ -130,3 +130,33 @@
   CI before publishing this draft. Preview content verification is complete.
   After publication, verify production before submitting only materially
   changed canonical URLs.
+
+## 2026-09-28 — Refresh after product updates
+
+- Continued PR #20. The prior revision `c7464283cfbcb535ca3e8e9c148b5b1ac0952fff`
+  passed both hosted CI run 36301773730 and SEO run 36301773787, clearing the
+  mobile-divider failure recorded above without weakening a test.
+- Production main advanced to `fef3d8cfb41c389dab7f2a4536e77720a1a6ec43`.
+  Merged that main revision into the pending branch; the diff against main still
+  contains only the same 14 SEO files. Current product and generated-plugin
+  changes are preserved. No new content page or feature claim was added.
+- Verified production on 28 September: the homepage, robots.txt and five-URL
+  sitemap return HTTP 200; the homepage remains self-canonical and still uses
+  the original title without the spaced brand. The latest Vercel production
+  deployment is READY at commit `fef3d8c`.
+- General web search returned the homepage plus current official Chrome and
+  Obsidian listings. This is useful corroboration, not a measured Google Norway
+  rank. Search Console remains unavailable. Google's public DNS resolver still
+  returns no TXT record for cells.garden, so the supplied domain-verification
+  record is not public and no sitemap or recrawl request was made.
+- Production URLs changed this cycle: none. No IndexNow submission was made.
+- Passed locally after the merge: `npm run typecheck`, `npm run lint`, the full
+  aggregate build, the eight-page SEO browser checks and `git diff --check`.
+  `npm run test:web` passed its headless desktop, mobile, offline and divider
+  scenarios, then hit the previously documented runtime restriction when full
+  Chromium could not create its process-singleton socket. Hosted CI remains the
+  authoritative check for that final account/push coverage.
+- Next: pass the required checks and verify the refreshed preview. If those pass,
+  the remaining release action is human review/merge of PR #20. After release,
+  verify production, submit only the changed canonical URLs to IndexNow, and use
+  authorized Search Console access for the Google-specific baseline and recrawl.
