@@ -85,6 +85,8 @@ try {
     await app.waitForFunction(() => document.querySelector('#status').textContent.includes('exactly 32'));
     await app.locator('#tile').setInputFiles(resolve('src/assets/void_tile.png'));
     await app.waitForSelector('#pattern.ready');
+    assert.match(await app.locator('#pattern').evaluate(el => getComputedStyle(el).backgroundImage), /^url\("data:image\/png;base64,/);
+    assert.equal(await app.locator('#pattern').evaluate(el => getComputedStyle(el).maskImage), 'none', 'opaque artwork is not flattened into an alpha mask');
     assert.match(await app.locator('#status').innerText(), /nothing has been published/);
     await app.locator('#reset').click();
     assert.equal(await app.locator('#pattern.ready').count(), 0);

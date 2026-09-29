@@ -1,4 +1,4 @@
-// Local-only preview. Decode the PNG into a small canvas before using its alpha.
+// Local-only preview. Keep the PNG's original colours and transparency.
 const input = document.querySelector('#tile');
 const status = document.querySelector('#status');
 const pattern = document.querySelector('#pattern');
@@ -25,30 +25,26 @@ input.addEventListener('change', async () => {
         if (!ctx) throw new Error('This browser cannot preview the image.');
         ctx.drawImage(image, 0, 0);
         const rgba = ctx.getImageData(0, 0, 32, 32).data;
-        let transparent = false, visible = false;
+        let visible = false;
         for (let i = 3; i < rgba.length; i += 4) {
-            transparent ||= rgba[i] < 255;
             visible ||= rgba[i] > 0;
         }
-        if (!transparent || !visible) throw new Error('Use a PNG with both visible and transparent pixels.');
+        if (!visible) throw new Error('Use a PNG with visible pixels.');
         if (current !== generation) return;
-        const mask = `url("${canvas.toDataURL('image/png')}")`;
-        pattern.style.maskImage = mask;
-        pattern.style.webkitMaskImage = mask;
+        pattern.style.backgroundImage = `url("${canvas.toDataURL('image/png')}")`;
         pattern.classList.add('ready');
-        status.textContent = `${file.name}: 32 × 32 alpha tile. Preview only; nothing has been published.`;
+        status.textContent = `${file.name}: 32 × 32 PNG. Original colours preserved. Preview only; nothing has been published.`;
     } catch (error) {
         if (current === generation) status.textContent = error instanceof Error ? error.message : 'The image could not be previewed.';
     } finally {
         if (url) URL.revokeObjectURL(url);
     }
 });
-document.querySelector('#ink').addEventListener('input', event => { pattern.style.backgroundColor = event.target.value; });
 document.querySelector('#ground').addEventListener('input', event => { preview.style.backgroundColor = event.target.value; });
 document.querySelector('#reset').addEventListener('click', () => {
     generation++;
     input.value = '';
     pattern.classList.remove('ready');
-    pattern.style.maskImage = pattern.style.webkitMaskImage = '';
+    pattern.style.backgroundImage = '';
     status.textContent = 'Choose a PNG to preview it at its native pixel size.';
 });
