@@ -21,6 +21,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { checkAndRecycleTutorial } from './test-tutorial.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.TEST_WEB_PORT) || 4173;
@@ -360,6 +361,119 @@ function stopPreview(child) {
 // The scenario
 // ---------------------------------------------------------------------------
 
+async function routeScenario(browser, errors) {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const page = await ctx.newPage();
+    watchErrors(page, 'routes', errors);
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.seed-content');
+    assert.equal(await page.textContent('.seed-content'), 'Tutorial plant', 'a first garden has the editable tutorial');
+    assert.equal(await page.locator('.project-column').count(), 1);
+    await shot(page, '17-starter-phone.png');
+    const starter = await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')));
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')).projects[0].id), starter.projects[0].id, 'reload does not duplicate the starter');
+    await page.waitForFunction(() => !!window.garden);
+    await page.evaluate(async () => {
+        const garden = window.garden.toGarden();
+        await window.garden.replaceGarden({ ...garden, projects: [] });
+    });
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForSelector('.kanban-empty-message');
+    assert.equal(await page.locator('.project-column').count(), 0, 'removing the starter stays removed');
+
+    await page.goto(`${BASE}about/`, { waitUntil: 'networkidle' });
+    await page.getByRole('heading', { level: 1, name: 'Give your projects a place to grow' }).waitFor();
+    await shot(page, '18-about-phone.png');
+    await page.getByRole('link', { name: 'Try the tutorial garden →' }).click();
+    await page.waitForSelector('.seed-content');
+    assert.equal(new URL(page.url()).pathname, '/tutorial');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.length), 0, 'practice does not replace the real garden');
+    await page.waitForFunction(() => !!window.garden);
+    await page.evaluate(async () => {
+        window.garden.gardenData[0].seed = 'Practice edit';
+        await window.garden.saveGardenData();
+    });
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await page.textContent('.seed-content'), 'Practice edit');
+    await page.goBack({ waitUntil: 'networkidle' });
+    assert.equal(new URL(page.url()).pathname, '/about/');
+    await page.goForward({ waitUntil: 'networkidle' });
+    assert.equal(await page.textContent('.seed-content'), 'Practice edit');
+    await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+    await ctx.setOffline(true);
+    await page.goto(`${BASE}about/`, { waitUntil: 'load' });
+    await page.getByRole('heading', { level: 1 }).waitFor();
+    await page.goto(`${BASE}tutorial`, { waitUntil: 'load' });
+    await page.waitForSelector('.seed-content');
+    assert.equal(await page.textContent('.seed-content'), 'Practice edit', 'nested routes work offline');
+    await ctx.setOffline(false);
+
+    const token = '3f2c9a1e-5b7d-4c8e-9f10-2a3b4c5d6e7f';
+    for (const [path, kind] of [[`invite/${token}`, 'garden'], [`invite/plant/${token}`, 'plant']]) {
+        await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+        assert(!page.url().includes(token), 'invite is removed from the address');
+        if (await page.locator('.auth-pill').count()) {
+            await page.locator('.auth-note').waitFor();
+            assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1/pendingJoin')).kind), kind);
+        }
+    }
+    await page.evaluate(() => localStorage.removeItem('cells.garden/v1/pendingJoin'));
+    await page.goto(`${BASE}garden/${token}`, { waitUntil: 'networkidle' });
+    if (await page.locator('.auth-pill').count()) {
+        await page.getByText('Sign in to open this garden.', { exact: true }).waitFor();
+        assert.equal(new URL(page.url()).pathname, `/garden/${token}`, 'the requested garden survives until sign-in');
+    }
+    await page.goto(`${BASE}user/${token}`, { waitUntil: 'networkidle' });
+    await page.getByRole('heading', { name: 'Gardener', exact: true }).waitFor();
+    await page.goto(`${BASE}invite/not-a-token`, { waitUntil: 'networkidle' });
+    await page.getByRole('heading', { name: 'This page is not here' }).waitFor();
+    await ctx.close();
+    console.log('Routes: starter, deletion, practice isolation, reload, history, offline, invites and signed-out links passed');
+}
+
+async function legacyTutorialScenario(browser, errors, signedIn = false) {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const fixture = JSON.parse(readFileSync(join(ROOT, 'scripts/fixtures/legacy-tutorial.json'), 'utf8'));
+    const state = signedIn ? await standInSupabase(ctx) : null;
+    if (state) state.garden = fixture;
+    else await ctx.addInitScript(garden => {
+        if (localStorage.getItem('cells.garden/v1') === null) localStorage.setItem('cells.garden/v1', JSON.stringify(garden));
+    }, fixture);
+    const page = await ctx.newPage();
+    watchErrors(page, `legacy tutorial ${signedIn ? 'account' : 'local'}`, errors);
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.waitForFunction(id => window.garden?.gardenData[0]?.id === id
+        && window.garden.gardenData[0].seed === 'Tutorial plant', fixture.projects[0].id);
+    await page.waitForFunction(() => document.querySelectorAll('.garden-plant-wrapper .garden-part[data-item-id]').length === 40);
+    assert.equal(await page.locator('.project-column').count(), 1, 'upgrade does not add a second plant');
+    assert.equal(await page.locator('.garden-item').count(), 39);
+    const art = await page.locator('.garden-plant-wrapper').evaluate(plant => {
+        const above = [...plant.querySelectorAll('.garden-stem-part, .garden-flower-part')];
+        const seed = plant.querySelector('.garden-seed-part').getBoundingClientRect();
+        return {
+            above: above.length,
+            height: seed.top - Math.min(...above.map(part => part.getBoundingClientRect().top)),
+            missingSprites: [...plant.querySelectorAll('.garden-part')].filter(part => getComputedStyle(part).backgroundImage === 'none').length,
+        };
+    });
+    assert.equal(art.above, 19);
+    assert(art.height > 100, `the original tutorial must render tall on a phone: ${JSON.stringify(art)}`);
+    assert.equal(art.missingSprites, 0, 'all original stems, flowers, roots, minerals and seed have artwork');
+    await shot(page, signedIn ? '20-upgraded-account-tutorial-phone.png' : '19-upgraded-local-tutorial-phone.png');
+    const saved = state?.garden ?? await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')));
+    const ids = saved.projects[0].flowers.map(cell => cell.id);
+    assert.equal(saved.projects[0].seed, 'Tutorial plant', 'the replacement is persisted');
+    assert.equal(saved.projects[0].id, fixture.projects[0].id);
+    if (state) assert.equal(state.saves, 1);
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForFunction(id => window.garden?.gardenData[0]?.id === id, fixture.projects[0].id);
+    assert.deepEqual(await page.evaluate(() => window.garden.gardenData[0].flowers.map(cell => cell.id)), ids);
+    if (state) assert.equal(state.saves, 1, 'reloading the upgraded cloud garden does not write it again');
+    await ctx.close();
+    console.log(`Legacy tutorial: ${signedIn ? 'account' : 'local'} starter upgraded in place, tall artwork and reload verified`);
+}
+
 async function scenario(browser, errors) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     const page = await ctx.newPage();
@@ -367,6 +481,7 @@ async function scenario(browser, errors) {
 
     await page.goto(BASE, { waitUntil: 'networkidle' });
     await page.waitForSelector('.garden-canvas-viewport');
+    await checkAndRecycleTutorial(page);
     console.log('empty msg:', await page.textContent('.kanban-empty-message h3'));
     await shot(page, '01-empty.png');
 
@@ -1027,6 +1142,7 @@ async function scenario(browser, errors) {
     watchErrors(mpage, 'mobile', errors);
     await mpage.goto(BASE, { waitUntil: 'networkidle' });
     await mpage.waitForSelector('.garden-canvas-viewport');
+    await checkAndRecycleTutorial(mpage);
     const cdp = await mctx.newCDPSession(mpage);
     const touch = async (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
     // A re-render swaps the garden in whole, so an element found a moment ago can be
@@ -1484,6 +1600,7 @@ const DEE = '0b9c3a52-6f1e-4c7a-9d10-00000000000d';
 /** Someone who left: nobody knows them any more. */
 const GONE = '0b9c3a52-6f1e-4c7a-9d10-0000000000ff';
 const OWN_GARDEN = '5d1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b';
+const SHARED_GARDEN = '5d1e2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5c';
 const IPHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
 
 function supabaseUrl() {
@@ -1520,7 +1637,7 @@ function fakeJwt(claims) {
     return `${part({ alg: 'HS256', typ: 'JWT' })}.${part(claims)}.stand-in`;
 }
 
-async function standInSupabase(ctx) {
+async function standInSupabase(ctx, withShared = false) {
     const exp = Math.floor(Date.now() / 1000) + 30 * 24 * 3600;
     const session = {
         access_token: fakeJwt({ sub: ME, role: 'authenticated', aud: 'authenticated', exp, email: 'iver@example.com' }),
@@ -1540,6 +1657,7 @@ async function standInSupabase(ctx) {
     const ago = (minutes) => new Date(Date.now() - minutes * 60_000).toISOString();
     const state = {
         garden: accountGarden(),
+        sharedGarden: { ...accountGarden(), projects: [{ ...accountGarden().projects[0], seed: 'Shared bed' }] },
         name: 'My garden',
         rev: 1,
         saves: 0,
@@ -1587,6 +1705,7 @@ async function standInSupabase(ctx) {
             return json({ notified: 1, pushed: 0 });
         }
         if (path === '/auth/v1/token') return json(session);
+        if (withShared && path === '/rest/v1/rpc/join_garden') return json([{ garden_id: SHARED_GARDEN, name: 'Shared bed' }]);
         if (path === '/rest/v1/rpc/save_push_subscription') return json(null);
         if (path === '/rest/v1/push_subscriptions' && req.method() === 'DELETE') return json(null);
         if (path === '/rest/v1/gardens') {
@@ -1598,11 +1717,19 @@ async function standInSupabase(ctx) {
                 state.saves += 1;
                 return json([{ rev: state.rev }]);
             }
-            if (select === 'id,data,updated_at,rev') return json([{ id: OWN_GARDEN, data: state.garden, updated_at: state.garden.updatedAt, rev: state.rev }]);
+            if (select === 'id,data,updated_at,rev') {
+                const shared = withShared && eq('id') === SHARED_GARDEN;
+                if (eq('id') && eq('id') !== OWN_GARDEN && !shared) return json([]);
+                const data = shared ? state.sharedGarden : state.garden;
+                return json([{ id: shared ? SHARED_GARDEN : OWN_GARDEN, data, updated_at: data.updatedAt, rev: state.rev }]);
+            }
             if (select === 'id,name') return json(eq('user_id') === ME ? [{ id: OWN_GARDEN, name: state.name }] : []);
             if (select === 'user_id,owner_id') return json(eq('id') === OWN_GARDEN ? [{ user_id: ME, owner_id: null }] : []);
         }
         if (path === '/rest/v1/garden_members') {
+            if (withShared && select.startsWith('garden_id,gardens')) return json([{
+                garden_id: SHARED_GARDEN, gardens: { id: SHARED_GARDEN, name: 'Shared bed', user_id: ANA, owner_id: null },
+            }]);
             if (select.startsWith('user_id,created_at,profiles')) {
                 return json(eq('garden_id') === OWN_GARDEN ? [ANA, BO, CY, DEE].map((id, i) => ({ user_id: id, created_at: ago(1000 - i), profiles: profiles[id] })) : []);
             }
@@ -1675,6 +1802,47 @@ function checkAssignees(geometry, label) {
 }
 
 const rowOf = (label) => `.garden-context-menu .garden-menu-item:has(.garden-menu-label:text-is("${label}"))`;
+
+async function accountRouteScenario(browser, errors) {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const state = await standInSupabase(ctx, true);
+    const page = await ctx.newPage();
+    watchErrors(page, 'account routes', errors);
+    await page.goto(`${BASE}garden/${SHARED_GARDEN}`, { waitUntil: 'load' });
+    await page.getByText('Shared bed', { exact: true }).last().waitFor();
+    assert.equal(new URL(page.url()).pathname, `/garden/${SHARED_GARDEN}`);
+    await page.locator('.auth-pill').click();
+    await page.getByRole('button', { name: 'My garden', exact: true }).click();
+    await page.waitForURL(`**/garden/${OWN_GARDEN}`);
+    await page.getByText('Tomatoes', { exact: true }).waitFor();
+    await page.goBack();
+    await page.getByText('Shared bed', { exact: true }).last().waitFor();
+    await page.goForward();
+    await page.getByText('Tomatoes', { exact: true }).waitFor();
+    await page.reload({ waitUntil: 'load' });
+    await page.getByText('Tomatoes', { exact: true }).waitFor();
+    assert.equal(new URL(page.url()).pathname, `/garden/${OWN_GARDEN}`);
+    assert.equal(state.garden.projects.length, 2, 'opening deep links does not insert a tutorial into an existing account');
+    await page.goto(`${BASE}garden/${GONE}`, { waitUntil: 'load' });
+    await page.getByText('That garden is unavailable or has not been shared with you.', { exact: true }).waitFor();
+    await page.waitForURL(`**/garden/${OWN_GARDEN}`);
+    await page.goto(`${BASE}user/${ME}`, { waitUntil: 'load' });
+    await page.getByRole('heading', { name: 'Iver', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Edit profile' }).click();
+    await page.getByRole('heading', { name: 'Profile', exact: true }).waitFor();
+    await page.keyboard.press('Escape');
+    await page.goto(`${BASE}user/${ANA}`, { waitUntil: 'load' });
+    await page.getByRole('heading', { name: 'Ana', exact: true }).waitFor();
+    await page.goto(`${BASE}user/${GONE}`, { waitUntil: 'load' });
+    await page.getByText('This profile is unavailable.', { exact: false }).waitFor();
+    await page.goto(`${BASE}invite/3f2c9a1e-5b7d-4c8e-9f10-2a3b4c5d6e7f`, { waitUntil: 'load' });
+    await page.waitForURL(`**/garden/${SHARED_GARDEN}`);
+    await page.getByText('Shared bed', { exact: true }).last().waitFor();
+    assert.equal(await page.evaluate(() => localStorage.getItem('cells.garden/v1/pendingJoin')), null);
+    assert.deepEqual(state.unknown, []);
+    await ctx.close();
+    console.log('Account routes: own/shared gardens, history, refresh, denied access, profiles and invite acceptance passed');
+}
 
 async function accountScenario(browser, errors) {
     // --- Desktop ------------------------------------------------------------------
@@ -1873,6 +2041,16 @@ async function accountScenario(browser, errors) {
     await page.reload({ waitUntil: 'load' });
     await page.waitForFunction(() => document.querySelector('.auth-pill')?.textContent.includes('Kitchen garden'));
     assert(await page.locator('html[data-high-contrast]').count(), 'contrast preference survives reload');
+    await page.click('.auth-pill');
+    await page.click(rowOf('Report issue'));
+    const reportPanel = page.locator('.garden-menu-panel.is-open');
+    assert.equal(await reportPanel.getByRole('button', { name: 'Open a GitHub issue', exact: true }).count(), 1);
+    assert.equal(await reportPanel.getByRole('button', { name: 'cells.garden@proton.me', exact: true }).count(), 1);
+    assert((await reportPanel.innerText()).includes('cells.garden@proton.me'));
+    await page.click(rowOf('About'));
+    await page.getByRole('heading', { name: 'Give your projects a place to grow' }).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/about/');
+    assert.equal(await page.getByRole('link', { name: 'Support cells.garden on Buy Me a Coffee' }).getAttribute('href'), 'https://buymeacoffee.com/cells.garden');
     assert.deepEqual(state.unknown, [], 'requests the stand-in did not expect');
     await ctx.close();
 
@@ -1922,11 +2100,15 @@ try {
     ensureBuild();
     preview = await startPreview();
     browser = await chromium.launch();
+    await legacyTutorialScenario(browser, errors);
+    await routeScenario(browser, errors);
     await scenario(browser, errors);
     if (supabaseUrl()) {
         // The full Chromium in headless mode: the lighter headless shell has no notifications to show a push with.
         const full = await chromium.launch({ channel: 'chromium' });
         try {
+            await legacyTutorialScenario(full, errors, true);
+            await accountRouteScenario(full, errors);
             await accountScenario(full, errors);
         } finally {
             await full.close().catch(() => {});

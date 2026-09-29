@@ -6,6 +6,8 @@ Turn a task board into a pixel-art garden inside Obsidian. Each project is a pla
 
 Start with one idea. Add what it needs. Watch it take shape.
 
+Your first garden includes the original tutorial plant. Its cells explain the garden as you explore it. Existing users can choose **Add tutorial plant** from the garden menu, or open the separate [tutorial garden](https://cells.garden/tutorial) to practice without changing their own plants.
+
 [Open the web app](https://cells.garden/) · [How it works](https://cells.garden/guide/) · [Chrome extension](https://cells.garden/chrome-extension/) · [Obsidian plugin](https://cells.garden/obsidian/)
 
 ## A garden that works like a board
@@ -13,9 +15,9 @@ Start with one idea. Add what it needs. Watch it take shape.
 The seed holds your project's name or goal. Around it, four layers give your work a home:
 
 - **Minerals** hold the raw material: ideas, notes and things to explore.
-- **Roots** hold the groundwork: plans, prerequisites and next steps.
-- **Stem** holds the work in progress.
-- **Flowers** hold what you have finished.
+- **Roots** hold your motivations and reasons for doing the project.
+- **Stem** holds tasks you have completed.
+- **Flowers** hold results and moments to celebrate.
 
 Drag cells between layers as your project moves forward. The plant changes with them. Use the layers your own way, from a small personal checklist to a shared project with many moving parts.
 
@@ -25,8 +27,8 @@ Choose a plant shape, change its colours and make the garden your own. Click a p
 
 1. Open **Settings → Community plugins → Browse**, search for **cells.garden**, then install and enable it.
 2. Select the sprout in the ribbon, or run **cells.garden: Open garden** from the command palette.
-3. Add a plant, name its seed and use **+** in a layer to add your first cell.
-4. Move a cell into Flowers when it is done.
+3. Explore the editable **Tutorial plant**, or add a plant, name its seed and use **+** in a layer to add your first cell.
+4. Convert a finished task from Minerals to Stem, and add a Flower to celebrate a result.
 
 Works on Obsidian desktop and mobile. An account is optional: you can begin immediately and keep your garden on your device.
 

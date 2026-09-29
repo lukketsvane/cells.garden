@@ -39,7 +39,7 @@ assert(/history\.replaceState/.test(callbackJs));
 
 const rootIndex = read('src/web/index.html');
 assert(rootIndex.includes('/privacy/oauth-extension-return.js'), 'root extension OAuth interceptor missing');
-assert(rootIndex.indexOf('/privacy/oauth-extension-return.js') < rootIndex.indexOf('./main.ts'), 'extension OAuth interceptor must run before web main');
+assert(rootIndex.indexOf('/privacy/oauth-extension-return.js') < rootIndex.indexOf('/main.ts'), 'extension OAuth interceptor must run before web main');
 const extensionStart = read('public/privacy/oauth-extension-start.js');
 assert(/sessionStorage\.setItem/.test(extensionStart) && /redirect_to/.test(extensionStart), 'extension OAuth start intent missing');
 const extensionReturn = read('public/privacy/oauth-extension-return.js');

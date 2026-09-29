@@ -8,6 +8,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { isDrawing } from './avatar-pixels';
 import type { PlantData } from './merge';
 import { emptyGarden } from './model';
+import { invitePath } from './routes';
 
 /** Where invite links point. Every build talks to the same project, so one origin serves all. */
 export const APP_URL = 'https://cells.garden/';
@@ -84,13 +85,14 @@ export function sharingAvailable(client: SupabaseClient): Promise<boolean> {
 /** The uuid a `#join=` or `#plant=` hash carries, or null. */
 function tokenFromHash(hash: string, name: string): string | null {
     const match = new RegExp(`(?:^#|&)${name}=([^&]+)`).exec(hash);
-    const token = match ? decodeURIComponent(match[1]) : '';
+    let token = '';
+    try { token = match ? decodeURIComponent(match[1]) : ''; } catch { return null; }
     return UUID.test(token) ? token.toLowerCase() : null;
 }
 
 export const inviteTokenFromHash = (hash: string) => tokenFromHash(hash, 'join');
 
-export const inviteUrl = (token: string) => `${APP_URL}#join=${token}`;
+export const inviteUrl = (token: string) => new URL(invitePath(token), APP_URL).href;
 
 /** Gardens other people shared with this user. */
 export async function listSharedGardens(client: SupabaseClient, userId: string): Promise<SharedGarden[]> {
@@ -253,7 +255,7 @@ export async function renameGarden(client: SupabaseClient, gardenId: string, nam
 
 export const plantTokenFromHash = (hash: string) => tokenFromHash(hash, 'plant');
 
-export const plantInviteUrl = (token: string) => `${APP_URL}#plant=${token}`;
+export const plantInviteUrl = (token: string) => new URL(invitePath(token, 'plant'), APP_URL).href;
 
 export interface SharedPlantRow {
     id: string;

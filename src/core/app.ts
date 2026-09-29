@@ -7,6 +7,7 @@ import { defaultSettings, emptyGarden, settingsFrom } from './model';
 import type { Person } from './people';
 import { GardenGoneError, readJson, snapshot, writeJson, type GardenStore } from './store';
 import { tagKey } from './tags';
+import { upgradeLegacyTutorial } from './tutorial';
 
 export type SyncState = 'local' | 'syncing' | 'synced' | 'error';
 
@@ -157,7 +158,10 @@ export class GardenApp {
     }
 
     async mount(host: HTMLElement) {
-        this.applyGarden((await this.store.load()) ?? emptyGarden());
+        const stored = (await this.store.load()) ?? emptyGarden();
+        const garden = upgradeLegacyTutorial(stored);
+        this.applyGarden(garden);
+        if (garden !== stored) await this.saveGardenData();
 
         this.view = new GardenView(host, this);
         await this.view.onOpen();
@@ -227,7 +231,7 @@ export class GardenApp {
                 pushToRemote = true;
             } else if (remote) {
                 chosen = remote;
-            } else if (mine && mine.projects.length > 0) {
+            } else if (mine) {
                 chosen = mine;
                 pushToRemote = true;
             } else if (seed && seed.projects.length > 0) {
@@ -239,7 +243,9 @@ export class GardenApp {
                 chosen = mine ?? emptyGarden();
             }
 
-            this.applyGarden(chosen);
+            const upgraded = upgradeLegacyTutorial(chosen);
+            if (upgraded !== chosen) pushToRemote = true;
+            this.applyGarden(upgraded);
             if (pushToRemote) {
                 await this.saveGardenData();
             } else {

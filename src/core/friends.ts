@@ -23,6 +23,7 @@ export class FriendsModal extends Modal {
         private readonly userId: string,
         /** Put an accepted plant into the garden. */
         private readonly plant: (row: SharedPlantRow) => Promise<void>,
+        private readonly openProfile?: (id: string) => void,
     ) {
         super();
     }
@@ -74,6 +75,10 @@ export class FriendsModal extends Modal {
                 ].filter(Boolean).join(', ');
                 const row = new Setting(box).setName(friend.name).setDesc(shared);
                 row.nameEl.prepend(avatarEl(friend.avatar, 24));
+                if (this.openProfile) row.addButton((b) => b.setButtonText('Profile').onClick(() => {
+                    this.close();
+                    this.openProfile?.(friend.userId);
+                }));
             }
         } catch (e) {
             say(`Could not load friends: ${(e as Error).message}`);

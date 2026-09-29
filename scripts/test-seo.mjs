@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { resolve, extname } from 'node:path';
+import { resolve, extname, sep } from 'node:path';
 import { chromium } from 'playwright';
 
 const root = resolve('dist');
@@ -12,8 +12,14 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const redirect = config.redirects.find(r => r.source === url.pathname);
     if (redirect) { res.writeHead(308, { Location: redirect.destination + url.search }); res.end(); return; }
-    const path = resolve(root, '.' + decodeURIComponent(url.pathname), url.pathname.endsWith('/') ? 'index.html' : '');
-    if (!path.startsWith(root + '/')) { res.writeHead(403); res.end(); return; }
+    const rewrite = config.rewrites.find(r => {
+        if (!r.source.endsWith('/:path*')) return r.source === url.pathname;
+        const prefix = r.source.slice(0, -'/:path*'.length);
+        return url.pathname === prefix || url.pathname.startsWith(prefix + '/');
+    });
+    const pathname = rewrite?.destination ?? url.pathname;
+    const path = resolve(root, '.' + decodeURIComponent(pathname), pathname.endsWith('/') ? 'index.html' : '');
+    if (!path.startsWith(root + sep)) { res.writeHead(403); res.end(); return; }
     try {
         const body = await readFile(path);
         const headers = Object.fromEntries(config.headers.find(h => h.source === '/(.*)').headers.map(h => [h.key, h.value]));
@@ -30,7 +36,7 @@ try {
     browser = await chromium.launch();
     const sitemap = await (await fetch(base + '/sitemap.xml')).text();
     const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m => new URL(m[1]));
-    assert.equal(urls.length, 5);
+    assert.equal(urls.length, 6);
     const robots = await (await fetch(base + '/robots.txt')).text();
     assert(robots.includes('Sitemap: https://cells.garden/sitemap.xml'));
     const titles = new Set();
@@ -65,7 +71,7 @@ try {
     await app.evaluate(() => navigator.serviceWorker.ready);
     await app.reload();
     assert(await app.evaluate(() => !!navigator.serviceWorker.controller), 'worker must control the browser');
-    for (const path of ['/guide/', '/chrome-extension/', '/obsidian/', '/privacy.html']) {
+    for (const path of ['/guide/', '/chrome-extension/', '/obsidian/', '/about/', '/privacy.html']) {
         await app.goto(base + path);
         assert.equal(await app.locator('h1').count(), 1, 'worker swallowed ' + path);
         assert.equal(await app.locator('#app').count(), 0, 'app shell replaced ' + path);
@@ -73,6 +79,8 @@ try {
     await context.setOffline(true);
     await app.goto(base + '/guide/');
     assert.match(await app.locator('h1').innerText(), /project planner/);
+    await app.goto(base + '/about/');
+    assert.match(await app.locator('h1').innerText(), /projects a place to grow/);
     await app.goto(base + '/?offline-check=1');
     await app.waitForFunction(() => !!window.garden);
     await context.setOffline(false);
@@ -86,7 +94,7 @@ try {
         await app.goto(base + '/chrome-extension/');
         await app.screenshot({ path: process.env.SEO_SCREENSHOTS + '/chrome-mobile.png', fullPage: true });
     }
-    console.log('SEO checks passed: 5 crawlable pages, unique metadata, mobile layout, internal links, utility noindex, service-worker navigation, offline app and guide, true 404.');
+    console.log('SEO checks passed: 6 crawlable pages, unique metadata, mobile layout, internal links, utility noindex, service-worker navigation, offline app and guide, true 404.');
 } finally {
     await browser?.close();
     await new Promise(resolve => server.close(resolve));

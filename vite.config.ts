@@ -90,11 +90,14 @@ export default defineConfig(({ command, mode }) => {
                     // emitted as a file (scripts/test-web.mjs fails offline if one is
                     // missing from the precache).
                     globPatterns: ['**/*.{html,js,css}'],
-                    // Only app-root navigations get the shell. Public guides and
+                    // Only application routes get the shell. Public guides and
                     // unknown URLs must keep their own content or 404 response.
                     // Magic links on "/?code=..." still reach index.html.
                     navigateFallback: 'index.html',
-                    navigateFallbackAllowlist: [/^\/(?:index\.html)?(?:\?|$)/],
+                    navigateFallbackAllowlist: [
+                        /^\/(?:index\.html)?(?:\?|$)/,
+                        /^\/(?:tutorial\/?|(?:garden|user|invite)(?:\/[^?]*)?)(?:\?|$)/,
+                    ],
                     // Plain pages next to the app, such as the privacy policy, load as themselves.
                     navigateFallbackDenylist: [/^\/privacy/],
                     // No runtimeCaching on purpose: only precached same-origin URLs are
