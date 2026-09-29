@@ -26,7 +26,7 @@ import { PetsModal, activePetCount } from './pets';
 import { applyScene } from './scene';
 import { SettingsModal } from './settings';
 import { gardenPath, parseRoute, userPath } from './routes';
-import { tutorialGarden, tutorialPlant } from './tutorial';
+import { tutorialGarden } from './tutorial';
 import {
     inviteTokenFromHash,
     joinGarden,
@@ -461,7 +461,6 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
                 { label: 'Tutorial garden', onClick: () => location.assign('/tutorial') },
                 ...(uid ? [{ label: 'My profile', onClick: () => location.assign(userPath(uid)) }] : []),
             ] : []),
-            { label: 'Add tutorial plant', onClick: () => app.addProject(tutorialPlant()) },
             reportIssueItem(),
             { label: 'About', onClick: () => routes ? location.assign('/about/') : new AboutModal().open() },
             { label: 'Export or import', onClick: () => openGardenFiles(app) },

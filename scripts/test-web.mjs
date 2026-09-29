@@ -1659,6 +1659,7 @@ async function standInSupabase(ctx, withShared = false) {
         garden: accountGarden(),
         sharedGarden: { ...accountGarden(), projects: [{ ...accountGarden().projects[0], seed: 'Shared bed' }] },
         name: 'My garden',
+        spaces: [],
         rev: 1,
         saves: 0,
         notified: [],
@@ -1709,8 +1710,22 @@ async function standInSupabase(ctx, withShared = false) {
         if (path === '/rest/v1/rpc/save_push_subscription') return json(null);
         if (path === '/rest/v1/push_subscriptions' && req.method() === 'DELETE') return json(null);
         if (path === '/rest/v1/gardens') {
+            if (req.method() === 'POST') {
+                const row = JSON.parse(req.postData() ?? '{}');
+                assert.equal(row.owner_id, ME);
+                assert.equal(row.user_id, null);
+                const space = { ...row, id: `cccccccc-0000-4000-8000-${String(state.spaces.length + 1).padStart(12, '0')}`, rev: 1 };
+                state.spaces.push(space);
+                return json([{ id: space.id, name: space.name }], 201);
+            }
+            const space = state.spaces.find(space => space.id === eq('id'));
             if (req.method() === 'PATCH') {
                 const patch = JSON.parse(req.postData() ?? '{}');
+                if (space) {
+                    Object.assign(space, patch);
+                    space.rev += 1;
+                    return json([{ rev: space.rev }]);
+                }
                 if ('name' in patch) { state.name = patch.name; return json([{ id: OWN_GARDEN }]); }
                 state.garden = patch.data;
                 state.rev += 1;
@@ -1718,13 +1733,18 @@ async function standInSupabase(ctx, withShared = false) {
                 return json([{ rev: state.rev }]);
             }
             if (select === 'id,data,updated_at,rev') {
+                if (space) return json([{ id: space.id, data: space.data, updated_at: space.updated_at, rev: space.rev }]);
                 const shared = withShared && eq('id') === SHARED_GARDEN;
                 if (eq('id') && eq('id') !== OWN_GARDEN && !shared) return json([]);
                 const data = shared ? state.sharedGarden : state.garden;
                 return json([{ id: shared ? SHARED_GARDEN : OWN_GARDEN, data, updated_at: data.updatedAt, rev: state.rev }]);
             }
-            if (select === 'id,name') return json(eq('user_id') === ME ? [{ id: OWN_GARDEN, name: state.name }] : []);
-            if (select === 'user_id,owner_id') return json(eq('id') === OWN_GARDEN ? [{ user_id: ME, owner_id: null }] : []);
+            if (select === 'id,name') return json(eq('owner_id') === ME
+                ? state.spaces.map(({ id, name }) => ({ id, name }))
+                : eq('user_id') === ME ? [{ id: OWN_GARDEN, name: state.name }] : []);
+            if (select === 'user_id,owner_id') return json(space
+                ? [{ user_id: null, owner_id: ME }]
+                : eq('id') === OWN_GARDEN ? [{ user_id: ME, owner_id: null }] : []);
         }
         if (path === '/rest/v1/garden_members') {
             if (withShared && select.startsWith('garden_id,gardens')) return json([{
@@ -1839,9 +1859,39 @@ async function accountRouteScenario(browser, errors) {
     await page.waitForURL(`**/garden/${SHARED_GARDEN}`);
     await page.getByText('Shared bed', { exact: true }).last().waitFor();
     assert.equal(await page.evaluate(() => localStorage.getItem('cells.garden/v1/pendingJoin')), null);
+    const existing = JSON.stringify(state.garden);
+    const tutorialIds = new Set();
+    for (const name of ['New home garden', 'New shared projects']) {
+        await page.locator('.auth-pill').click();
+        assert.equal(await page.getByRole('button', { name: 'Add tutorial plant', exact: true }).count(), 0, 'the tutorial is automatic, not a separate menu action');
+        await page.getByRole('button', { name: 'New garden space', exact: true }).click();
+        await page.locator('.modal input[type="text"]').fill(name);
+        await page.getByRole('button', { name: 'Create', exact: true }).click();
+        await page.waitForFunction(() => window.garden?.gardenData[0]?.seed === 'Tutorial plant');
+        const space = state.spaces.at(-1);
+        await page.waitForURL(`**/garden/${space.id}`);
+        await page.locator('.seed-content').filter({ hasText: /^Tutorial plant$/ }).waitFor();
+        assert.equal(await page.locator('.project-column').count(), 1);
+        assert.equal(await page.locator('.garden-item').count(), 39);
+        const plant = space.data.projects[0];
+        for (const id of [plant.id, ...['flowers', 'stem', 'roots', 'minerals'].flatMap(layer => plant[layer].map(cell => cell.id))]) {
+            assert(!tutorialIds.has(id), 'each newly created garden gets an independent tutorial');
+            tutorialIds.add(id);
+        }
+        await page.reload({ waitUntil: 'load' });
+        await page.waitForFunction(name => document.querySelector('.auth-pill')?.textContent.includes(name), name);
+        await page.locator(`.seed-content[data-id="${plant.id}"]`).waitFor();
+        await checkAndRecycleTutorial(page, { reload: false });
+        assert.equal(space.data.projects.length, 0, 'deleting the new space tutorial remains saved');
+        await page.reload({ waitUntil: 'load' });
+        await page.waitForFunction(name => document.querySelector('.auth-pill')?.textContent.includes(name), name);
+        await page.waitForSelector('.kanban-empty-message');
+        assert.equal(await page.locator('.project-column').count(), 0, 'a deliberately emptied garden space stays empty');
+    }
+    assert.equal(JSON.stringify(state.garden), existing, 'new garden spaces do not change the original garden');
     assert.deepEqual(state.unknown, []);
     await ctx.close();
-    console.log('Account routes: own/shared gardens, history, refresh, denied access, profiles and invite acceptance passed');
+    console.log('Account routes: own/shared gardens, history, profiles, invites and independent tutorials in every new space passed');
 }
 
 async function accountScenario(browser, errors) {
