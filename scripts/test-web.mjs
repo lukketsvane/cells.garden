@@ -390,7 +390,9 @@ async function routeScenario(browser, errors) {
     assert.equal(await page.locator('.project-column').count(), 0, 'removing the starter stays removed');
 
     await page.goto(`${BASE}about/`, { waitUntil: 'networkidle' });
-    await page.getByRole('heading', { level: 1, name: 'Give your projects a place to grow' }).waitFor();
+    await page.getByRole('heading', { level: 1, name: 'About cells.garden' }).waitFor();
+    assert.match(await page.locator('main').innerText(), /This page is being prepared/);
+    assert.doesNotMatch(await page.locator('main').innerText(), /Credits|Based on Max|maintained by|Apache/);
     await shot(page, '18-about-phone.png');
     assert.equal(await page.locator('a[href="/tutorial"]').count(), 0, 'About does not offer a separate tutorial garden');
     await page.getByRole('link', { name: 'Open your garden', exact: true }).click();
@@ -1020,12 +1022,11 @@ async function scenario(browser, errors) {
         await page.waitForSelector('.garden-context-menu');
         const pill = await page.$$eval('.garden-context-menu .garden-menu-label', (els) => els.map((e) => e.textContent));
         assert(!pill.includes('Items') && pill.includes('Pets'), `the pill menu offers Items, or lost Pets: ${JSON.stringify(pill)}`);
-        await page.click('.garden-context-menu .garden-menu-item:has(.garden-menu-label:text-is("Pets"))');
-        await page.waitForSelector('.modal .garden-tile');
-        const tiles = await page.$$eval('.modal .garden-tile', (els) => els.map((e) => [e.getAttribute('aria-label'), e.disabled]));
-        console.log('pets without extras:', tiles);
-        assert.deepEqual(tiles, [['Garden gnome, unavailable', true], ['Pumpkin, unavailable', true], ['Crow, unavailable', true]],
-            'the Pets menu shows what is coming, greyed out');
+        const pets = page.locator('.garden-context-menu .garden-menu-item:has(.garden-menu-label:text-is("Pets"))');
+        assert(await pets.isDisabled(), 'Pets is a disabled coming-soon entry');
+        assert.match(await pets.innerText(), /Coming soon/);
+        await pets.evaluate(el => el.click());
+        assert.equal(await page.locator('.modal .garden-tile').count(), 0, 'Pets cannot open a preview');
         await page.keyboard.press('Escape');
     }
     await page.evaluate(() => window.garden.saveGardenData());
@@ -2090,12 +2091,11 @@ async function accountScenario(browser, errors) {
 
     await page.click('.auth-pill');
     await page.click(rowOf('Settings'));
-    await page.locator('.setting-item').filter({ hasText: 'Accessibility' }).getByRole('button', { name: 'Open' }).click();
-    await page.locator('.setting-item').filter({ hasText: 'High contrast' }).getByRole('switch').click();
-    assert(await page.locator('html[data-high-contrast]').count());
+    assert.equal(await page.locator('.setting-item').filter({ hasText: 'Accessibility' }).count(), 0);
+    await page.evaluate(() => localStorage.setItem('cells.garden/high-contrast', 'true'));
     await page.reload({ waitUntil: 'load' });
     await page.waitForFunction(() => document.querySelector('.auth-pill')?.textContent.includes('Kitchen garden'));
-    assert(await page.locator('html[data-high-contrast]').count(), 'contrast preference survives reload');
+    assert.equal(await page.locator('html[data-high-contrast]').count(), 0, 'the removed preference is not applied');
     await page.click('.auth-pill');
     await page.click(rowOf('Report issue'));
     const reportPanel = page.locator('.garden-menu-panel.is-open');
@@ -2103,9 +2103,9 @@ async function accountScenario(browser, errors) {
     assert.equal(await reportPanel.getByRole('button', { name: 'cells.garden@proton.me', exact: true }).count(), 1);
     assert((await reportPanel.innerText()).includes('cells.garden@proton.me'));
     await page.click(rowOf('About'));
-    await page.getByRole('heading', { name: 'Give your projects a place to grow' }).waitFor();
+    await page.getByRole('heading', { name: 'About cells.garden' }).waitFor();
     assert.equal(new URL(page.url()).pathname, '/about/');
-    assert.equal(await page.getByRole('link', { name: 'Support cells.garden on Buy Me a Coffee' }).getAttribute('href'), 'https://buymeacoffee.com/cells.garden');
+    assert.match(await page.locator('main').innerText(), /This page is being prepared/);
     assert.deepEqual(state.unknown, [], 'requests the stand-in did not expect');
     await ctx.close();
 

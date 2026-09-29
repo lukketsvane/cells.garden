@@ -8,7 +8,6 @@
 import './shim';
 import { GardenApp, type Account } from './app';
 import { assignNotice } from './assign';
-import { applyAccessibility } from './accessibility';
 import { AboutModal, reportIssueItem } from './support';
 import { AuthPill, type AuthOptions } from './auth';
 import { menuRow, type MenuItem } from './menu';
@@ -22,7 +21,6 @@ import { SharePlantModal } from './share-plant';
 import { FriendsModal } from './friends';
 import { EXTRAS } from './extras';
 import { ItemsModal, shownItems } from './items';
-import { PetsModal, activePetCount } from './pets';
 import { applyScene } from './scene';
 import { SettingsModal } from './settings';
 import { gardenPath, parseRoute, userPath } from './routes';
@@ -127,7 +125,6 @@ export interface BootOptions extends AuthOptions {
 
 export async function bootGarden(host: HTMLElement, options: BootOptions = {}): Promise<GardenApp> {
     applyScene();
-    applyAccessibility();
     // Extension pages never receive a link, so only the web app looks.
     const inExtension = !!(window as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
     const routes = options.routes === true;
@@ -454,7 +451,6 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
 
     pill.setMenu(async (): Promise<MenuItem[]> => {
         const uid = currentUser;
-        const petCount = activePetCount(app.settings);
         const itemCount = shownItems(app.settings).length;
         const common: MenuItem[] = [
             ...(routes && uid ? [{ label: 'My profile', onClick: () => location.assign(userPath(uid)) }] : []),
@@ -469,8 +465,8 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
             }] : []),
             {
                 label: 'Pets',
-                sub: petCount ? petCount + ' on' : 'Off',
-                onClick: () => new PetsModal(app).open(),
+                sub: 'Coming soon',
+                disabled: true,
             },
             ...tagsMenu(app),
             {

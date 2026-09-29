@@ -80,7 +80,7 @@ try {
     await app.goto(base + '/guide/');
     assert.match(await app.locator('h1').innerText(), /project planner/);
     await app.goto(base + '/about/');
-    assert.match(await app.locator('h1').innerText(), /projects a place to grow/);
+    assert.equal(await app.locator('h1').innerText(), 'About cells.garden');
     await app.goto(base + '/?offline-check=1');
     await app.waitForFunction(() => !!window.garden);
     await context.setOffline(false);

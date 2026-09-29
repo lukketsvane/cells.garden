@@ -8,14 +8,16 @@ async function checkArtwork(page) {
     await page.locator('.garden-bg-layer').first().waitFor({ state: 'attached' });
     const artwork = await page.evaluate(() => {
         const viewport = getComputedStyle(document.querySelector('.garden-canvas-viewport'));
-        const sky = ['sky-color', 'stars', 'satellite', 'mountains', 'bg'].map(name =>
+        const sky = ['sky-color', 'stars', 'satellite', 'shooting-star', 'mountains', 'bg'].map(name =>
             getComputedStyle(document.querySelector('.garden-' + name + '-layer')).zIndex);
-        return { image: viewport.backgroundImage, size: viewport.backgroundSize, repeat: viewport.backgroundRepeat, sky };
+        const isolated = getComputedStyle(document.querySelector('.garden-world')).isolation;
+        return { image: viewport.backgroundImage, size: viewport.backgroundSize, repeat: viewport.backgroundRepeat, sky, isolated };
     });
     assert.equal(artwork.image, `url("${tileUrl}")`, 'the void renders the original image, not just its alpha mask');
     assert.equal(artwork.size, '32px 32px');
     assert.equal(artwork.repeat, 'repeat');
-    assert.deepEqual(artwork.sky, ['-8', '-7', '-6', '0', '3'], 'the scene keeps the artist\'s sky-to-treeline ordering');
+    assert.deepEqual(artwork.sky, ['-8', '-7', '-6', '-5', '0', '3'], 'UFOs, satellites and shooting stars stay behind the mountains');
+    assert.equal(artwork.isolated, 'isolate', 'negative sky layers stay inside the world');
 }
 
 /** First-run coverage shared by all distributions; recycle through the real UI. */

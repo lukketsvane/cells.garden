@@ -66,8 +66,11 @@ const PETS: PetType[] = [
 ];
 
 function isOn(settings: GardenSettings, key: PetType['key']): boolean {
-    return EXTRAS && (settings as unknown as Record<string, unknown>)[key] === true;
+    return PETS_AVAILABLE && EXTRAS && (settings as unknown as Record<string, unknown>)[key] === true;
 }
+
+/** Keep saved pet choices, but do not expose the unfinished feature in any build. */
+const PETS_AVAILABLE = false;
 
 /** What the menu reports: pets switched on in a build that has them. */
 export function activePetCount(settings: GardenSettings) {
