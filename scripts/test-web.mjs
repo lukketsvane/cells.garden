@@ -432,6 +432,48 @@ async function routeScenario(browser, errors) {
     console.log('Routes: starter, deletion, practice isolation, reload, history, offline, invites and signed-out links passed');
 }
 
+async function legacyTutorialScenario(browser, errors, signedIn = false) {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const fixture = JSON.parse(readFileSync(join(ROOT, 'scripts/fixtures/legacy-tutorial.json'), 'utf8'));
+    const state = signedIn ? await standInSupabase(ctx) : null;
+    if (state) state.garden = fixture;
+    else await ctx.addInitScript(garden => {
+        if (localStorage.getItem('cells.garden/v1') === null) localStorage.setItem('cells.garden/v1', JSON.stringify(garden));
+    }, fixture);
+    const page = await ctx.newPage();
+    watchErrors(page, `legacy tutorial ${signedIn ? 'account' : 'local'}`, errors);
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.waitForFunction(id => window.garden?.gardenData[0]?.id === id
+        && window.garden.gardenData[0].seed === 'Tutorial plant', fixture.projects[0].id);
+    await page.waitForFunction(() => document.querySelectorAll('.garden-plant-wrapper .garden-part[data-item-id]').length === 40);
+    assert.equal(await page.locator('.project-column').count(), 1, 'upgrade does not add a second plant');
+    assert.equal(await page.locator('.garden-item').count(), 39);
+    const art = await page.locator('.garden-plant-wrapper').evaluate(plant => {
+        const above = [...plant.querySelectorAll('.garden-stem-part, .garden-flower-part')];
+        const seed = plant.querySelector('.garden-seed-part').getBoundingClientRect();
+        return {
+            above: above.length,
+            height: seed.top - Math.min(...above.map(part => part.getBoundingClientRect().top)),
+            missingSprites: [...plant.querySelectorAll('.garden-part')].filter(part => getComputedStyle(part).backgroundImage === 'none').length,
+        };
+    });
+    assert.equal(art.above, 19);
+    assert(art.height > 100, `the original tutorial must render tall on a phone: ${JSON.stringify(art)}`);
+    assert.equal(art.missingSprites, 0, 'all original stems, flowers, roots, minerals and seed have artwork');
+    await shot(page, signedIn ? '20-upgraded-account-tutorial-phone.png' : '19-upgraded-local-tutorial-phone.png');
+    const saved = state?.garden ?? await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')));
+    const ids = saved.projects[0].flowers.map(cell => cell.id);
+    assert.equal(saved.projects[0].seed, 'Tutorial plant', 'the replacement is persisted');
+    assert.equal(saved.projects[0].id, fixture.projects[0].id);
+    if (state) assert.equal(state.saves, 1);
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForFunction(id => window.garden?.gardenData[0]?.id === id, fixture.projects[0].id);
+    assert.deepEqual(await page.evaluate(() => window.garden.gardenData[0].flowers.map(cell => cell.id)), ids);
+    if (state) assert.equal(state.saves, 1, 'reloading the upgraded cloud garden does not write it again');
+    await ctx.close();
+    console.log(`Legacy tutorial: ${signedIn ? 'account' : 'local'} starter upgraded in place, tall artwork and reload verified`);
+}
+
 async function scenario(browser, errors) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     const page = await ctx.newPage();
@@ -2069,12 +2111,14 @@ try {
     ensureBuild();
     preview = await startPreview();
     browser = await chromium.launch();
+    await legacyTutorialScenario(browser, errors);
     await routeScenario(browser, errors);
     await scenario(browser, errors);
     if (supabaseUrl()) {
         // The full Chromium in headless mode: the lighter headless shell has no notifications to show a push with.
         const full = await chromium.launch({ channel: 'chromium' });
         try {
+            await legacyTutorialScenario(full, errors, true);
             await accountRouteScenario(full, errors);
             await accountScenario(full, errors);
         } finally {

@@ -1,8 +1,7 @@
 /** Snapshot of the original Tutorial garden, copied with fresh IDs and no sharing links. */
 import { emptyGarden, type Garden, type LayerItem, type LayerName, type ProjectData } from './model';
 
-export function tutorialPlant(): ProjectData {
-    const id = `tutorial_${Array.from(crypto.getRandomValues(new Uint32Array(4)), n => n.toString(16).padStart(8, '0')).join('')}`;
+export function tutorialPlant(id = `tutorial_${Array.from(crypto.getRandomValues(new Uint32Array(4)), n => n.toString(16).padStart(8, '0')).join('')}`): ProjectData {
     const roots = [3, 11, 10, 13, 6, 3];
     const minerals = [21, 62, 57, 21, 38, 38, 27, 25, 84, 92, 20, 52, 37, 27];
     const cells = (layer: LayerName, lines: string[]): LayerItem[] => lines.map((content, i) => ({
@@ -68,4 +67,37 @@ export function tutorialPlant(): ProjectData {
 
 export function tutorialGarden(): Garden {
     return { ...emptyGarden(), projects: [tutorialPlant()], updatedAt: new Date().toISOString() };
+}
+
+const LEGACY_CELLS: Record<LayerName, readonly string[]> = {
+    flowers: ['Small wins bloom here. Make this garden your own.'],
+    stem: ['Move a cell between layers: drag it, or use its Move to menu.'],
+    roots: ['Double-click a cell to edit. On a phone, tap it twice.',
+        'Right-click or press and hold a cell for its menu.'],
+    minerals: ['Add your first idea with + in any layer.',
+        'Add a project with + beside the board. The seed is its name.',
+        'This is an example plant. Edit it or use Recycle plant in its seed menu.'],
+};
+
+/** Upgrade only the exact, unedited seven-cell starter shipped before the original tutorial. */
+export function upgradeLegacyTutorial(garden: Garden): Garden {
+    let changed = false;
+    const projects = garden.projects.map(project => {
+        if (!project || !/^proj_[a-f0-9]{32}$/.test(project.id)
+            || project.name !== 'Start here' || project.seed !== 'Start here'
+            || project.plantType !== 'plant_1' || project.hue !== 0 || project.standby
+            || project.seedImagePath || project.sharedPlantId || project.tags?.length) return project;
+        for (const layer of Object.keys(LEGACY_CELLS) as LayerName[]) {
+            const cells = project[layer], lines = LEGACY_CELLS[layer];
+            if (!Array.isArray(cells) || cells.length !== lines.length || cells.some((cell, index) =>
+                !cell || !/^item_[a-f0-9]{32}$/.test(cell.id) || cell.content !== lines[index]
+                || cell.isComplete !== (layer === 'flowers') || cell.imagePath
+                || cell.highlighted || cell.assignees?.length
+                || Object.keys(cell).some(key => !['id', 'content', 'isComplete', 'imagePath', 'highlighted', 'assignees'].includes(key)))) return project;
+        }
+        changed = true;
+        // Keep the plant's identity and position. Stable cell IDs make concurrent upgrades identical.
+        return { ...project, ...tutorialPlant(project.id), order: project.order };
+    });
+    return changed ? { ...garden, projects } : garden;
 }
