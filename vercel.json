@@ -5,7 +5,6 @@
   "buildCommand": "npm run test:security && npm run build:web && npm run test:security",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/about", "destination": "/index.html" },
     { "source": "/tutorial", "destination": "/index.html" },
     { "source": "/garden/:path*", "destination": "/index.html" },
     { "source": "/user/:path*", "destination": "/index.html" },
@@ -38,5 +37,16 @@
         { "key": "Cache-Control", "value": "no-store" }
       ]
     }
+  ],
+  "redirects": [
+    {"source": "/index.html", "destination": "/", "permanent": true},
+    {"source": "/guide", "destination": "/guide/", "permanent": true},
+    {"source": "/guide/index.html", "destination": "/guide/", "permanent": true},
+    {"source": "/chrome-extension", "destination": "/chrome-extension/", "permanent": true},
+    {"source": "/chrome-extension/index.html", "destination": "/chrome-extension/", "permanent": true},
+    {"source": "/obsidian", "destination": "/obsidian/", "permanent": true},
+    {"source": "/obsidian/index.html", "destination": "/obsidian/", "permanent": true},
+    {"source": "/about", "destination": "/about/", "permanent": true},
+    {"source": "/about/index.html", "destination": "/about/", "permanent": true}
   ]
 }

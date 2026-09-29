@@ -160,3 +160,22 @@ test('a shared plant merges cell edits from both people and drops garden-only fi
     assert.equal('order' in merged, false);
     assert.equal('sharedPlantId' in merged, false);
 });
+
+test('a plant tagged on this device keeps its tags when the other side changed something else', () => {
+    const base = garden([plant('a', 0), plant('b', 1)]);
+    const local = copy(base);
+    local.projects[0].tags = ['work'];
+    const remote = copy(base);
+    remote.projects[1].seed = 'renamed';
+    const merged = mergeGardens(base, local, remote, now);
+    assert.deepEqual(merged.projects[0].tags, ['work']);
+    assert.equal(merged.projects[1].seed, 'renamed');
+});
+
+test('tags taken off on one side stay off', () => {
+    const base = garden([plant('a', 0, { tags: ['work'] })]);
+    const local = copy(base);
+    delete local.projects[0].tags;
+    const merged = mergeGardens(base, local, copy(base), now);
+    assert.equal('tags' in merged.projects[0], false);
+});

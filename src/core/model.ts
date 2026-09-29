@@ -28,6 +28,12 @@ export interface ProjectData {
     plantType: string;
     /** Set when this plant is shared (a `plants` row); its cells sync with everyone who has it. */
     sharedPlantId?: string;
+    /**
+     * Words that group this plant with others, to hide and show them together
+     * (tags.ts). Absent when it has none. Like its name, they travel with the
+     * plant; which tags are hidden is each device's own choice.
+     */
+    tags?: string[];
     roots: LayerItem[];
     stem: LayerItem[];
     flowers: LayerItem[];
@@ -95,6 +101,8 @@ export interface GardenSettings {
     enableFireflies: boolean;
     fireflyCount: number;
     fireflies: number;
+    /** Separate count for touch devices, shared as part of the garden. */
+    mobileFireflies: number;
     /** 'static' holds the sky at the first node's colour. */
     skyMode: 'cycle' | 'static';
     /** Node 1 first, in the order they were added; the sky goes through them by hour. */
@@ -146,6 +154,7 @@ export const DEFAULT_SETTINGS: GardenSettings = {
     enableFireflies: true,
     fireflyCount: 9,
     fireflies: 8,
+    mobileFireflies: 4,
     skyMode: 'cycle',
     skyNodes: DEFAULT_SKY_NODES.map(n => ({ ...n })),
     mineralFade: false,

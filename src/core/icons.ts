@@ -1,5 +1,3 @@
-import type { LayerName } from './model';
-
 /**
  * The line icons, as SVG markup. setIcon() puts one into a button or a label,
  * so it holds no text and inherits `currentColor`.
@@ -24,98 +22,6 @@ export const ICONS = {
     board: `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.3"/></svg>`,
     /** Four arrows out from the middle: pan view. */
     pan: `<svg ${stroke}><path d="M12 2v20"></path><path d="M2 12h20"></path><path d="m9 5 3-3 3 3"></path><path d="m9 19 3 3 3-3"></path><path d="m5 9-3 3 3 3"></path><path d="m19 9 3 3-3 3"></path></svg>`,
-};
-
-/**
- * A pixel-art icon from rows of `#` (a pixel) and `.` (none), one row per line
- * of the square it is drawn on. Each run of pixels in a row becomes a rectangle
- * one pixel high, all in one path filled with `currentColor`; crisp edges keep
- * the renderer from smoothing a pixel into its neighbours.
- */
-function pixelIcon(rows: string[]): string {
-    const size = rows.length;
-    let d = '';
-    rows.forEach((row, y) => {
-        for (const run of row.matchAll(/#+/g)) {
-            const n = run[0].length;
-            d += `M${run.index} ${y}h${n}v1h-${n}z`;
-        }
-    });
-    return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true"><path d="${d}"></path></svg>`;
-}
-
-/**
- * The four zone icons, drawn rather than typed: the symbols these replace were
- * whichever characters a font happened to carry, and the stem one landed in a
- * plane no system font covers, so every reader saw an empty box.
- *
- * They are pixel art, like the garden they label: one ink, square pixels, each
- * on the same 12-square and drawn here as its rows, so one can be redrawn
- * without touching anything else. The board shows them at 12 CSS pixels, an
- * art pixel to a CSS pixel, which puts every edge on a whole device pixel at
- * any whole-number screen scale.
- */
-export const ZONE_ICONS: Record<LayerName, string> = {
-    /** A blossom seen from above: four round petals parted around an open eye. */
-    flowers: pixelIcon([
-        '....####....',
-        '...######...',
-        '...######...',
-        '.##.####.##.',
-        '####.##.####',
-        '#####..#####',
-        '#####..#####',
-        '####.##.####',
-        '.##.####.##.',
-        '...######...',
-        '...######...',
-        '....####....',
-    ]),
-    /** A stalk with a pointed leaf on either side, the upper one reaching for the light. */
-    stem: pixelIcon([
-        '......#....#',
-        '......#..###',
-        '......#.####',
-        '......#.###.',
-        '......##....',
-        '.#....#.....',
-        '.###..#.....',
-        '.####.#.....',
-        '..###.#.....',
-        '.....##.....',
-        '......#.....',
-        '......#.....',
-    ]),
-    /** Roots from the base of the plant, forking as they spread down, one pixel thin like the garden's own. */
-    roots: pixelIcon([
-        '.....##.....',
-        '.....##.....',
-        '.....#.#....',
-        '...##..#....',
-        '..#...#.##..',
-        '.#...#....#.',
-        '.#..#.#....#',
-        '#...#..#....',
-        '...#...#..#.',
-        '..#.....##..',
-        '..#.......#.',
-        '.#..........',
-    ]),
-    /** A cut gem in outline: the table, the girdle and the facets meeting at the point. */
-    minerals: pixelIcon([
-        '............',
-        '...######...',
-        '..#.#..#.#..',
-        '.#..#..#..#.',
-        '############',
-        '#...#..#...#',
-        '.#..#..#..#.',
-        '..#..##..#..',
-        '...#.##.#...',
-        '....####....',
-        '.....##.....',
-        '............',
-    ]),
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';

@@ -8,7 +8,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { bootGarden } from '../core/boot';
 import { isIos } from '../core/notify-core';
 import { parseRoute } from '../core/routes';
-import { aboutPage, localNavigation, missingPage, profilePage, tutorialPage } from './pages';
+import { localNavigation, missingPage, profilePage, tutorialPage } from './pages';
 
 const host = document.getElementById('app');
 if (!host) throw new Error('cells.garden: #app element missing');
@@ -51,8 +51,10 @@ const extensionOAuthHandoff = Boolean(
 );
 
 if (!extensionOAuthHandoff) {
+    // Replace the readable loading/no-JavaScript introduction with the app.
+    document.getElementById('garden-intro')?.remove();
     const route = parseRoute(location.pathname);
-    if (route.kind === 'about') aboutPage(host);
+    if (route.kind === 'about') location.replace('/about/');
     else if (route.kind === 'tutorial') void tutorialPage(host);
     else if (route.kind === 'user') profilePage(host, route.id);
     else if (route.kind === 'missing') missingPage(host);

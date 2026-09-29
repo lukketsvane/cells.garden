@@ -1,38 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1932 1932" shape-rendering="crispEdges">
-  <rect width="1932" height="1932" fill="#1c2080"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" shape-rendering="crispEdges">
+  <!-- The logo (src/assets/CG_logo_v1.png) pixel for pixel: 21 across, the plant
+       half a pixel down, as the logo has it. "npm run icons" renders every size. -->
+  <!-- Drawn smaller than one screen pixel to a logo pixel (a 16 px favicon), crisp
+       edges would drop whole lines, the stem among them: there it blends instead. -->
+  <style>@media (max-width: 20.99px) { svg { shape-rendering: auto; } }</style>
+  <rect width="21" height="21" fill="#1b217e"/>
   <!-- leaves and stem -->
-  <g fill="#3b7a82">
-    <rect x="918" y="477" width="96" height="544"/>
-    <rect x="1014" y="606" width="289" height="96"/>
-    <rect x="1207" y="509" width="96" height="97"/>
-    <rect x="1303" y="413" width="193" height="193"/>
-    <rect x="1496" y="509" width="194" height="97"/>
-    <rect x="628" y="799" width="290" height="96"/>
-    <rect x="242" y="702" width="483" height="97"/>
-    <rect x="435" y="606" width="193" height="96"/>
+  <g fill="#3a7a83">
+    <rect x="5" y="5.5" width="2" height="1"/>
+    <rect x="10" y="5.5" width="1" height="1"/>
+    <rect x="3" y="6.5" width="5" height="1"/>
+    <rect x="10" y="6.5" width="1" height="1"/>
+    <rect x="7" y="7.5" width="4" height="1"/>
+    <rect x="14" y="7.5" width="2" height="1"/>
+    <rect x="10" y="8.5" width="1" height="1"/>
+    <rect x="13" y="8.5" width="5" height="1"/>
+    <rect x="10" y="9.5" width="4" height="1"/>
+    <rect x="10" y="10.5" width="1" height="1"/>
   </g>
   <!-- flower -->
-  <g fill="#72f552">
-    <rect x="822" y="91" width="288" height="96"/>
-    <rect x="725" y="187" width="482" height="193"/>
-    <rect x="822" y="380" width="288" height="97"/>
+  <g fill="#74f951">
+    <rect x="9" y="1.5" width="3" height="1"/>
+    <rect x="8" y="2.5" width="2" height="1"/>
+    <rect x="11" y="2.5" width="2" height="1"/>
+    <rect x="8" y="3.5" width="5" height="1"/>
+    <rect x="9" y="4.5" width="3" height="1"/>
   </g>
-  <rect x="918" y="187" width="96" height="97" fill="#7aea5e"/>
+  <!-- the flower's eye -->
+  <g fill="#7fec57">
+    <rect x="10" y="2.5" width="1" height="1"/>
+  </g>
   <!-- seed -->
-  <g fill="#221520">
-    <rect x="821" y="1021" width="289" height="192"/>
-    <rect x="918" y="1213" width="95" height="97"/>
+  <g fill="#241423">
+    <rect x="9" y="11.5" width="3" height="1"/>
+    <rect x="9" y="12.5" width="3" height="1"/>
+    <rect x="10" y="13.5" width="1" height="1"/>
   </g>
   <!-- roots -->
-  <g fill="#3a7543">
-    <rect x="918" y="1310" width="95" height="531"/>
-    <rect x="918" y="1310" width="772" height="96"/>
-    <rect x="1207" y="1406" width="96" height="97"/>
-    <rect x="1399" y="1406" width="97" height="97"/>
-    <rect x="1593" y="1406" width="97" height="97"/>
-    <rect x="242" y="1600" width="771" height="96"/>
-    <rect x="242" y="1696" width="96" height="97"/>
-    <rect x="435" y="1696" width="96" height="97"/>
-    <rect x="628" y="1696" width="97" height="97"/>
+  <g fill="#496f4f">
+    <rect x="10" y="14.5" width="1" height="1"/>
+    <rect x="3" y="15.5" width="8" height="1"/>
+    <rect x="3" y="16.5" width="1" height="1"/>
+    <rect x="5" y="16.5" width="1" height="1"/>
+    <rect x="7" y="16.5" width="1" height="1"/>
+    <rect x="10" y="16.5" width="1" height="1"/>
+    <rect x="13" y="16.5" width="1" height="1"/>
+    <rect x="15" y="16.5" width="1" height="1"/>
+    <rect x="17" y="16.5" width="1" height="1"/>
+    <rect x="10" y="17.5" width="8" height="1"/>
+    <rect x="10" y="18.5" width="1" height="1"/>
   </g>
 </svg>

@@ -6,6 +6,7 @@ import type { Garden, GardenSettings, LayerItem, ProjectData } from './model';
 import { defaultSettings, emptyGarden, settingsFrom } from './model';
 import type { Person } from './people';
 import { GardenGoneError, readJson, snapshot, writeJson, type GardenStore } from './store';
+import { tagKey } from './tags';
 
 export type SyncState = 'local' | 'syncing' | 'synced' | 'error';
 
@@ -43,6 +44,18 @@ export interface UseStoreOptions {
 }
 
 const FRIEND_PLANTS_KEY = 'cells.garden/friend-plants';
+const HIDDEN_TAGS_KEY = 'cells.garden/hidden-tags';
+
+/** The tags hidden on this device, by tagKey. */
+function readHiddenTags(): Set<string> {
+    const stored = readJson<unknown>(HIDDEN_TAGS_KEY);
+    const keys = Array.isArray(stored) ? (stored as unknown[]).filter((t): t is string => typeof t === 'string').map(tagKey) : [];
+    return new Set(keys.filter(Boolean));
+}
+
+function writeHiddenTags(hidden: ReadonlySet<string>) {
+    writeJson(HIDDEN_TAGS_KEY, hidden.size > 0 ? [...hidden] : null);
+}
 
 /**
  * The app shell, what `GardenPlugin` was in Obsidian. Owns the data, the
@@ -90,6 +103,27 @@ export class GardenApp {
      * so the garden opens already arranged.
      */
     friendPlants = new Set<string>(readJson<string[]>(FRIEND_PLANTS_KEY) ?? []);
+
+    /** The tags whose plants are out of sight on this device (tags.ts), by tagKey. */
+    hiddenTags = readHiddenTags();
+
+    /** Hide or show every plant that carries `tag`, on this device, and draw the garden without or with them. */
+    setTagHidden(tag: string, hidden: boolean) {
+        const key = tagKey(tag);
+        if (!key || this.hiddenTags.has(key) === hidden) return;
+        if (hidden) this.hiddenTags.add(key);
+        else this.hiddenTags.delete(key);
+        writeHiddenTags(this.hiddenTags);
+        this.view?.scheduleRender();
+    }
+
+    /** Show every plant again. */
+    showAllTags() {
+        if (this.hiddenTags.size === 0) return;
+        this.hiddenTags.clear();
+        writeHiddenTags(this.hiddenTags);
+        this.view?.scheduleRender();
+    }
 
     isFriendPlant(project: ProjectData): boolean {
         return !!project.sharedPlantId && this.friendPlants.has(project.sharedPlantId);

@@ -24,6 +24,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { checkAndRecycleTutorial } from './test-tutorial.mjs';
 import { loadEnv } from 'vite';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -291,15 +292,8 @@ try {
     await newtab.goto(`chrome-extension://${extId}/newtab.html`);
     await newtab.waitForSelector('.garden-canvas-viewport');
     assert(await newtab.getAttribute('html', 'data-context') === 'newtab', 'newtab.html must set data-context="newtab"');
-    assert(await newtab.textContent('.seed-content') === 'Tutorial plant', 'a fresh profile should start with a tutorial plant');
-    // Delete the starter, then exercise the original empty-garden editing flow.
-    await newtab.evaluate(() => {
-        const garden = JSON.parse(localStorage.getItem('cells.garden/v1'));
-        garden.projects = [];
-        localStorage.setItem('cells.garden/v1', JSON.stringify(garden));
-    });
-    await newtab.reload();
-    await newtab.waitForSelector('.kanban-empty-message h3');
+    await checkAndRecycleTutorial(newtab);
+    assert(/empty/i.test(await newtab.textContent('.kanban-empty-message h3')), 'recycling the tutorial leaves an empty garden');
 
     await newtab.click('.add-column-btn-inner >> nth=1');
     await newtab.waitForSelector('.modal textarea');

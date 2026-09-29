@@ -10,7 +10,7 @@ import { getProfile, listFriends } from '../core/sharing';
 import { LOCAL_KEY, LocalStore } from '../core/store';
 import { createSupabase } from '../core/supabase';
 import { installTouchAdapter } from '../core/touch';
-import { seedTutorial } from '../core/tutorial';
+import { tutorialGarden } from '../core/tutorial';
 import { BoardToggleButton } from '../core/transfer';
 import { forgetDevice } from '../core/web-push';
 
@@ -25,40 +25,9 @@ function page(host: HTMLElement, title: string): HTMLElement {
     const nav = content.createEl('nav', { attr: { 'aria-label': 'Main navigation' } });
     link(nav, 'My garden', '/');
     link(nav, 'Tutorial', '/tutorial');
-    link(nav, 'About', '/about');
+    link(nav, 'About', '/about/');
     content.createEl('h1', { text: title });
     return content;
-}
-
-export function aboutPage(host: HTMLElement) {
-    const content = page(host, 'Give your projects a place to grow.');
-    content.createEl('p', { cls: 'site-lead', text: 'cells.garden turns your task board into a living pixel-art garden. Each project is a plant, each task is a cell, and every step forward changes the scene.' });
-    const layers = content.createEl('dl', { cls: 'site-layers' });
-    for (const [name, text] of [
-        ['Minerals', 'Ideas, notes, and things to explore.'],
-        ['Roots', 'Your motivations and reasons to grow.'],
-        ['Stem', 'Tasks you have completed.'],
-        ['Flowers', 'Results and moments to celebrate.'],
-    ]) {
-        layers.createEl('dt', { text: name });
-        layers.createEl('dd', { text });
-    }
-    link(content, 'Try the tutorial garden →', '/tutorial').addClass('site-action');
-    content.createEl('h2', { text: 'Grow wherever you work' });
-    content.createEl('p', { text: 'Start on the web, add the garden to your phone’s Home Screen, or use it in Chrome and Obsidian. Sign in with the same account to sync your plants across devices.' });
-    const installs = content.createEl('ul');
-    link(installs.createEl('li'), 'Chrome extension — installation and setup', 'https://github.com/lukketsvane/cells.garden/tree/main/ext#readme');
-    link(installs.createEl('li'), 'Open cells.garden in Obsidian Community plugins', 'obsidian://show-plugin?id=cells-garden');
-    content.createEl('h2', { text: 'Your garden, your work' });
-    content.createEl('p', { text: 'You can work locally without an account. Share a garden or a plant when you want to grow something together, and export a backup from the garden menu whenever you like.' });
-    content.createEl('h2', { text: 'Made from a small seed' });
-    content.createEl('p', { text: 'Based on Max’s Garden Cells, whose garden design, pixel art, and original Obsidian plugin made this project possible. Free and open source, under Apache-2.0.' });
-    const links = content.createEl('nav', { attr: { 'aria-label': 'Help and support' } });
-    link(links, 'Source and documentation', 'https://github.com/lukketsvane/cells.garden');
-    link(links, 'Report an issue', 'https://github.com/lukketsvane/cells.garden/issues/new');
-    link(links, 'Email us', 'mailto:cells.garden@proton.me');
-    link(links, 'Buy us a coffee', 'https://buymeacoffee.com/cells.garden');
-    link(links, 'Privacy', '/privacy.html');
 }
 
 export function missingPage(host: HTMLElement) {
@@ -70,8 +39,7 @@ export function missingPage(host: HTMLElement) {
 export async function tutorialPage(host: HTMLElement) {
     document.title = 'Tutorial garden · cells.garden';
     applyScene();
-    const store = new LocalStore(`${LOCAL_KEY}/tutorial`);
-    await seedTutorial(store);
+    const store = new LocalStore(`${LOCAL_KEY}/tutorial`, tutorialGarden);
     const app = new GardenApp(store);
     await app.mount(host);
     window.garden = app;
@@ -87,7 +55,7 @@ export async function tutorialPage(host: HTMLElement) {
     menu.addEventListener('click', () => openMenu([
         { label: 'Practice here. Changes stay on this device.', heading: true },
         { label: 'My garden', onClick: () => location.assign('/') },
-        { label: 'About cells.garden', onClick: () => location.assign('/about') },
+        { label: 'About cells.garden', onClick: () => location.assign('/about/') },
     ], menu));
 }
 
@@ -150,6 +118,6 @@ export function profilePage(host: HTMLElement, id: string) {
 export function localNavigation(host: HTMLElement) {
     const nav = host.createEl('nav', { cls: 'local-navigation', attr: { 'aria-label': 'Garden navigation' } });
     link(nav, 'Tutorial', '/tutorial');
-    link(nav, 'About', '/about');
+    link(nav, 'About', '/about/');
     if (location.pathname === '/') history.replaceState(null, '', gardenPath('local') + location.search + location.hash);
 }

@@ -205,6 +205,7 @@ function drawGardenSettings(el: HTMLElement, app: GardenApp, heading: boolean, s
     else el.createEl('p', { cls: 'setting-item-description', text: 'Shared with everyone in this garden.' });
 
     number(new Setting(el).setName('Fireflies').setDesc('Fewer run lighter.'), s.fireflies, 0, MAX_FIREFLIES, (n) => set({ fireflies: n }));
+    number(new Setting(el).setName('Fireflies on mobile').setDesc('Used on touch devices. Fewer run lighter.'), s.mobileFireflies, 0, MAX_FIREFLIES, (n) => set({ mobileFireflies: n }));
 
     // --- Sky ---
     const isStatic = s.skyMode === 'static';

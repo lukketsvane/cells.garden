@@ -1,7 +1,5 @@
 /** Snapshot of the original Tutorial garden, copied with fresh IDs and no sharing links. */
 import { emptyGarden, type Garden, type LayerItem, type LayerName, type ProjectData } from './model';
-import { local } from './local';
-import { LocalStore } from './store';
 
 export function tutorialPlant(): ProjectData {
     const id = `tutorial_${Array.from(crypto.getRandomValues(new Uint32Array(4)), n => n.toString(16).padStart(8, '0')).join('')}`;
@@ -70,9 +68,4 @@ export function tutorialPlant(): ProjectData {
 
 export function tutorialGarden(): Garden {
     return { ...emptyGarden(), projects: [tutorialPlant()], updatedAt: new Date().toISOString() };
-}
-
-/** Seed only a store that has never existed, so deleting the tutorial stays deleted. */
-export async function seedTutorial(store: LocalStore): Promise<void> {
-    if (local.get(store.key) === null) await store.save(tutorialGarden());
 }

@@ -8,13 +8,15 @@
 import './shim';
 import { GardenApp, type Account } from './app';
 import { assignNotice } from './assign';
+import { AboutModal, reportIssueItem } from './support';
 import { AuthPill, type AuthOptions } from './auth';
-import type { MenuItem } from './menu';
+import { menuRow, type MenuItem } from './menu';
+import { gardenTags, tagKey } from './tags';
 import { NotificationCenter, NotificationsModal, sendAssignNotice } from './notifications';
 import { cellTargetFromHash, type CellTarget } from './notify-core';
 import { People } from './people';
 import { PlantSync } from './plants';
-import { GardenQuestionModal, NewSpaceModal, ShareGardenModal } from './share';
+import { GardenQuestionModal, NewSpaceModal, RenameGardenModal, ShareGardenModal } from './share';
 import { SharePlantModal } from './share-plant';
 import { FriendsModal } from './friends';
 import { EXTRAS } from './extras';
@@ -23,7 +25,7 @@ import { PetsModal, activePetCount } from './pets';
 import { applyScene } from './scene';
 import { SettingsModal } from './settings';
 import { gardenPath, parseRoute, userPath } from './routes';
-import { seedTutorial, tutorialGarden, tutorialPlant } from './tutorial';
+import { tutorialGarden, tutorialPlant } from './tutorial';
 import {
     inviteTokenFromHash,
     joinGarden,
@@ -38,6 +40,7 @@ import {
     ownGardenId,
     plantTokenFromHash,
     removeMember,
+    renameGarden,
     ShareError,
     sharingAvailable,
 } from './sharing';
@@ -123,6 +126,8 @@ export interface BootOptions extends AuthOptions {
 
 export async function bootGarden(host: HTMLElement, options: BootOptions = {}): Promise<GardenApp> {
     applyScene();
+    // The experimental contrast panel is deferred beyond beta; keep its stored preference.
+    document.documentElement.removeAttribute('data-high-contrast');
     // Extension pages never receive a link, so only the web app looks.
     const inExtension = !!(window as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
     const routes = options.routes === true;
@@ -131,8 +136,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
     let pendingCell: CellTarget | null = inExtension ? null : takeCellFromUrl();
 
     // Always start local so the garden shows instantly, signed in or not.
-    const anonymous = new LocalStore();
-    await seedTutorial(anonymous);
+    const anonymous = new LocalStore(LOCAL_KEY, tutorialGarden);
     const app = new GardenApp(anonymous);
 
     try {
@@ -260,9 +264,9 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         });
         shared = null;
         writeJson(activeKey(uid), null);
-        pill.setLabel(null);
-        const id = await ownGardenRow(uid);
-        if (id && (!expectedPath || expectedPath === location.pathname)) showGardenAddress(id, mode);
+        const own = await ownGardenId(supabase, uid).catch(() => null);
+        if (currentUser === uid && !shared) pill.setLabel(own?.name || 'My garden');
+        if (own && (!expectedPath || expectedPath === location.pathname)) showGardenAddress(own.id, mode);
         knowWhoSees(uid);
     };
 
@@ -455,10 +459,11 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         const common: MenuItem[] = [
             ...(routes ? [
                 { label: 'Tutorial garden', onClick: () => location.assign('/tutorial') },
-                { label: 'About cells.garden', onClick: () => location.assign('/about') },
                 ...(uid ? [{ label: 'My profile', onClick: () => location.assign(userPath(uid)) }] : []),
             ] : []),
             { label: 'Add tutorial plant', onClick: () => app.addProject(tutorialPlant()) },
+            reportIssueItem(),
+            { label: 'About', onClick: () => routes ? location.assign('/about/') : new AboutModal().open() },
             { label: 'Export or import', onClick: () => openGardenFiles(app) },
             // Items wait for Max's approval, so only a build with the extras offers them.
             ...(EXTRAS ? [{
@@ -471,6 +476,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
                 sub: petCount ? petCount + ' on' : 'Off',
                 onClick: () => new PetsModal(app).open(),
             },
+            ...tagsMenu(app),
             {
                 label: 'Settings',
                 onClick: () => new SettingsModal(uid ? {
@@ -528,8 +534,25 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
             }).open(),
         });
         const ownSpace = shared && spaces.find(s => s.id === shared?.id);
+        const namedGarden = ownSpace ?? (!shared ? await ownGardenId(supabase, uid) : null);
+        const renamed = (id: string, name: string) => {
+            if (currentUser !== uid || (shared?.id ?? ownId) !== id) return;
+            if (shared) {
+                shared = { ...shared, name };
+                writeJson(activeKey(uid), shared);
+            }
+            pill.setLabel(name);
+        };
+        if (namedGarden) {
+            if (!shared) ownId = namedGarden.id;
+            renamed(namedGarden.id, namedGarden.name);
+            items.push({ label: 'Rename garden', onClick: () => new RenameGardenModal(namedGarden.name, async name => {
+                await renameGarden(supabase, namedGarden.id, name);
+                renamed(namedGarden.id, name);
+            }).open() });
+        }
         if (ownSpace) {
-            items.push({ label: 'Share garden', onClick: () => new ShareGardenModal(supabase, ownSpace.id, ownSpace.name).open() });
+            items.push({ label: 'Share garden', onClick: () => new ShareGardenModal(supabase, ownSpace.id, ownSpace.name, name => renamed(ownSpace.id, name)).open() });
             items.push({
                 label: 'Delete garden space',
                 danger: true,
@@ -563,7 +586,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
                         notify(host, 'Could not share yet. Try again in a moment.');
                         return;
                     }
-                    new ShareGardenModal(supabase, own.id, own.name).open();
+                    new ShareGardenModal(supabase, own.id, own.name, name => renamed(own.id, name)).open();
                 },
             });
         } else {
@@ -659,4 +682,37 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
     });
 
     return app;
+}
+
+/**
+ * The garden's tags in the pill menu, ticked where their plants are shown: a
+ * tap hides or shows every plant with that tag, on this device. Absent while
+ * no plant has a tag; a plant's own menu gives it tags.
+ */
+function tagsMenu(app: GardenApp): MenuItem[] {
+    const tags = gardenTags(app.gardenData);
+    if (tags.length === 0) return [];
+    const hiddenCount = () => tags.filter(tag => app.hiddenTags.has(tagKey(tag))).length;
+    const sub = () => (hiddenCount() ? `${hiddenCount()} hidden` : 'All shown');
+    return [{
+        label: 'Tags',
+        sub: sub(),
+        panel: (panel, menu) => {
+            for (const tag of tags) {
+                const row = menuRow(panel, { label: tag, active: !app.hiddenTags.has(tagKey(tag)) });
+                row.dataset.tag = tag;
+                row.onclick = (event) => {
+                    event.stopPropagation();
+                    const shown = !app.hiddenTags.has(tagKey(tag));
+                    app.setTagHidden(tag, shown);
+                    row.toggleClass('is-active', !shown);
+                    if (shown) row.removeAttribute('aria-current');
+                    else row.setAttribute('aria-current', 'true');
+                    const check = row.querySelector('.garden-menu-check');
+                    if (check) check.textContent = shown ? '' : '✓';
+                    menu.setSub(sub());
+                };
+            }
+        },
+    }];
 }

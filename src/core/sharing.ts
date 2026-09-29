@@ -7,8 +7,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isDrawing } from './avatar-pixels';
 import type { PlantData } from './merge';
-import { emptyGarden } from './model';
 import { invitePath } from './routes';
+import { tutorialGarden } from './tutorial';
 
 /** Where invite links point. Every build talks to the same project, so one origin serves all. */
 export const APP_URL = 'https://cells.garden/';
@@ -128,7 +128,7 @@ export async function createSpace(client: SupabaseClient, userId: string, name: 
     const now = new Date().toISOString();
     const { data, error } = await client
         .from('gardens')
-        .insert({ owner_id: userId, user_id: null, name, data: { ...emptyGarden(), updatedAt: now }, updated_at: now })
+        .insert({ owner_id: userId, user_id: null, name, data: { ...tutorialGarden(), updatedAt: now }, updated_at: now })
         .select('id, name');
     if (error) fail(error);
     const row = ((data ?? []) as { id: string; name: string }[])[0];
@@ -244,8 +244,11 @@ export const listMembers = (c: SupabaseClient, gardenId: string) => members(c, G
 export const removeMember = (c: SupabaseClient, gardenId: string, userId: string) => removeFrom(c, GARDEN, gardenId, userId);
 
 export async function renameGarden(client: SupabaseClient, gardenId: string, name: string): Promise<void> {
-    const { error } = await client.from('gardens').update({ name }).eq('id', gardenId);
+    const next = name.trim();
+    if (!next || next.length > 120) throw new ShareError('Use a garden name between 1 and 120 characters.');
+    const { data, error } = await client.from('gardens').update({ name: next }).eq('id', gardenId).select('id');
     if (error) fail(error);
+    if (!data?.length) throw new ShareError('This garden could not be renamed.');
 }
 
 // --- Collaborative plants (migration 0007) -----------------------------------
