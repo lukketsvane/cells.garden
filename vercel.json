@@ -4,6 +4,13 @@
   "installCommand": "npm ci --ignore-scripts",
   "buildCommand": "npm run test:security && npm run build:web && npm run test:security",
   "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/tutorial", "destination": "/index.html" },
+    { "source": "/garden/:path*", "destination": "/index.html" },
+    { "source": "/user/:path*", "destination": "/index.html" },
+    { "source": "/invite/:path*", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/privacy/oauth-return.html",
@@ -22,6 +29,13 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "X-DNS-Prefetch-Control", "value": "off" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), hid=(), accelerometer=(), gyroscope=(), magnetometer=(), display-capture=(), clipboard-read=(), clipboard-write=(self)" }
+      ]
+    },
+    {
+      "source": "/invite/:path*",
+      "headers": [
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "Cache-Control", "value": "no-store" }
       ]
     }
   ]

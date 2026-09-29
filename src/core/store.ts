@@ -84,7 +84,8 @@ export function claimAnonymousGarden(userId: string): void {
 
 /** Works without login. One key on this device, the whole garden as JSON. */
 export class LocalStore implements GardenStore {
-    constructor(readonly key: string = LOCAL_KEY) {}
+    readonly key: string;
+    constructor(key: string = LOCAL_KEY) { this.key = key; }
 
     async load(): Promise<Garden | null> {
         const raw = local.get(this.key);

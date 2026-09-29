@@ -22,6 +22,8 @@ import { ItemsModal, shownItems } from './items';
 import { PetsModal, activePetCount } from './pets';
 import { applyScene } from './scene';
 import { SettingsModal } from './settings';
+import { gardenPath, parseRoute, userPath } from './routes';
+import { seedTutorial, tutorialGarden, tutorialPlant } from './tutorial';
 import {
     inviteTokenFromHash,
     joinGarden,
@@ -75,13 +77,15 @@ type InviteKind = 'garden' | 'plant';
  * take it out of the address so it is not bookmarked or passed on by accident.
  * Kept in localStorage because the emailed sign-in link opens a new tab.
  */
-function stashInviteFromUrl() {
+function stashInviteFromUrl(routes: boolean) {
+    const route = routes ? parseRoute(location.pathname) : null;
     const garden = inviteTokenFromHash(location.hash);
     const plant = plantTokenFromHash(location.hash);
-    const token = garden ?? plant;
+    const token = route?.kind === 'invite' ? route.token : garden ?? plant;
     if (!token) return;
-    writeJson(PENDING_JOIN_KEY, { token, kind: garden ? 'garden' : 'plant', at: Date.now() });
-    history.replaceState(null, '', location.pathname + location.search);
+    const kind = route?.kind === 'invite' ? route.target : garden ? 'garden' : 'plant';
+    writeJson(PENDING_JOIN_KEY, { token, kind, at: Date.now() });
+    history.replaceState(null, '', (route?.kind === 'invite' ? '/' : location.pathname) + location.search);
 }
 
 /**
@@ -112,16 +116,23 @@ function notify(host: HTMLElement, text: string) {
 }
 
 /** `options.redirectTo`: where a magic link should land. Defaults to the current page. */
-export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): Promise<GardenApp> {
+export interface BootOptions extends AuthOptions {
+    /** Only the web shell owns the address bar; embedded hosts keep their own URLs. */
+    routes?: boolean;
+}
+
+export async function bootGarden(host: HTMLElement, options: BootOptions = {}): Promise<GardenApp> {
     applyScene();
     // Extension pages never receive a link, so only the web app looks.
     const inExtension = !!(window as { chrome?: { runtime?: { id?: string } } }).chrome?.runtime?.id;
-    if (!inExtension) stashInviteFromUrl();
+    const routes = options.routes === true;
+    if (!inExtension) stashInviteFromUrl(routes);
     /** A notification's cell to open once someone is signed in and their garden is on screen. */
     let pendingCell: CellTarget | null = inExtension ? null : takeCellFromUrl();
 
     // Always start local so the garden shows instantly, signed in or not.
     const anonymous = new LocalStore();
+    await seedTutorial(anonymous);
     const app = new GardenApp(anonymous);
 
     try {
@@ -145,6 +156,8 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
     if (!supabase) {
         // No pill menu to hold export and import, so they keep a button.
         new GardenFilesButton(app, host);
+        const route = routes ? parseRoute(location.pathname) : null;
+        if (route?.kind === 'garden' && route.id !== 'local') notify(host, 'This build cannot open online gardens. Showing the garden on this device.');
         if (peekPendingJoin()) {
             writeJson(PENDING_JOIN_KEY, null);
             notify(host, 'Sharing needs an account. This build has none.');
@@ -211,21 +224,29 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         void openGardenRow(uid).then((gardenId) => (gardenId ? directory.load(gardenId, null) : null)).catch(() => {});
     };
 
-    const openGarden = async (uid: string, target: OpenGarden | null): Promise<void> => {
-        shared = target;
-        writeJson(activeKey(uid), target);
-        pill.setLabel(target?.name ?? null);
+    const showGardenAddress = (id: string, mode: 'push' | 'replace') => {
+        if (!routes) return;
+        const path = gardenPath(id);
+        if (location.pathname !== path) history[mode === 'push' ? 'pushState' : 'replaceState'](null, '', path + location.search + location.hash);
+    };
+
+    const openGarden = async (uid: string, target: OpenGarden | null, mode: 'push' | 'replace' = 'push', expectedPath?: string): Promise<void> => {
         if (target) {
             try {
                 await app.useStore(new SupabaseStore(supabase, uid, target.id), {
                     mirror: new LocalStore(`${LOCAL_KEY}/garden/${target.id}`),
                 });
-                knowWhoSees(uid);
             } catch (e) {
                 if (!(e instanceof GardenGoneError)) throw e;
                 notify(host, `You no longer have access to ${target.name}. Showing your garden.`);
-                await openGarden(uid, null);
+                await openGarden(uid, null, 'replace', expectedPath);
+                return;
             }
+            shared = target;
+            writeJson(activeKey(uid), target);
+            pill.setLabel(target.name);
+            if (!expectedPath || expectedPath === location.pathname) showGardenAddress(target.id, mode);
+            knowWhoSees(uid);
             return;
         }
         // The anonymous garden of this device is offered to an account that has
@@ -234,16 +255,53 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         const seed = app.store === anonymous && (!claimedBy || claimedBy === uid) ? app.toGarden() : null;
         await app.useStore(new SupabaseStore(supabase, uid), {
             mirror: new LocalStore(`${LOCAL_KEY}/user/${uid}`),
-            seed,
-            onSeedUsed: () => claimAnonymousGarden(uid),
+            seed: seed ?? tutorialGarden(),
+            onSeedUsed: () => { if (seed) claimAnonymousGarden(uid); },
         });
+        shared = null;
+        writeJson(activeKey(uid), null);
+        pill.setLabel(null);
+        const id = await ownGardenRow(uid);
+        if (id && (!expectedPath || expectedPath === location.pathname)) showGardenAddress(id, mode);
         knowWhoSees(uid);
+    };
+
+    /** Resolve a URL against the gardens this account can actually open. */
+    const gardenAtAddress = async (uid: string, pathname = location.pathname): Promise<OpenGarden | null | undefined> => {
+        if (!routes) return undefined;
+        const route = parseRoute(pathname);
+        if (route.kind !== 'garden') return undefined;
+        if (route.id === 'local' || route.id === await ownGardenRow(uid)) return null;
+        const [gardens, spaces] = await Promise.all([listSharedGardens(supabase, uid), listOwnSpaces(supabase, uid)]);
+        const found = [...spaces, ...gardens].find(g => g.id === route.id);
+        if (!found) notify(host, 'That garden is unavailable or has not been shared with you.');
+        return found ? { id: found.id, name: found.name } : null;
     };
 
     const fail = (e: unknown) => {
         console.error('Garden Cells: could not switch gardens', e);
         pill.setSyncState('error');
     };
+
+    if (routes) {
+        // Serialize history changes, including rapid Back/Forward clicks.
+        let navigating = Promise.resolve();
+        window.addEventListener('popstate', () => {
+            const requestedPath = location.pathname;
+            navigating = navigating.then(async () => {
+                if (requestedPath !== location.pathname) return;
+                const uid = currentUser;
+                if (!uid) {
+                    const route = parseRoute(location.pathname);
+                    if (route.kind === 'garden' && route.id !== 'local') pill.signIn('Sign in to open this garden.');
+                    return;
+                }
+                const target = await gardenAtAddress(uid, requestedPath);
+                if (requestedPath !== location.pathname || uid !== currentUser) return;
+                await openGarden(uid, target ?? null, 'replace', requestedPath);
+            }).catch(fail);
+        });
+    }
 
     /** An invite that could not be used: say why when the reason is worded for the user. */
     const linkFailed = (e: unknown, kind: InviteKind) => {
@@ -395,6 +453,12 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         const petCount = activePetCount(app.settings);
         const itemCount = shownItems(app.settings).length;
         const common: MenuItem[] = [
+            ...(routes ? [
+                { label: 'Tutorial garden', onClick: () => location.assign('/tutorial') },
+                { label: 'About cells.garden', onClick: () => location.assign('/about') },
+                ...(uid ? [{ label: 'My profile', onClick: () => location.assign(userPath(uid)) }] : []),
+            ] : []),
+            { label: 'Add tutorial plant', onClick: () => app.addProject(tutorialPlant()) },
             { label: 'Export or import', onClick: () => openGardenFiles(app) },
             // Items wait for Max's approval, so only a build with the extras offers them.
             ...(EXTRAS ? [{
@@ -450,7 +514,8 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
         items.push({
             label: 'Friends',
             sub: offers.length ? `${offers.length} new` : undefined,
-            onClick: () => new FriendsModal(supabase, uid, plantOffered).open(),
+            onClick: () => new FriendsModal(supabase, uid, plantOffered,
+                routes ? (id) => location.assign(userPath(id)) : undefined).open(),
         });
         items.push({
             label: 'New garden space',
@@ -532,6 +597,12 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
             // A notification opened the app, and nobody is signed in here.
             askedToSignIn = true;
             window.setTimeout(() => pill.signIn('Sign in to open that cell.'), 0);
+        } else if (!uid && !askedToSignIn && routes) {
+            const route = parseRoute(location.pathname);
+            if (route.kind === 'garden' && route.id !== 'local') {
+                askedToSignIn = true;
+                window.setTimeout(() => pill.signIn('Sign in to open this garden.'), 0);
+            } else if (route.kind === 'home') showGardenAddress('local', 'replace');
         }
         if (uid === currentUser) return; // token refresh, same user
         currentUser = uid;
@@ -558,8 +629,9 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
                 inbox.watch(showUnread);
                 void (async () => {
                     const joined = await joinPending(uid);
-                    const remembered = joined ?? readJson<OpenGarden>(activeKey(uid));
-                    await openGarden(uid, remembered && remembered.id ? remembered : null);
+                    const addressed = await gardenAtAddress(uid);
+                    const remembered = joined ?? (addressed !== undefined ? addressed : readJson<OpenGarden>(activeKey(uid)));
+                    await openGarden(uid, remembered && remembered.id ? remembered : null, 'replace');
                     sync.start();
                     await joinPendingPlant(uid, sync);
                     getProfile(supabase, uid).then((p) => pill.setAvatar(p.avatar)).catch(() => {});
@@ -579,6 +651,7 @@ export async function bootGarden(host: HTMLElement, options: AuthOptions = {}): 
                 shared = null;
                 pill.setLabel(null);
                 pill.setAvatar(null);
+                showGardenAddress('local', 'replace');
                 // Sign-out: show the anonymous garden again, never write the account's data into it.
                 app.useStore(anonymous, { reconcile: false }).catch(fail);
             }

@@ -193,7 +193,7 @@ export class GardenApp {
                 pushToRemote = true;
             } else if (remote) {
                 chosen = remote;
-            } else if (mine && mine.projects.length > 0) {
+            } else if (mine) {
                 chosen = mine;
                 pushToRemote = true;
             } else if (seed && seed.projects.length > 0) {

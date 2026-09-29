@@ -291,7 +291,15 @@ try {
     await newtab.goto(`chrome-extension://${extId}/newtab.html`);
     await newtab.waitForSelector('.garden-canvas-viewport');
     assert(await newtab.getAttribute('html', 'data-context') === 'newtab', 'newtab.html must set data-context="newtab"');
-    assert(/empty/i.test(await newtab.textContent('.kanban-empty-message h3')), 'a fresh profile should start with an empty garden');
+    assert(await newtab.textContent('.seed-content') === 'Tutorial plant', 'a fresh profile should start with a tutorial plant');
+    // Delete the starter, then exercise the original empty-garden editing flow.
+    await newtab.evaluate(() => {
+        const garden = JSON.parse(localStorage.getItem('cells.garden/v1'));
+        garden.projects = [];
+        localStorage.setItem('cells.garden/v1', JSON.stringify(garden));
+    });
+    await newtab.reload();
+    await newtab.waitForSelector('.kanban-empty-message h3');
 
     await newtab.click('.add-column-btn-inner >> nth=1');
     await newtab.waitForSelector('.modal textarea');

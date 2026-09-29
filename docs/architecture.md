@@ -50,16 +50,35 @@ interface GardenStore {
 
 - Signed out: `LocalStore` (localStorage, key `cells.garden/v1`). Tabs stay in step through the `storage` event. Obsidian uses Plugin.loadData/saveData for its per-vault garden, preferences and account session. Browser storage is disabled in that build. Signed-in gardens catch up through realtime events and when the window regains focus.
 - Signed in: `SupabaseStore` is primary and a per-user `LocalStore` mirrors every save, so the device keeps an offline copy and sign-out never loses anything. The whole garden is one JSON blob per owner; saves are compare-and-swap on a server revision and merge by plant and cell id when someone wrote first; realtime pushes changes to the other devices.
-- Shared: an owner shares their garden by link (`#join=<token>`); members edit the same blob. See `supabase/README.md`.
+- Shared: an owner shares their garden by link (`/invite/<token>`); members edit the same blob. Older `#join=<token>` links still work. See `supabase/README.md`.
 - Garden spaces: more gardens than your own (New garden space in the pill menu), shared the same way.
 - Assign cells: right-click or hold a cell, choose Assign, and pick people who share its garden or plant. Their small avatars stay on the cell. Assignment notices appear under Notifications in the account menu.
 - Phone notifications: open Settings, Notifications, Turn on. On iPhone or iPad (iOS 16.4+), add cells.garden to the Home Screen and open it from there first. Tapping a notification opens the assigned cell. Pushes are optional and stop on this device when you turn them off or sign out.
 - Garden settings (pill menu, Settings): fireflies, the sky's colours through the day or one fixed colour, minerals that fade with depth, and the standby look. They belong to the garden, so everyone who shares it sees the same; the defaults are Max's original garden.
-- Collaborative plants: one plant shared by link (`#plant=<token>`) into other people's gardens; everyone who has it edits it live.
+- Collaborative plants: one plant shared by link (`/invite/plant/<token>`) into other people's gardens; everyone who has it edits it live. Older `#plant=<token>` links still work.
 - First sign-in on a device offers the anonymous garden to an account that has none yet, once.
 - Camera, kanban scroll and the divider between them are per surface (web, new tab, side panel) and stay on the device.
 
 The `.env` file carries the Supabase URL and publishable key on purpose; both are public by design and RLS protects the data. Anything private for local tooling goes in `.env.local`, which git ignores. See `supabase/README.md` for the migrations and the dashboard settings.
+
+## Web navigation and tutorial
+
+The web shell enables routes in `bootGarden`; the extension and Obsidian keep their host URLs. Garden switches use browser history, and Back/Forward restores the selected garden. Other pages use normal links. Vercel rewrites the application routes to the web shell, and the service worker serves the same shell offline. Privacy and authentication handoff files stay separate.
+
+| Address | Opens |
+| --- | --- |
+| `/` | The last garden used by the signed-in account, or the local garden |
+| `/garden/local` | The device's garden when signed out; the account's own garden when signed in |
+| `/garden/<id>` | An owned or shared garden; sign-in and existing access are required |
+| `/user/<id>` | Your profile or someone who shares a garden or plant with you |
+| `/invite/<token>` | A garden invitation |
+| `/invite/plant/<token>` | A plant invitation |
+| `/about` | Introduction, installation links, credits, support, and privacy |
+| `/tutorial` | A separate local practice garden |
+
+Invitation tokens are removed from the address and kept for up to 24 hours while sign-in completes. A plain garden URL does not grant membership. Existing notification hashes continue to open their cells. Authentication redirect allowlists must include the site's nested paths, as described in `supabase/README.md`.
+
+`src/core/tutorial.ts` contains a snapshot of the original Tutorial garden's plant: its 39 cells, sprite choices, and hue. Every copy receives fresh IDs with no assignments or shared-plant reference. It is saved only when the anonymous store has never existed, or offered to a new account with no remote garden or cached copy. Existing empty gardens stay empty. The account menu can add another copy explicitly. `/tutorial` uses its own local store at `cells.garden/v1/tutorial` and keeps practice edits across visits.
 
 ## Assets
 
