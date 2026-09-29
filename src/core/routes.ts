@@ -1,6 +1,6 @@
 /** Public web addresses. Account and garden access is still checked by the server. */
 export type Route =
-    | { kind: 'home' | 'about' | 'tutorial' | 'missing' }
+    | { kind: 'home' | 'about' | 'missing' }
     | { kind: 'garden'; id: string }
     | { kind: 'user'; id: string }
     | { kind: 'invite'; token: string; target: 'garden' | 'plant' };
@@ -13,7 +13,6 @@ export function parseRoute(pathname: string): Route {
     catch { return { kind: 'missing' }; }
     if (path === '/') return { kind: 'home' };
     if (path === '/about') return { kind: 'about' };
-    if (path === '/tutorial') return { kind: 'tutorial' };
     const parts = path.split('/').slice(1);
     const [kind, id] = parts;
     if (parts.length === 2 && (kind === 'garden' || kind === 'user') && UUID.test(id)) {

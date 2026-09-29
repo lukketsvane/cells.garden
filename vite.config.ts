@@ -96,7 +96,7 @@ export default defineConfig(({ command, mode }) => {
                     navigateFallback: 'index.html',
                     navigateFallbackAllowlist: [
                         /^\/(?:index\.html)?(?:\?|$)/,
-                        /^\/(?:tutorial\/?|(?:garden|user|invite)(?:\/[^?]*)?)(?:\?|$)/,
+                        /^\/(?:garden|user|invite)(?:\/[^?]*)?(?:\?|$)/,
                     ],
                     // Plain pages next to the app, such as the privacy policy, load as themselves.
                     navigateFallbackDenylist: [/^\/privacy/],

@@ -369,6 +369,13 @@ async function routeScenario(browser, errors) {
     await page.waitForSelector('.seed-content');
     assert.equal(await page.textContent('.seed-content'), 'Tutorial plant', 'a first garden has the editable tutorial');
     assert.equal(await page.locator('.project-column').count(), 1);
+    if (await page.locator('.auth-pill').count()) {
+        await page.locator('.auth-pill').click();
+        await page.getByRole('button', { name: 'About', exact: true }).waitFor();
+        assert.equal(await page.getByRole('button', { name: /^(Tutorial garden|Add tutorial plant)$/ }).count(), 0);
+        await page.keyboard.press('Escape');
+    }
+    assert.equal(await page.locator('a[href="/tutorial"]').count(), 0);
     await shot(page, '17-starter-phone.png');
     const starter = await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')));
     await page.reload({ waitUntil: 'networkidle' });
@@ -385,29 +392,25 @@ async function routeScenario(browser, errors) {
     await page.goto(`${BASE}about/`, { waitUntil: 'networkidle' });
     await page.getByRole('heading', { level: 1, name: 'Give your projects a place to grow' }).waitFor();
     await shot(page, '18-about-phone.png');
-    await page.getByRole('link', { name: 'Try the tutorial garden →' }).click();
-    await page.waitForSelector('.seed-content');
-    assert.equal(new URL(page.url()).pathname, '/tutorial');
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('cells.garden/v1')).projects.length), 0, 'practice does not replace the real garden');
-    await page.waitForFunction(() => !!window.garden);
-    await page.evaluate(async () => {
-        window.garden.gardenData[0].seed = 'Practice edit';
-        await window.garden.saveGardenData();
-    });
-    await page.reload({ waitUntil: 'networkidle' });
-    assert.equal(await page.textContent('.seed-content'), 'Practice edit');
+    assert.equal(await page.locator('a[href="/tutorial"]').count(), 0, 'About does not offer a separate tutorial garden');
+    await page.getByRole('link', { name: 'Open your garden', exact: true }).click();
+    await page.waitForSelector('.kanban-empty-message');
     await page.goBack({ waitUntil: 'networkidle' });
     assert.equal(new URL(page.url()).pathname, '/about/');
     await page.goForward({ waitUntil: 'networkidle' });
-    assert.equal(await page.textContent('.seed-content'), 'Practice edit');
+    await page.waitForSelector('.kanban-empty-message');
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
     await ctx.setOffline(true);
     await page.goto(`${BASE}about/`, { waitUntil: 'load' });
     await page.getByRole('heading', { level: 1 }).waitFor();
-    await page.goto(`${BASE}tutorial`, { waitUntil: 'load' });
-    await page.waitForSelector('.seed-content');
-    assert.equal(await page.textContent('.seed-content'), 'Practice edit', 'nested routes work offline');
+    await page.goto(`${BASE}garden/local`, { waitUntil: 'load' });
+    await page.waitForSelector('.kanban-empty-message');
+    assert.equal(await page.locator('.project-column').count(), 0, 'nested garden routes work offline without replanting the tutorial');
     await ctx.setOffline(false);
+    await page.goto(`${BASE}tutorial`, { waitUntil: 'networkidle' });
+    await page.getByRole('heading', { name: 'This page is not here' }).waitFor();
+    assert.equal(await page.locator('.project-column').count(), 0, 'there is no standalone tutorial garden');
+    assert.equal(await page.evaluate(() => localStorage.getItem('cells.garden/v1/tutorial')), null, 'no separate tutorial store is created');
 
     const token = '3f2c9a1e-5b7d-4c8e-9f10-2a3b4c5d6e7f';
     for (const [path, kind] of [[`invite/${token}`, 'garden'], [`invite/plant/${token}`, 'plant']]) {
@@ -429,7 +432,7 @@ async function routeScenario(browser, errors) {
     await page.goto(`${BASE}invite/not-a-token`, { waitUntil: 'networkidle' });
     await page.getByRole('heading', { name: 'This page is not here' }).waitFor();
     await ctx.close();
-    console.log('Routes: starter, deletion, practice isolation, reload, history, offline, invites and signed-out links passed');
+    console.log('Routes: automatic starter, deletion, no tutorial page or menu, reload, history, offline, invites and signed-out links passed');
 }
 
 async function legacyTutorialScenario(browser, errors, signedIn = false) {
@@ -1863,7 +1866,9 @@ async function accountRouteScenario(browser, errors) {
     const tutorialIds = new Set();
     for (const name of ['New home garden', 'New shared projects']) {
         await page.locator('.auth-pill').click();
+        await page.getByRole('button', { name: 'New garden space', exact: true }).waitFor();
         assert.equal(await page.getByRole('button', { name: 'Add tutorial plant', exact: true }).count(), 0, 'the tutorial is automatic, not a separate menu action');
+        assert.equal(await page.getByRole('button', { name: 'Tutorial garden', exact: true }).count(), 0, 'there is no separate tutorial garden');
         await page.getByRole('button', { name: 'New garden space', exact: true }).click();
         await page.locator('.modal input[type="text"]').fill(name);
         await page.getByRole('button', { name: 'Create', exact: true }).click();

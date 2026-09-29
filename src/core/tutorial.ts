@@ -1,4 +1,4 @@
-/** Snapshot of the original Tutorial garden, copied with fresh IDs and no sharing links. */
+/** Original tutorial plant, copied with fresh IDs and no sharing links. */
 import { emptyGarden, type Garden, type LayerItem, type LayerName, type ProjectData } from './model';
 
 export function tutorialPlant(id = `tutorial_${Array.from(crypto.getRandomValues(new Uint32Array(4)), n => n.toString(16).padStart(8, '0')).join('')}`): ProjectData {

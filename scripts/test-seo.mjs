@@ -84,8 +84,10 @@ try {
     await app.goto(base + '/?offline-check=1');
     await app.waitForFunction(() => !!window.garden);
     await context.setOffline(false);
-    const missing = await app.goto(base + '/this-page-does-not-exist');
-    assert.equal(missing.status(), 404, 'unknown page must not become an app-shell soft 404');
+    for (const path of ['/this-page-does-not-exist', '/tutorial', '/tutorial/']) {
+        const missing = await app.goto(base + path);
+        assert.equal(missing.status(), 404, 'unknown or removed page must not become an app-shell soft 404: ' + path);
+    }
     if (process.env.SEO_SCREENSHOTS) {
         await app.setViewportSize({ width: 1280, height: 900 });
         await app.goto(base + '/guide/');

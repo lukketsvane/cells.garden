@@ -5,7 +5,6 @@
   "buildCommand": "npm run test:security && npm run build:web && npm run test:security",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/tutorial", "destination": "/index.html" },
     { "source": "/garden/:path*", "destination": "/index.html" },
     { "source": "/user/:path*", "destination": "/index.html" },
     { "source": "/invite/:path*", "destination": "/index.html" }

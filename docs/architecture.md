@@ -75,11 +75,10 @@ The web shell enables routes in `bootGarden`; the extension and Obsidian keep th
 | `/invite/<token>` | A garden invitation |
 | `/invite/plant/<token>` | A plant invitation |
 | `/about` | Redirects to the public `/about/` page: introduction, credits, support, and privacy |
-| `/tutorial` | A separate local practice garden |
 
 Invitation tokens are removed from the address and kept for up to 24 hours while sign-in completes. A plain garden URL does not grant membership. Existing notification hashes continue to open their cells. Authentication redirect allowlists must include the site's nested paths, as described in `supabase/README.md`.
 
-`src/core/tutorial.ts` contains a snapshot of the original Tutorial garden's plant: its 39 cells, sprite choices, and hue. Every copy receives fresh IDs with no assignments or shared-plant reference. It is saved when the anonymous store has never existed, offered to a new account with no remote garden or cached copy, and included in every new garden space. Existing empty gardens stay empty. There is no separate action for adding a tutorial plant. `/tutorial` uses its own local store at `cells.garden/v1/tutorial` and keeps practice edits across visits.
+`src/core/tutorial.ts` contains the original tutorial plant: its 39 cells, sprite choices, and hue. Every copy receives fresh IDs with no assignments or shared-plant reference. It is saved when the anonymous store has never existed, offered to a new account with no remote garden or cached copy, and included in every new garden space. Existing empty gardens stay empty. There is no separate tutorial page, garden, or menu action.
 
 An untouched seven-cell `Start here` starter from the earlier beta is upgraded in place when a local or signed-in garden opens. Matching is conservative: changed text, layers, completion, artwork, tags, assignments, highlighting, or shared plants are left alone. The plant ID and position are preserved; replacement cells use deterministic IDs so concurrent device upgrades do not create duplicates. This never adds a tutorial to an empty garden.
 

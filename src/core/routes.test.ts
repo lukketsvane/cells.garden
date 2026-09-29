@@ -8,11 +8,11 @@ test('garden and profile addresses support reloads, trailing slashes, and upperc
     assert.deepEqual(parseRoute(gardenPath(ID)), { kind: 'garden', id: ID });
     assert.deepEqual(parseRoute(userPath(ID.toUpperCase()) + '/'), { kind: 'user', id: ID });
     assert.deepEqual(parseRoute('/garden/local'), { kind: 'garden', id: 'local' });
-    for (const kind of ['about', 'tutorial']) assert.deepEqual(parseRoute(`/${kind}/`), { kind });
+    assert.deepEqual(parseRoute('/about/'), { kind: 'about' });
 });
 
 test('unknown paths and malformed IDs are not interpreted as garden or invite access', () => {
-    for (const path of ['/unknown', '/invite/nope', '/user/local', `/garden/${ID}/extra`, '/garden/%E0%A4%A', '/invite/plant', `/invite/garden/${ID}`]) {
+    for (const path of ['/unknown', '/tutorial', '/tutorial/', '/invite/nope', '/user/local', `/garden/${ID}/extra`, '/garden/%E0%A4%A', '/invite/plant', `/invite/garden/${ID}`]) {
         assert.deepEqual(parseRoute(path), { kind: 'missing' }, path);
     }
 });

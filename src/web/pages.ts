@@ -1,17 +1,10 @@
 /** Small web pages around the garden. Ordinary links also work on reload and offline. */
-import { GardenApp } from '../core/app';
 import { AuthPill } from '../core/auth';
 import { avatarEl } from '../core/avatar';
-import { openMenu } from '../core/menu';
 import { gardenPath } from '../core/routes';
-import { applyScene } from '../core/scene';
 import { SettingsModal } from '../core/settings';
 import { getProfile, listFriends } from '../core/sharing';
-import { LOCAL_KEY, LocalStore } from '../core/store';
 import { createSupabase } from '../core/supabase';
-import { installTouchAdapter } from '../core/touch';
-import { tutorialGarden } from '../core/tutorial';
-import { BoardToggleButton } from '../core/transfer';
 import { forgetDevice } from '../core/web-push';
 
 function link(host: HTMLElement, text: string, href: string) {
@@ -24,7 +17,6 @@ function page(host: HTMLElement, title: string): HTMLElement {
     const content = host.createEl('main', { cls: 'site-content' });
     const nav = content.createEl('nav', { attr: { 'aria-label': 'Main navigation' } });
     link(nav, 'My garden', '/');
-    link(nav, 'Tutorial', '/tutorial');
     link(nav, 'About', '/about/');
     content.createEl('h1', { text: title });
     return content;
@@ -34,29 +26,6 @@ export function missingPage(host: HTMLElement) {
     const content = page(host, 'This page is not here');
     content.createEl('p', { text: 'Check the address, or return to your garden. If this was an invitation, ask for a new link.' });
     link(content, 'Open my garden →', '/').addClass('site-action');
-}
-
-export async function tutorialPage(host: HTMLElement) {
-    document.title = 'Tutorial garden · cells.garden';
-    applyScene();
-    const store = new LocalStore(`${LOCAL_KEY}/tutorial`, tutorialGarden);
-    const app = new GardenApp(store);
-    await app.mount(host);
-    window.garden = app;
-    installTouchAdapter(host);
-    new BoardToggleButton(host);
-    // The tutorial starts with its instructions visible, without changing the saved preference.
-    document.documentElement.dataset.board = 'shown';
-    const toggle = host.querySelector('.garden-board-toggle');
-    toggle?.setAttribute('aria-label', 'Hide the board');
-    toggle?.setAttribute('title', 'Hide the board');
-    toggle?.classList.add('is-active');
-    const menu = host.createEl('button', { cls: 'auth-pill', text: 'Tutorial garden', attr: { type: 'button' } });
-    menu.addEventListener('click', () => openMenu([
-        { label: 'Practice here. Changes stay on this device.', heading: true },
-        { label: 'My garden', onClick: () => location.assign('/') },
-        { label: 'About cells.garden', onClick: () => location.assign('/about/') },
-    ], menu));
 }
 
 export function profilePage(host: HTMLElement, id: string) {
@@ -117,7 +86,6 @@ export function profilePage(host: HTMLElement, id: string) {
 /** Links for builds without the account menu. */
 export function localNavigation(host: HTMLElement) {
     const nav = host.createEl('nav', { cls: 'local-navigation', attr: { 'aria-label': 'Garden navigation' } });
-    link(nav, 'Tutorial', '/tutorial');
     link(nav, 'About', '/about/');
     if (location.pathname === '/') history.replaceState(null, '', gardenPath('local') + location.search + location.hash);
 }

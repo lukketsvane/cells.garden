@@ -457,10 +457,7 @@ export async function bootGarden(host: HTMLElement, options: BootOptions = {}): 
         const petCount = activePetCount(app.settings);
         const itemCount = shownItems(app.settings).length;
         const common: MenuItem[] = [
-            ...(routes ? [
-                { label: 'Tutorial garden', onClick: () => location.assign('/tutorial') },
-                ...(uid ? [{ label: 'My profile', onClick: () => location.assign(userPath(uid)) }] : []),
-            ] : []),
+            ...(routes && uid ? [{ label: 'My profile', onClick: () => location.assign(userPath(uid)) }] : []),
             reportIssueItem(),
             { label: 'About', onClick: () => routes ? location.assign('/about/') : new AboutModal().open() },
             { label: 'Export or import', onClick: () => openGardenFiles(app) },
