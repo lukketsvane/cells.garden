@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:design": "node scripts/design-dev.mjs",
     "build": "npm run test:security && npm run build:web && npm run build:ext && npm run build:obsidian && npm run test:security",
     "build:web": "tsc --noEmit && vite build",
     "preview": "vite preview",
@@ -22,7 +23,7 @@
     "design:apply": "node scripts/design-assets.mjs apply",
     "design:audit": "node scripts/map-design-assets.mjs",
     "design:map": "node scripts/map-design-assets.mjs --offline",
-    "test:design": "node --test scripts/design-assets.test.mjs scripts/map-design-assets.test.mjs scripts/design-delivery.test.mjs",
+    "test:design": "node --test scripts/design-assets.test.mjs scripts/map-design-assets.test.mjs scripts/design-delivery.test.mjs scripts/design-export.test.mjs scripts/design-dev.test.mjs scripts/design-bridge.test.mjs",
     "test:design:preview": "node scripts/test-design-preview.mjs",
     "test:unit": "node --import ./scripts/ts-resolve.mjs --test \"src/**/*.test.ts\"",
     "test:web": "node scripts/test-web.mjs",

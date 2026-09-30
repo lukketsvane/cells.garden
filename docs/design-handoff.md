@@ -1,40 +1,75 @@
 # Master design handoff
 
 [Master file](https://www.figma.com/design/WJgKfsKcxUpuNkDvxI9gEx/cells.garden?node-id=27-1966)
-→ source components on **ASSETS** → linked **EXPORTS** frames → local candidate
-→ reviewed repository asset → `dev` → `main`.
+→ source components on **ASSETS** → linked **EXPORTS** frames → local development
+→ Git changes on `dev` → `main`.
 
-The **current repository and build are the visual baseline**. Stale Figma artwork
-must not replace it. Intentional changes require an exact candidate approval,
-an actual-garden visual review, and a separately reviewed delivery.
+The current repository and build are the visual baseline. Edit mapped artwork
+in Figma and keep the application's existing layout and behaviour. Local artwork
+updates use the direct development connection; Git delivery uses the repository's
+normal checks and review.
 
-## For the product team
+## Direct local development
 
-Start the local review desk once with `npm run design:studio`, then open the
-printed address. Routine artwork work stays in that screen; hashes and terminal
-approval commands are not required.
+Run `npm run dev:design` on `dev` or a feature branch and open
+`http://127.0.0.1:5173/` for the normal application with login and sync.
 
-1. Choose the artwork. **Open in Figma** takes you to its existing source.
-2. Use **Get from Figma**, or choose its native 1× PNG if the connection is limited.
-3. Select **Preview in garden**. Compare the current and proposed artwork in the
-   actual desktop and mobile garden; changed pixels are shown separately.
-4. Add a short review note and select **Approve artwork**.
-5. Select **Submit to dev**. The desk runs the checks and opens a GitHub review
-   request. Review and merge that request through the team's normal process.
+In Figma desktop, use **Plugins → Development → Import plugin from manifest**
+and choose `.design-staging/figma-live/manifest.json` in this checkout. Run
+**cells.garden live artwork** in the master file and leave it running while
+editing. The local connection survives server restarts. Run the plugin again
+after closing it, reopening Figma, or pulling changes to its scripts or mappings.
+It has no review screen and does not add or style any canvas layers.
 
-Every draft starts in a private worktree from the published `dev` branch. Your
-working checkout and existing gardens are not modified. The screen cannot
-publish to `main`, merge requests, enable unfinished features or approve an
-unseen/stale candidate. A read limit offers the PNG import route, not a stale
-automatic fallback. GitHub authentication is needed only for submission; the
-desk does not collect account passwords or tokens.
+Edits to the 289 mapped PNG sources and their linked export frames send native
+1× PNG bytes directly to this checkout. The server updates the asset index and
+the garden reloads. Initial connection exports only selected mapped artwork;
+it does not import the whole file. The changed assets appear in Git's normal diff
+and can be committed and pushed after the repository's required checks.
 
-An identical candidate needs no submission. Unmapped artwork and components
-that the current garden fixture cannot exercise remain unavailable for approval.
-The two legacy logos and animated stars are not treated as ordinary PNG imports.
+For a single PNG or another export location, use
+`npm run dev:design -- "C:/path/gnome.png" gnome`. Exported image bytes and
+native dimensions are preserved. Invalid exports and artwork edited directly
+outside the mapped index are rejected. Without the live plugin, save the native
+export as `Downloads/cells.garden.zip`, replacing the previous file, and the
+same server imports it. Ready for dev alone does not transfer files or push Git.
 
-The command-line sections below are for maintainers, troubleshooting and
-advanced branch-specific reviews, not the everyday product-team workflow.
+The live connection covers mapped PNG artwork. The original animated GIF,
+unmatched legacy logos, generated application icons, inline crow graphics,
+procedural sky and vector UI remain in their existing implementation. See
+`design/render-map.json`; these do not have equivalent native PNG mappings.
+
+The older review commands below are optional and are not part of local editing.
+
+## Setup for contributors
+
+Install Node.js and Figma desktop, and obtain edit access to the master file.
+Start from the shared `dev` branch:
+
+```sh
+git clone --branch dev https://github.com/lukketsvane/cells.garden.git
+cd cells.garden
+npm ci
+npm run dev:design
+```
+
+For an existing clone, check out `dev` and pull it before starting. On Windows,
+use `npm.cmd` if PowerShell blocks `npm.ps1`.
+
+Open `http://127.0.0.1:5173/`, sign in normally, and import the generated
+`.design-staging/figma-live/manifest.json` through Figma's Development menu once.
+Run **cells.garden live artwork** in the same master file. Each checkout generates
+its own local connection token; do not copy a generated plugin between computers.
+The scripts and mappings are shared in Git, while the generated plugin and token
+stay ignored. The live plugin needs no Figma API token, publishing or MCP setup.
+
+Keep source/export node IDs and native sizes intact. Edit artwork in Figma; review
+the resulting Git diff and use the repository's required checks before pushing.
+The server retries temporary Windows file locks and rejects conflicting local
+artwork edits. A saved ZIP is imported only when saved during the running session;
+restarting does not restore an older download over newer artwork.
+
+## Mapping records
 
 `design/asset-map.json` indexes every one of the 292 source assets, with its
 approved hash, native dimensions, source node and verification status.
@@ -47,7 +82,7 @@ Its documentation URLs and the Figma components' documentation links point to
 the relevant GitHub files. These are resource links and local mapping records,
 not published Code Connect bindings.
 
-## One-time setup
+## Optional MCP pull setup
 
 Keep the master file open in the Figma desktop app. Enable its local MCP server
 in Dev Mode. The helper connects only to `http://127.0.0.1:3845/mcp` and downloads
@@ -62,7 +97,7 @@ dimensions before accepting a single native PNG image fill.
 | --- | --- | --- | --- |
 | Void tile | `253:410` | `253:411` | 32 × 32 |
 | Grass | `263:410` | `263:411` | 540 × 10 |
-| Gnome (unreleased) | `263:413` | `263:414` | 13 × 22 |
+| Gnome (unreleased) | `263:413` | `336:3782` | 13 × 22 |
 | Roots icon | `263:416` | `263:417` | 9 × 9 |
 | Stem icon | `263:419` | `263:420` | 9 × 9 |
 | Minerals icon | `263:422` | `263:423` | 9 × 9 |
@@ -72,8 +107,8 @@ The native Git Source components are intentional: the older grass source is
 552 × 10, and the older gnome is 20 × 35. They must not overwrite the differently
 sized shipped sprites. Mapping gnome artwork does not enable Pets in the app.
 The separate 9 × 9 icon frames at `251:411`–`251:414` are not the import sources.
-Live pulls on 2026-09-30 verified that all six non-void mappings are byte-identical
-to the current repository artwork.
+The earlier source-image audit verified their original image fills. Live editing
+stores Figma's native rendered PNG bytes, which may use a different PNG encoding.
 
 ## Complete source inventory
 
@@ -83,16 +118,18 @@ from Figma's rendered export:
 
 | Status | Files | Meaning |
 | --- | ---: | --- |
-| Source verified | 289 | Canonical image hash matches the original repository bytes' SHA1; source geometry and linked native PNG export are configured |
+| Source verified | 74 | Canonical image hash matches the repository bytes' SHA1; source geometry and linked native PNG export are configured |
+| Rendered PNG imported | 215 | Native Figma exports update the working hashes without claiming source-image verification |
 | Reference only | 1 | Animated stars must remain the original GIF |
 | Ambiguous source | 2 | Legacy logo PNGs cannot yet be assigned to a specific logo variant |
 
 For each `source-verified` entry, `figmaImageSha1` records the confirmed source
 image hash, with evidence `source-image-sha1-and-linked-export`. `figmaSha256`
 is null: this reconciliation did not download and SHA256-check every rendered
-Figma export. The repository's approved SHA256 remains unchanged. Source hash
-verification does not claim that Figma's export encoder reproduces identical
-PNG bytes.
+Figma export. A rendered import updates the working SHA256 and clears old
+source-image evidence. Source hash verification does not claim that Figma's
+export encoder reproduces identical PNG bytes. Status counts change as artwork
+is edited; `design/asset-map.json` is the current record.
 
 Every mapped export was resolved through its actual main component, named with
 the exact repository path, and configured at native dimensions with a 1× PNG
@@ -102,34 +139,16 @@ Do not flatten assemblies or guess a logo variant.
 
 ## Figma organisation
 
-The existing ASSETS page now has ten named top-level sections. Existing source
-component IDs and instance relationships are retained; five Plume sources were
-added. No artwork was deleted, and no runtime files or repository artwork changed.
+ASSETS keeps the native source components and the existing UI reference section
+(`162:279`). All 289 mapped PNG exports are direct children of EXPORTS (`186:410`).
+The added organisational sections, auto-layout rows, family frames and captions
+were removed. Artwork positions, native sizes, node IDs and instance links were
+preserved; canvas-only background fills were removed.
 
-| Section | Node |
-| --- | --- |
-| 01 / Environment & icons | `298:410` |
-| 02 / Plants / native sprites | `298:414` |
-| 03 / Ground & creatures / native sprites | `298:419` |
-| 04 / Scene assemblies / renderer reference | `298:422` |
-| 05 / Assembly slots / preserve padding | `298:426` |
-| 06 / Board & UI / implementation reference | `162:279` |
-| 07 / Void / linked repeat preview | `298:493` |
-| EXPORTS | `186:410` |
-| 90 / Reference only / legacy & unreleased | `298:484` |
-| 99 / Sketch archive / not for export | `298:488` |
-
-The 99 Assembly Slot wrappers are retained. All 99 were checked and contain
-nested Sprite instances, not independent replacement artwork; their padding
-and assembly roles must survive any later consolidation. Export and preview
-instances are useful links to canonical sources, not duplicate source artwork.
-
-Canonical source components and families have GitHub documentation links, as do
-the renderer references. Figma's native **Ready for dev** status was set and
-verified in the desktop app for sections 01, 02, 03, EXPORTS and 07 on 2026-09-30.
-Scene assemblies, padding references, historical UI, unreleased work and sketches
-remain reference-only rather than approved implementation targets. Marking an
-artwork library ready does not enable unreleased features in the application.
+Functional Assembly Slot components remain because their nested Sprite instances
+and padding are used by the existing assemblies. Export and preview instances
+remain linked to canonical sources. Historical UI, unreleased work and sketches
+are references. Ready for dev does not transfer edits or enable application features.
 
 ## Routine workflow
 

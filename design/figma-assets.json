@@ -5,7 +5,7 @@
   "assets": {
     "void-tile": { "path": "src/assets/void_tile.png", "sourceNodeId": "253:410", "exportNodeId": "253:411", "previewNodeId": "253:413", "width": 32, "height": 32, "blockedSha256": ["49552131ad60f9f3f063b8f42fb2ce5358aefabd479078425ec4d4c694056b3a"] },
     "grass": { "path": "src/assets/grass.png", "sourceNodeId": "263:410", "exportNodeId": "263:411", "width": 540, "height": 10 },
-    "gnome": { "path": "src/assets/pets/gnome.png", "sourceNodeId": "263:413", "exportNodeId": "263:414", "width": 13, "height": 22 },
+    "gnome": { "path": "src/assets/pets/gnome.png", "sourceNodeId": "263:413", "exportNodeId": "336:3782", "width": 13, "height": 22 },
     "roots-icon": { "path": "src/assets/pack/kanban_icons/roots_icon.png", "sourceNodeId": "263:416", "exportNodeId": "263:417", "width": 9, "height": 9 },
     "stem-icon": { "path": "src/assets/pack/kanban_icons/stem_icon.png", "sourceNodeId": "263:419", "exportNodeId": "263:420", "width": 9, "height": 9 },
     "minerals-icon": { "path": "src/assets/pack/kanban_icons/minerals_icon.png", "sourceNodeId": "263:422", "exportNodeId": "263:423", "width": 9, "height": 9 },

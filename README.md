@@ -64,4 +64,4 @@ Read [About cells.garden](https://cells.garden/about/) for credits and project i
 
 Based on Max's **Garden Cells**, whose garden design, pixel art and original plugin made this project possible. The original is preserved on the [`original` branch](https://github.com/lukketsvane/cells.garden/tree/original). Licensed under [Apache-2.0](LICENSE).
 
-For development, see [Contributing](CONTRIBUTING.md) and the [architecture notes](docs/architecture.md).
+For development, see [Contributing](CONTRIBUTING.md), the [architecture notes](docs/architecture.md), and [live Figma artwork setup](docs/design-handoff.md#setup-for-contributors).
