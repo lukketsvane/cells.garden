@@ -26,6 +26,11 @@ Also run `npm run test:ext` when you touch `ext/`, and `npm run test:obsidian` w
 
 ## Where things live
 
+For Figma artwork, see the [master design handoff](docs/design-handoff.md) and
+[void background workflow](docs/void-tile.md). Pull, preview and apply native
+image fills with the `design:*` commands; `npm run test:design` checks their
+contracts without requiring Figma.
+
 - `src/core/`: the app itself, shared by every surface.
 - `src/web/`: the web app and PWA shell.
 - `ext/`: the Chrome extension, see `ext/README.md`.

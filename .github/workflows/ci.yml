@@ -40,10 +40,14 @@ jobs:
         run: npm run lint
       - name: Unit tests
         run: npm run test:unit
+      - name: Design asset contracts
+        run: npm run test:design
       - name: Full build
         run: npm run build
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      - name: Design preview smoke
+        run: npm run test:design:preview
       - name: Web/PWA smoke
         run: npm run test:web
       - name: Chrome extension smoke
