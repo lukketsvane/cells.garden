@@ -188,12 +188,22 @@
   build, the eight-page SEO browser checks and `git diff --check`. The web smoke
   test passed its headless desktop, mobile, offline, routing and divider checks,
   then hit the documented runtime restriction when full Chromium could not
-  create its process-singleton socket. No test was skipped or weakened; hosted
-  CI remains required before release.
+  create its process-singleton socket. No test was skipped or weakened.
+- Hosted SEO run 36679017237 passed. Full CI run 36679017266 initially timed out
+  waiting for a mobile draft cell after all earlier checks had passed; the same
+  scenario had passed locally. A clean retry passed the complete workflow,
+  including Web/PWA, Chrome extension and Obsidian smoke tests, without a code
+  or test change.
+- Vercel preview `dpl_HCV38BLWGDs7iDbUkZ4nxmQveNdU` is READY at
+  https://cellsgarden-72l2wvxtk-iverfinnes-projects.vercel.app/. All eight
+  canonical pages, the noindex About placeholder, robots.txt and sitemap.xml
+  return 200. Canonicals, redirects and the unknown-route 404 are correct. The
+  bodies match the tested build except for Vercel's normal preview-toolbar
+  injection on two pages. Browser review confirmed the preserved garden artwork
+  and readable guide layout.
 - Production URLs changed by this cycle: none. No IndexNow submission, Google
   sitemap submission or recrawl request was made.
-- Next: obtain passing hosted CI and verify the refreshed preview. Human review
-  and merge of PR #20 remain the release step. After publication, verify the
+- Next: human review and merge of PR #20 remain the release step. After publication, verify the
   production artifact, submit only materially changed canonical URLs to
   IndexNow, and use authorized Search Console access for the Google-specific
   baseline and recrawl.
