@@ -137,6 +137,7 @@ export default defineConfig(({ command, mode }) => {
             // instead of colliding on the default.
             port: Number(process.env.PORT) || 5173,
             strictPort: true,
+            fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/.design-staging/**'] },
         },
     };
 });

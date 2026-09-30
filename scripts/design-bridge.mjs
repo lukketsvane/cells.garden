@@ -148,6 +148,7 @@ export function createDesignBridge({ root = ROOT, token, sync, syncAll = false }
             const origin = request.headers.origin;
             if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.socket.remoteAddress)
                 || !['localhost:5173', '127.0.0.1:5173'].includes(request.headers.host)
+                || request.headers['x-forwarded-for'] !== undefined || request.headers['cf-connecting-ip'] !== undefined
                 || (origin !== undefined && !['https://www.figma.com', 'https://figma.com', 'null'].includes(origin))) throw Object.assign(new Error('Use the local Figma artwork connection.'), { status: 403 });
             if (origin !== undefined) { response.setHeader('Access-Control-Allow-Origin', origin); response.setHeader('Vary', 'Origin'); }
             if (request.method === 'OPTIONS') {

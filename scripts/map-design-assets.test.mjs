@@ -121,11 +121,11 @@ test('organised exports retain approved targets and do not audit their nested im
         { nodeId: '10:4', type: 'instance', name: 'Nested image', parentNodeId: '10:3' },
         { nodeId: '10:5', type: 'frame', name: asset.path, parentNodeId: '10:2' },
         { nodeId: '10:6', type: 'instance', name: 'Nested export image', parentNodeId: '10:5' },
-        { nodeId: '263:411', type: 'frame', name: 'Renamed grass export', parentNodeId: '10:2' },
+        { nodeId: manifest.assets.grass.exportNodeId, type: 'frame', name: 'Renamed grass export', parentNodeId: '10:2' },
         { nodeId: '10:7', type: 'text', name: 'Notes', parentNodeId: '10:2' },
         { nodeId: '10:8', type: 'instance', name: 'Outside exports', parentNodeId: manifest.pageNodeId },
     ];
-    assert.deepEqual(exportTargets(nodes, [asset]).map(node => node.nodeId), ['10:3', '10:5', '263:411']);
+    assert.deepEqual(exportTargets(nodes, [asset]).map(node => node.nodeId), ['10:3', '10:5', manifest.assets.grass.exportNodeId]);
 });
 
 test('broken or cyclic container ancestry cannot establish source ownership', () => {

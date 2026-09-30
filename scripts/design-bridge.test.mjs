@@ -91,6 +91,9 @@ test('bridge rejects unauthorized, foreign, malformed and oversized uploads befo
     for (const headers of [{ 'X-Figma-Token': 'old-session' }, { 'X-Figma-File': 'other-file' }, { Origin: 'https://example.com' }, { Host: 'example.com:5173' }, { 'X-Figma-Asset': '../../outside' }, { 'Content-Type': 'text/plain' }]) {
         assert((await send({ bytes: candidate, headers })).status >= 400);
     }
+    for (const headers of [{ 'X-Forwarded-For': '203.0.113.1' }, { 'CF-Connecting-IP': '203.0.113.1' }]) {
+        assert.equal((await send({ bytes: candidate, headers })).status, 403);
+    }
     assert.equal((await send({ bytes: Buffer.from('not a PNG') })).status, 400);
     assert.equal((await send({ bytes: readFileSync(resolve(ROOT, manifest.assets.gnome.path)) })).status, 400);
     assert.equal((await send({ bytes: Buffer.alloc(1024 * 1024 + 1) })).status, 413);
