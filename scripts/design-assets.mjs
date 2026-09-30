@@ -58,10 +58,14 @@ export function assetKey(path) {
         ?? path.replace(/^src\/assets\//, '').replace(/\.[^.]+$/, '').replaceAll('/', '-');
 }
 
-export function assetByName(name) {
+export function assetByName(name, assets = coverage.assets) {
     if (Object.hasOwn(manifest.assets, name)) return manifest.assets[name];
-    const entry = coverage.assets.find(asset => assetKey(asset.path) === name);
+    const entry = assets.find(asset => assetKey(asset.path) === name);
     requireThat(entry, `Unknown asset: ${name}. Run npm run design:list.`);
+    const hasExportId = !!entry.exportNodeId;
+    const hasExportName = !!entry.exportName;
+    requireThat(hasExportId === hasExportName, 'Incomplete export mapping. Review the linked export ID and name together.');
+    if (hasExportId) return { ...entry };
     // Source-only links are intentionally not guessed EXPORTS instances.
     return { ...entry, exportNodeId: entry.sourceNodeId, exportName: entry.sourceName };
 }

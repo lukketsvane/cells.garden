@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'nod
 import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { test } from 'node:test';
-import { ROOT, manifest, assetByName, validatePng, validateExport, imageUrl, parseRpc, createFigmaClient, stageAsset, applyAsset, previewServer, sha256 } from './design-assets.mjs';
+import { ROOT, manifest, coverage, assetKey, assetByName, validatePng, validateExport, imageUrl, parseRpc, createFigmaClient, stageAsset, applyAsset, previewServer, sha256 } from './design-assets.mjs';
 
 const tile = readFileSync(resolve(ROOT, manifest.assets['void-tile'].path));
 function fixture(t) {
@@ -24,6 +24,34 @@ test('every mapped asset exists with its exact native PNG dimensions', () => {
         assert.match(asset.exportNodeId, /^\d+:\d+$/);
         assert.match(validatePng(readFileSync(resolve(ROOT, asset.path)), asset), /^[a-f0-9]{64}$/);
     }
+});
+
+test('reconciled non-manifest assets use their actual linked exports', () => {
+    const background = assetByName('bg_image');
+    assert.equal(background.sourceNodeId, '29:3203');
+    assert.equal(background.exportNodeId, '186:413');
+    assert.equal(background.exportName, 'src/assets/bg_image.png');
+    validateExport(context('<instance id="186:413" name="src/assets/bg_image.png" width="540" height="108" />'), background);
+    assert.throws(() => validateExport(context('<symbol id="29:3203" name="Source/Environment/Background" width="540" height="108" />'), background), /does not match/);
+    for (const entry of coverage.assets.filter(asset => asset.exportNodeId && asset.exportName)) {
+        const resolved = assetByName(assetKey(entry.path));
+        assert.equal(resolved.exportNodeId, entry.exportNodeId);
+        assert.equal(resolved.exportName ?? resolved.path, entry.exportName);
+    }
+});
+
+test('source-only fallback keeps a complete source pair and rejects partial export mappings', () => {
+    const source = { path: 'src/assets/source-only.png', sourceNodeId: '1:2', sourceName: 'Source/Test', exportNodeId: null, exportName: null };
+    const resolved = assetByName('source-only', [source]);
+    assert.equal(resolved.exportNodeId, source.sourceNodeId);
+    assert.equal(resolved.exportName, source.sourceName);
+    assert.equal(source.exportNodeId, null);
+    for (const partial of [{ ...source, exportNodeId: '1:3' }, { ...source, exportName: source.path }]) {
+        assert.throws(() => assetByName('source-only', [partial]), /Incomplete export mapping/);
+    }
+    const absent = assetByName('source-only', [{ ...source, sourceNodeId: null, sourceName: null }]);
+    assert.equal(absent.exportNodeId, null);
+    assert.equal(absent.exportName, null);
 });
 
 test('invalid, damaged, truncated, resized and oversized PNGs are rejected', () => {

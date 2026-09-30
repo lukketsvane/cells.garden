@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, relative, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ROOT, manifest, createFigmaClient, sha256, imageUrl } from './design-assets.mjs';
+import { ROOT, manifest, coverage, createFigmaClient, sha256, imageUrl } from './design-assets.mjs';
 
 export function repositoryAssets(root = ROOT) {
     const directory = resolve(root, 'src/assets');
@@ -67,9 +67,55 @@ export const isReadLimit = error => /rate limit|try again tomorrow|reauthenticat
 const PLANTS = { plant_1: 'Bell', plant_2: 'Branch', plant_3: 'Vine', plant_4: 'Spray', plant_5: 'Arch', plant_6: 'Fork', plant_7: 'Starburst', plant_8: 'Cluster', plant_9: 'Plume' };
 const ENVIRONMENT = { 'bg_image.png': 'Background', 'cloud.png': 'Clouds', 'mountains.png': 'Mountains', 'ground_tile.png': 'Ground Tile', 'stars_pattern.gif': 'Stars' };
 
-export function findSource(asset, nodes) {
-    const known = Object.values(manifest.assets).find(entry => entry.path === asset.path);
-    if (known) return nodes.find(node => node.nodeId === known.sourceNodeId);
+function unique(nodes) { return nodes.length === 1 ? nodes[0] : undefined; }
+
+// Organisational containers may change; instances must never become sources.
+export function isSourceDescendant(node, ancestorId, nodes) {
+    const byId = nodes instanceof Map ? nodes : new Map(nodes.map(entry => [entry.nodeId, entry]));
+    const visited = new Set([node.nodeId]);
+    let parentId = node.parentNodeId;
+    while (parentId) {
+        if (visited.has(parentId)) return false;
+        if (parentId === ancestorId) return true;
+        visited.add(parentId);
+        const parent = byId.get(parentId);
+        if (!parent || !['frame', 'section', 'symbol'].includes(parent.type)) return false;
+        parentId = parent.parentNodeId;
+    }
+    return false;
+}
+
+export function exportTargets(nodes, assets = coverage.assets) {
+    const knownIds = new Set([...Object.values(manifest.assets), ...coverage.assets, ...assets].map(asset => asset.exportNodeId).filter(Boolean));
+    const paths = new Set(assets.map(asset => asset.path));
+    const children = new Map();
+    for (const node of nodes) {
+        if (!children.has(node.parentNodeId)) children.set(node.parentNodeId, []);
+        children.get(node.parentNodeId).push(node);
+    }
+    const targets = [];
+    const visited = new Set([manifest.exportSectionNodeId]);
+    const visit = parentId => {
+        for (const node of children.get(parentId) || []) {
+            if (visited.has(node.nodeId)) continue;
+            visited.add(node.nodeId);
+            if (['instance', 'symbol'].includes(node.type)
+                || (node.type === 'frame' && (knownIds.has(node.nodeId) || paths.has(node.name)))) {
+                targets.push(node);
+            } else if (['section', 'frame'].includes(node.type)) visit(node.nodeId);
+        }
+    };
+    visit(manifest.exportSectionNodeId);
+    return targets;
+}
+
+export function findSource(asset, nodes, approvedAssets = coverage.assets) {
+    const known = Object.values(manifest.assets).find(entry => entry.path === asset.path)
+        || approvedAssets.find(entry => entry.path === asset.path);
+    const byId = new Map(nodes.map(node => [node.nodeId, node]));
+    const sources = nodes.filter(node => node.type === 'symbol' && isSourceDescendant(node, manifest.pageNodeId, byId));
+    // A missing approved ID needs reconciliation, not silent rebinding to a copy.
+    if (known?.sourceNodeId) return unique(sources.filter(node => node.nodeId === known.sourceNodeId));
     const local = asset.path.replace(/^src\/assets\//, '');
     let parentName;
     let childName;
@@ -90,10 +136,11 @@ export function findSource(asset, nodes) {
         parentName = 'Source/Ground/Pumpkin';
         childName = `State=${pumpkin[1] === 'off' ? 'Off' : 'On ' + pumpkin[1].slice(3)}`;
     } else if (ENVIRONMENT[local]) {
-        return nodes.find(node => node.name === `Source/Environment/${ENVIRONMENT[local]}` && node.parentNodeId === manifest.pageNodeId);
+        return unique(sources.filter(node => node.name === `Source/Environment/${ENVIRONMENT[local]}`));
     }
-    const parent = nodes.find(node => node.name === parentName && node.parentNodeId === manifest.pageNodeId);
-    return parent && nodes.find(node => node.parentNodeId === parent.nodeId && node.name === childName);
+    const parent = unique(nodes.filter(node => ['frame', 'section'].includes(node.type)
+        && node.name === parentName && isSourceDescendant(node, manifest.pageNodeId, byId)));
+    return parent && unique(sources.filter(node => node.name === childName && isSourceDescendant(node, parent.nodeId, byId)));
 }
 
 export function buildCoverage(inventory, nodes, mappings, previousReports = []) {
@@ -151,12 +198,12 @@ export async function auditMaster(limit = 20) {
         await client.initialize();
         const nodes = metadataNodes(await client.call('get_metadata', { nodeId: manifest.pageNodeId }));
         writeFileSync(resolve(directory, 'asset-nodes.json'), JSON.stringify(nodes, null, 2) + '\n');
-        const exports = nodes.filter(node => node.parentNodeId === manifest.exportSectionNodeId);
+        const exports = exportTargets(nodes, inventory);
         if (!exports.length) throw new Error('The master EXPORTS section was not found. Open the correct file.');
         // Additional standalone sources are audited too, but remain reference-only
         // unless the image bytes identify a repository file unambiguously.
-        const extraSources = nodes.filter(node => node.type === 'symbol' && /^Source\//.test(node.name)
-            && node.parentNodeId === manifest.pageNodeId && !exports.some(e => e.name === node.name));
+        const extraSources = nodes.filter(node => node.type === 'symbol' && /^(?:Git )?Source\//.test(node.name)
+            && isSourceDescendant(node, manifest.pageNodeId, nodes) && !exports.some(e => e.name === node.name));
         const targets = [...exports, ...extraSources];
         const mappings = [...(oldReport?.mappings || [])];
         const failures = [];

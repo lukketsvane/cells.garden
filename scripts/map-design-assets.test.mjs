@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
 import { ROOT, coverage, manifest, assetKey, assetByName } from './design-assets.mjs';
-import { repositoryAssets, metadataNodes, describedPaths, classifyMapping, findSource, buildCoverage, isReadLimit } from './map-design-assets.mjs';
+import { repositoryAssets, metadataNodes, describedPaths, classifyMapping, findSource, buildCoverage, isReadLimit, isSourceDescendant, exportTargets } from './map-design-assets.mjs';
 
 test('every source asset is indexed once with its unchanged approved bytes and dimensions', () => {
     const current = repositoryAssets();
@@ -25,6 +26,16 @@ test('verification claims require actual matching digests and geometry', () => {
             assert.equal(asset.sourceWidth, asset.width);
             assert.equal(asset.sourceHeight, asset.height);
             assert.equal(asset.evidence, 'image-bytes');
+        }
+        if (asset.status === 'source-verified') {
+            assert.equal(asset.figmaImageSha1, createHash('sha1').update(readFileSync(resolve(ROOT, asset.path))).digest('hex'));
+            assert.equal(asset.sourceWidth, asset.width);
+            assert.equal(asset.sourceHeight, asset.height);
+            assert.match(asset.sourceNodeId, /^\d+:\d+$/);
+            assert.match(asset.exportNodeId, /^\d+:\d+$/);
+            assert.equal(asset.exportName, asset.path);
+            assert.equal(asset.figmaSha256, null);
+            assert.equal(asset.evidence, 'source-image-sha1-and-linked-export');
         }
         if (['missing-source', 'ambiguous-source'].includes(asset.status)) assert.equal(asset.sourceNodeId, null);
         if (asset.status === 'unverified') assert.equal(asset.figmaSha256, null);
@@ -49,34 +60,94 @@ test('a missing image response is unverified, never a claimed visual mismatch', 
 
 test('named source mapping distinguishes seed icons, seeds and plant assembly slots', () => {
     const nodes = [
-        { nodeId: '1:1', name: 'Source/Ground/Seeds', parentNodeId: manifest.pageNodeId },
-        { nodeId: '1:2', name: 'Kind=Seed, Variant=seed1', parentNodeId: '1:1' },
-        { nodeId: '1:3', name: 'Kind=Icon, Variant=seed1', parentNodeId: '1:1' },
-        { nodeId: '2:1', name: 'Source/Plants/Bell', parentNodeId: manifest.pageNodeId },
-        { nodeId: '2:2', name: 'Part=Stem, Variant=stem1', parentNodeId: '2:1' },
-        { nodeId: '3:1', name: 'Source/Assembly Slots/Plants/Bell/Stem', parentNodeId: manifest.pageNodeId },
-        { nodeId: '3:2', name: 'Variant=stem1', parentNodeId: '3:1' },
+        { nodeId: '1:1', type: 'frame', name: 'Source/Ground/Seeds', parentNodeId: manifest.pageNodeId },
+        { nodeId: '1:2', type: 'symbol', name: 'Kind=Seed, Variant=seed1', parentNodeId: '1:1' },
+        { nodeId: '1:3', type: 'symbol', name: 'Kind=Icon, Variant=seed1', parentNodeId: '1:1' },
+        { nodeId: '2:1', type: 'frame', name: 'Source/Plants/Bell', parentNodeId: manifest.pageNodeId },
+        { nodeId: '2:2', type: 'symbol', name: 'Part=Stem, Variant=stem1', parentNodeId: '2:1' },
+        { nodeId: '3:1', type: 'frame', name: 'Source/Assembly Slots/Plants/Bell/Stem', parentNodeId: manifest.pageNodeId },
+        { nodeId: '3:2', type: 'symbol', name: 'Variant=stem1', parentNodeId: '3:1' },
     ];
-    assert.equal(findSource({ path: 'src/assets/pack/seeds/seed1.png' }, nodes).nodeId, '1:2');
-    assert.equal(findSource({ path: 'src/assets/pack/seeds/seed_icons/seed1.png' }, nodes).nodeId, '1:3');
-    assert.equal(findSource({ path: 'src/assets/pack/plant_1/stem/stem1.png' }, nodes).nodeId, '2:2');
+    assert.equal(findSource({ path: 'src/assets/pack/seeds/seed1.png' }, nodes, []).nodeId, '1:2');
+    assert.equal(findSource({ path: 'src/assets/pack/seeds/seed_icons/seed1.png' }, nodes, []).nodeId, '1:3');
+    assert.equal(findSource({ path: 'src/assets/pack/plant_1/stem/stem1.png' }, nodes, []).nodeId, '2:2');
     assert.equal(findSource({ path: 'src/assets/pack/plant_9/stem/Stem_1.png' }, nodes), undefined);
 });
 
 test('stale old comparisons cannot upgrade changed repository files to verified', () => {
     const asset = { path: 'src/assets/bg_image.png', format: 'png', width: 540, height: 108, sha256: 'new' };
-    const nodes = [{ nodeId: '29:3203', name: 'Source/Environment/Background', parentNodeId: manifest.pageNodeId, width: 540, height: 108 }];
+    const nodes = [{ nodeId: '29:3203', type: 'symbol', name: 'Source/Environment/Background', parentNodeId: manifest.pageNodeId, width: 540, height: 108 }];
     const old = [{ path: asset.path, baselineSha256: 'old', candidateSha256: 'old' }];
     assert.equal(buildCoverage([asset], nodes, [], old)[0].status, 'unverified');
 });
 
-test('animated stars and absent source art cannot be converted into new PNG imports', () => {
+test('approved source IDs survive container and component renaming without rebinding', () => {
+    const asset = coverage.assets.find(asset => asset.path === 'src/assets/bg_image.png');
+    const source = { nodeId: asset.sourceNodeId, type: 'symbol', name: 'Background / native pixels', parentNodeId: '10:2', width: asset.width, height: asset.height };
+    const nodes = [
+        { nodeId: '10:1', type: 'section', name: '01 / Artwork', parentNodeId: manifest.pageNodeId },
+        { nodeId: '10:2', type: 'frame', name: 'Environment', parentNodeId: '10:1' },
+        source,
+        { nodeId: '10:3', type: 'symbol', name: asset.sourceName, parentNodeId: manifest.pageNodeId },
+    ];
+    assert.equal(findSource(asset, nodes), source);
+    assert.equal(findSource(asset, nodes.filter(node => node !== source)), undefined);
+    assert.equal(findSource(asset, nodes.map(node => node === source ? { ...node, type: 'instance' } : node)), undefined);
+    assert.equal(findSource(asset, [...nodes, { ...source }]), undefined);
+});
+
+test('new sources can be discovered through nested sections but never through instances or ambiguous copies', () => {
+    const asset = { path: 'src/assets/pack/plant_9/stem/Stem_1.png' };
+    const nodes = [
+        { nodeId: '10:1', type: 'section', name: 'Native artwork', parentNodeId: manifest.pageNodeId },
+        { nodeId: '10:2', type: 'frame', name: 'Source/Plants/Plume', parentNodeId: '10:1' },
+        { nodeId: '10:3', type: 'frame', name: 'Stems', parentNodeId: '10:2' },
+        { nodeId: '10:4', type: 'symbol', name: 'Part=Stem, Variant=Stem_1', parentNodeId: '10:3' },
+    ];
+    assert.equal(findSource(asset, nodes, []).nodeId, '10:4');
+    assert.equal(findSource(asset, nodes.map(node => node.nodeId === '10:3' ? { ...node, type: 'instance' } : node), []), undefined);
+    assert.equal(findSource(asset, nodes.map(node => node.nodeId === '10:4' ? { ...node, type: 'instance' } : node), []), undefined);
+    assert.equal(findSource(asset, [...nodes, { ...nodes[3], nodeId: '10:5' }], []), undefined);
+    assert.equal(findSource(asset, [...nodes, { ...nodes[1], nodeId: '10:6' }], []), undefined);
+    assert.equal(findSource(asset, nodes.map(node => node.nodeId === '10:1' ? { ...node, parentNodeId: 'other:page' } : node), []), undefined);
+});
+
+test('organised exports retain approved targets and do not audit their nested image layers twice', () => {
+    const asset = { path: 'src/assets/test.png' };
+    const nodes = [
+        { nodeId: '10:1', type: 'section', name: 'Environment', parentNodeId: manifest.exportSectionNodeId },
+        { nodeId: '10:2', type: 'frame', name: 'Native exports', parentNodeId: '10:1' },
+        { nodeId: '10:3', type: 'instance', name: 'A linked sprite', parentNodeId: '10:2' },
+        { nodeId: '10:4', type: 'instance', name: 'Nested image', parentNodeId: '10:3' },
+        { nodeId: '10:5', type: 'frame', name: asset.path, parentNodeId: '10:2' },
+        { nodeId: '10:6', type: 'instance', name: 'Nested export image', parentNodeId: '10:5' },
+        { nodeId: '263:411', type: 'frame', name: 'Renamed grass export', parentNodeId: '10:2' },
+        { nodeId: '10:7', type: 'text', name: 'Notes', parentNodeId: '10:2' },
+        { nodeId: '10:8', type: 'instance', name: 'Outside exports', parentNodeId: manifest.pageNodeId },
+    ];
+    assert.deepEqual(exportTargets(nodes, [asset]).map(node => node.nodeId), ['10:3', '10:5', '263:411']);
+});
+
+test('broken or cyclic container ancestry cannot establish source ownership', () => {
+    const nodes = [
+        { nodeId: '10:1', type: 'frame', parentNodeId: '10:2' },
+        { nodeId: '10:2', type: 'frame', parentNodeId: '10:1' },
+        { nodeId: '10:3', type: 'symbol', parentNodeId: '10:1' },
+    ];
+    assert.equal(isSourceDescendant(nodes[2], manifest.pageNodeId, nodes), false);
+    assert.equal(isSourceDescendant({ nodeId: '10:4', type: 'symbol', parentNodeId: 'missing' }, manifest.pageNodeId, nodes), false);
+});
+
+test('animated stars and ambiguous logos stay protected while Plume uses its reconciled sources', () => {
     const stars = coverage.assets.find(a => a.path.endsWith('stars_pattern.gif'));
     assert.equal(stars.format, 'gif');
     assert.equal(stars.status, 'reference-only');
     const plume = coverage.assets.filter(a => a.path.includes('/plant_9/'));
     assert.equal(plume.length, 5);
-    assert(plume.every(a => a.status === 'missing-source' && a.sourceNodeId === null));
+    assert(plume.every(a => a.status === 'source-verified' && a.sourceNodeId && a.exportNodeId));
+    const logos = coverage.assets.filter(a => /CG_logo/.test(a.path));
+    assert.equal(logos.length, 2);
+    assert(logos.every(a => a.status === 'ambiguous-source' && a.sourceNodeId === null));
 });
 
 test('quota and authentication failures stop live auditing', () => {

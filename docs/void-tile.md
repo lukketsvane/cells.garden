@@ -33,9 +33,13 @@ that changed in the repository after the pull. Correct the Figma source instead
 of replacing the shipped PNG. Nothing commits, pushes or deploys automatically.
 Future intentional artwork changes require a separate explicit review.
 
-The old white dash placeholder is explicitly blocked from applying: it predates
-Max's current coloured tile. If it appears in the preview, update the existing
-Figma source with the repository PNG and pull again. Do not change the renderer
-back to a mask to accommodate it.
+The existing Figma source was restored in place on 2026-09-30 with the current
+repository PNG. Its original image-fill bytes were read back and verified with
+SHA-256 `085da25188f1181c0653cf648b945ba84707c421f9fa054cd323f3aed5ccfff3`.
+The linked export and all repeat-preview instances retain their source links.
+
+The old white dash placeholder remains explicitly blocked from applying. If an
+already-open preview still shows it, pull again and restart that preview: it is
+a snapshot, not a live Figma view. Do not change the renderer back to a mask.
 
 See [the design handoff](design-handoff.md) for mappings and the other exports.
