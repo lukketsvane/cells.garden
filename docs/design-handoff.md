@@ -27,6 +27,21 @@ the garden reloads. Initial connection exports only selected mapped artwork;
 it does not import the whole file. The changed assets appear in Git's normal diff
 and can be committed and pushed after the repository's required checks.
 
+### Editing the gnome's hat
+
+Open [the editable gnome source](https://www.figma.com/design/WJgKfsKcxUpuNkDvxI9gEx/cells.garden?node-id=263-413).
+Expand its layers and select **Hat/Fill**, then click its **Fill** colour swatch
+in the right sidebar. Choose any colour; the live plugin sends the linked native
+export and the normal local garden reloads automatically after the import saves.
+**Hat/Outline** and **Hat/Highlight** let you adjust the shading independently.
+The gnome is native editable pixel artwork; other image-filled sprites remain
+flattened images unless their source has been made editable too.
+
+In your editor's Git Source Control view, confirm the branch is `dev`, review
+the changed artwork and `design/asset-map.json`, run the required checks below,
+then stage those files, commit and push. Figma editing updates the local checkout;
+Git commit and push are separate actions.
+
 For a single PNG or another export location, use
 `npm run dev:design -- "C:/path/gnome.png" gnome`. Exported image bytes and
 native dimensions are preserved. Invalid exports and artwork edited directly

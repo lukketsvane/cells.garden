@@ -74,7 +74,16 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const asset = args[1] ?? 'gnome';
     const branch = (await import('node:child_process')).execFileSync('git', ['branch', '--show-current'], { cwd: ROOT, encoding: 'utf8' }).trim();
     if (!branch || ['main', 'original'].includes(branch)) throw new Error('Run the design dev server on dev or a feature branch.');
-    const bridge = createDesignBridge({ sync: syncDesignExport });
+    let server;
+    const applyExport = async (path, options) => {
+        const changed = await syncDesignExport(path, options);
+        if (changed.length && server) {
+            server.moduleGraph.invalidateAll();
+            server.ws.send({ type: 'full-reload' });
+        }
+        return changed;
+    };
+    const bridge = createDesignBridge({ sync: applyExport });
     mkdirSync(dirname(path), { recursive: true });
     const version = () => {
         if (!existsSync(path)) return null;
@@ -87,13 +96,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         try {
             const currentVersion = version();
             if (currentVersion === importedVersion) return;
-            const changed = await syncDesignExport(path, { asset });
+            const changed = await applyExport(path, { asset });
             importedVersion = currentVersion;
             console.log(changed.length ? `Figma export applied: ${changed.join(', ')}` : 'Figma export matches the working tree.');
         } catch (error) { console.error(`Figma export retained for retry: ${error.message}`); }
     };
     await sync();
-    const server = await createServer({
+    server = await createServer({
         configFile: resolve(ROOT, 'vite.config.ts'),
         server: { host: '127.0.0.1', port: 5173, strictPort: true },
         plugins: [{ name: 'figma-live', configureServer(server) { server.middlewares.use(bridge.middleware); } }],
