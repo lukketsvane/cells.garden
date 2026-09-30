@@ -6,7 +6,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { GardenApp } from './app';
 import { avatarEl } from './avatar';
-import { AccessibilityModal } from './accessibility';
 import { AvatarEditorModal } from './avatar-editor';
 import { hourOf, skyAt, skyGradient, timeOf } from './garden-settings';
 import { ICONS } from './icons';
@@ -31,7 +30,7 @@ export interface SettingsAccount {
 const randomSeed = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2, '0')).join('');
 
 export class SettingsModal extends Modal {
-    constructor(private readonly account: SettingsAccount | null, private readonly app: GardenApp) {
+    constructor(private readonly account: SettingsAccount | null, private readonly app: GardenApp | null = null) {
         super();
     }
 
@@ -43,7 +42,7 @@ export class SettingsModal extends Modal {
     private async render() {
         const { contentEl } = this;
         contentEl.empty();
-        contentEl.createEl('h2', { text: 'Settings' });
+        contentEl.createEl('h2', { text: this.app ? 'Settings' : 'Profile' });
         const status = contentEl.createDiv('auth-status');
         const say = (text: string) => status.setText(text);
 
@@ -119,7 +118,12 @@ export class SettingsModal extends Modal {
                 say(`Could not load your profile: ${(e as Error).message}`);
             }
             // Pushes to this device; the web app alone has them.
-            pushSetting(contentEl, client, userId);
+            if (this.app) pushSetting(contentEl, client, userId);
+        }
+
+        if (!this.app) {
+            contentEl.appendChild(status);
+            return;
         }
 
         const scene = new Setting(contentEl).setName('Scene').setDesc('On this device.');
@@ -131,10 +135,6 @@ export class SettingsModal extends Modal {
         select.addEventListener('change', () => setScene(select.value as Scene));
 
         gardenSettings(contentEl.createDiv(), this.app);
-
-        new Setting(contentEl).setName('Accessibility')
-            .setDesc('Contrast and requests for this device.')
-            .addButton(b => b.setButtonText('Open').onClick(() => new AccessibilityModal().open()));
 
         new Setting(contentEl)
             .setName('Keyboard shortcuts')

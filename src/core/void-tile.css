@@ -1,22 +1,9 @@
-/* The 32px PNG is used as an alpha mask so theme colors stay in CSS,
-   including in Obsidian. The root qualifier overrides the legacy gradient
-   regardless of CSS bundling order. */
+/* Repeat the artist's original pixels, including their colours and transparency.
+   An alpha mask would flatten an opaque PNG into a solid colour. The root
+   qualifier overrides the legacy gradient regardless of CSS bundling order. */
 :root .garden-canvas-viewport {
-    background-image: none;
-}
-
-.garden-canvas-viewport::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background-color: var(--background-modifier-border);
-    -webkit-mask-image: url('../assets/void_tile.png');
-    mask-image: url('../assets/void_tile.png');
-    -webkit-mask-size: 32px 32px;
-    mask-size: 32px 32px;
-    -webkit-mask-repeat: repeat;
-    mask-repeat: repeat;
-    mask-mode: alpha;
+    background-image: url('../assets/void_tile.png');
+    background-size: 32px 32px;
+    background-repeat: repeat;
     image-rendering: pixelated;
 }

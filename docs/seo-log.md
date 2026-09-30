@@ -160,3 +160,40 @@
   the remaining release action is human review/merge of PR #20. After release,
   verify production, submit only the changed canonical URLs to IndexNow, and use
   authorized Search Console access for the Google-specific baseline and recrawl.
+
+## 2026-09-30 — Refresh after routes and artwork updates
+
+- Continued PR #20 after production main advanced to
+  `11bcba4641bd0eb529d686a634423392ac1414fd`. Merged current main into the
+  existing SEO branch and resolved only the SEO test and redirect-list overlaps.
+  The new garden routes, tutorial changes, native artwork, design handoff and
+  generated plugin updates from main are preserved.
+- Production currently returns HTTP 200 for the homepage, robots.txt and the
+  six-URL sitemap. All six listed pages are self-canonical; an unknown route and
+  the three pending workflow guides return 404. The homepage still uses the old
+  title without `Cells Garden`.
+- Main added `/about/` to the sitemap and later replaced its content with a
+  short preparation notice. This branch keeps that latest copy but adds
+  `noindex, follow` and removes the placeholder from the sitemap until it has
+  substantive information. The eight useful canonical pages remain the
+  branch's indexable set.
+- Rechecked the guide instructions against the current sharing, assignment,
+  notification, transfer and Obsidian code. No product claim or new workflow
+  page was added.
+- General web search returned the homepage and the current Obsidian listing.
+  This is corroboration only, not a measured Google Norway rank. Search Console
+  remains unavailable. Google's public DNS resolver returned no TXT answer for
+  `cells.garden`, so the supplied verification record is still not public.
+- Passed locally: `npm run typecheck`, `npm run lint`, the aggregate three-target
+  build, the eight-page SEO browser checks and `git diff --check`. The web smoke
+  test passed its headless desktop, mobile, offline, routing and divider checks,
+  then hit the documented runtime restriction when full Chromium could not
+  create its process-singleton socket. No test was skipped or weakened; hosted
+  CI remains required before release.
+- Production URLs changed by this cycle: none. No IndexNow submission, Google
+  sitemap submission or recrawl request was made.
+- Next: obtain passing hosted CI and verify the refreshed preview. Human review
+  and merge of PR #20 remain the release step. After publication, verify the
+  production artifact, submit only materially changed canonical URLs to
+  IndexNow, and use authorized Search Console access for the Google-specific
+  baseline and recrawl.

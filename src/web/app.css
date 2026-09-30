@@ -72,6 +72,25 @@ button {
     font-family: inherit;
 }
 
+#app.site-page {
+    overflow-y: auto;
+    padding: calc(64px + env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) calc(48px + env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    background: radial-gradient(ellipse at top, #283a30, #1e1e1e 65%);
+}
+
+.site-content { max-width: 680px; margin: 0 auto; font-size: 16px; line-height: 1.65; }
+.site-content h1 { font-size: clamp(32px, 6vw, 48px); line-height: 1.15; margin: 40px 0 24px; letter-spacing: -0.03em; }
+.site-content h2 { margin-top: 32px; font-size: 21px; }
+.site-content a, .local-navigation a { color: #bad3ac; text-underline-offset: 4px; }
+.site-content nav { display: flex; flex-wrap: wrap; gap: 12px 24px; }
+.site-content nav:last-child { border-top: 1px solid #455347; margin-top: 32px; padding-top: 24px; }
+.site-lead { font-size: 19px; color: #d3ddd1; }
+.site-layers { display: grid; grid-template-columns: auto 1fr; gap: 12px 24px; padding: 24px 0; }
+.site-layers dt { color: #bad3ac; font-weight: 600; }
+.site-layers dd { margin: 0; }
+.site-action { display: block; width: fit-content; margin: 24px 0; font-weight: 600; }
+.local-navigation { position: absolute; left: 80px; top: calc(16px + env(safe-area-inset-top)); display: flex; gap: 16px; z-index: 50; }
+
 #garden-intro {
     max-width: 44rem;
     max-height: 100%;

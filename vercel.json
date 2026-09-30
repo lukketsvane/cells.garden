@@ -4,6 +4,11 @@
   "installCommand": "npm ci --ignore-scripts",
   "buildCommand": "npm run test:security && npm run build:web && npm run test:security",
   "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/garden/:path*", "destination": "/index.html" },
+    { "source": "/user/:path*", "destination": "/index.html" },
+    { "source": "/invite/:path*", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/privacy/oauth-return.html",
@@ -23,6 +28,13 @@
         { "key": "X-DNS-Prefetch-Control", "value": "off" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), hid=(), accelerometer=(), gyroscope=(), magnetometer=(), display-capture=(), clipboard-read=(), clipboard-write=(self)" }
       ]
+    },
+    {
+      "source": "/invite/:path*",
+      "headers": [
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
     }
   ],
   "redirects": [
@@ -38,6 +50,8 @@
     {"source": "/guide/sync-sharing", "destination": "/guide/sync-sharing/", "permanent": true},
     {"source": "/guide/sync-sharing/index.html", "destination": "/guide/sync-sharing/", "permanent": true},
     {"source": "/guide/backups", "destination": "/guide/backups/", "permanent": true},
-    {"source": "/guide/backups/index.html", "destination": "/guide/backups/", "permanent": true}
+    {"source": "/guide/backups/index.html", "destination": "/guide/backups/", "permanent": true},
+    {"source": "/about", "destination": "/about/", "permanent": true},
+    {"source": "/about/index.html", "destination": "/about/", "permanent": true}
   ]
 }

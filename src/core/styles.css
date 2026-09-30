@@ -39,35 +39,18 @@
    a rim around the garden (VOID_REACH in garden.ts). */
 .garden-world {
     position: absolute;
+    isolation: isolate;
     top: 0;
     left: 0;
     overflow: hidden;
 }
 
-:root[data-high-contrast] .garden-ground-layer { filter: brightness(0.3); }
-:root[data-high-contrast] .garden-mineral-part {
-    opacity: 1 !important;
-    filter: brightness(1.5) drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff);
-}
-:root[data-high-contrast] .garden-item,
-:root[data-high-contrast] .seed-content,
-:root[data-high-contrast] .garden-menu-item,
-:root[data-high-contrast] .garden-zone-label-row,
-:root[data-high-contrast] .modal {
-    color: #fff;
-    background-color: #111;
-    border-color: #fff;
-}
-:root[data-high-contrast] :focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
-
 /*
  * The scene, layer by layer. The view sets only what an image decides: its
  * URL and its size.
  *
- * The z-index values are Max's, fractions and all. A fraction is not a valid
- * z-index, so those layers stack in the order they are written instead, which
- * is the order they are meant to be in; the numbers stay as a record of what
- * was meant to sit above what.
+ * Keep the sky inside the world's stacking context. Stars, satellites and
+ * UFOs sit behind the mountains; clouds and the tree line sit in front.
  */
 
 /* The sky layers, from the colour behind everything to the tree line. */
@@ -100,7 +83,7 @@
 }
 
 .garden-shooting-star-layer {
-    z-index: 1.45;
+    z-index: -5;
 }
 
 .garden-shooting-star-layer canvas {

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { resolve, extname } from 'node:path';
+import { resolve, extname, sep } from 'node:path';
 import { chromium } from 'playwright';
 
 const root = resolve('dist');
@@ -12,8 +12,14 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const redirect = config.redirects.find(r => r.source === url.pathname);
     if (redirect) { res.writeHead(308, { Location: redirect.destination + url.search }); res.end(); return; }
-    const path = resolve(root, '.' + decodeURIComponent(url.pathname), url.pathname.endsWith('/') ? 'index.html' : '');
-    if (!path.startsWith(root + '/')) { res.writeHead(403); res.end(); return; }
+    const rewrite = config.rewrites.find(r => {
+        if (!r.source.endsWith('/:path*')) return r.source === url.pathname;
+        const prefix = r.source.slice(0, -'/:path*'.length);
+        return url.pathname === prefix || url.pathname.startsWith(prefix + '/');
+    });
+    const pathname = rewrite?.destination ?? url.pathname;
+    const path = resolve(root, '.' + decodeURIComponent(pathname), pathname.endsWith('/') ? 'index.html' : '');
+    if (!path.startsWith(root + sep)) { res.writeHead(403); res.end(); return; }
     try {
         const body = await readFile(path);
         const headers = Object.fromEntries(config.headers.find(h => h.source === '/(.*)').headers.map(h => [h.key, h.value]));
@@ -82,7 +88,7 @@ try {
         assert.equal(response.status, 308);
         assert.equal(response.headers.get('location'), redirect.destination + '?from=seo-check');
     }
-    for (const path of ['/privacy/oauth-return.html', '/privacy/oauth-extension-start.html', '/privacy-refresh.html']) {
+    for (const path of ['/about/', '/privacy/oauth-return.html', '/privacy/oauth-extension-start.html', '/privacy-refresh.html']) {
         await page.goto(base + path);
         assert.match(await page.locator('meta[name="robots"]').getAttribute('content'), /noindex/);
     }
@@ -105,11 +111,15 @@ try {
         await app.goto(base + path);
         assert.equal(await app.locator('h1').count(), 1, 'guide must work offline: ' + path);
     }
+    await app.goto(base + '/about/');
+    assert.equal(await app.locator('h1').innerText(), 'About cells.garden');
     await app.goto(base + '/?offline-check=1');
     await app.waitForFunction(() => !!window.garden);
     await context.setOffline(false);
-    const missing = await app.goto(base + '/this-page-does-not-exist');
-    assert.equal(missing.status(), 404, 'unknown page must not become an app-shell soft 404');
+    for (const path of ['/this-page-does-not-exist', '/tutorial', '/tutorial/']) {
+        const missing = await app.goto(base + path);
+        assert.equal(missing.status(), 404, 'unknown or removed page must not become an app-shell soft 404: ' + path);
+    }
     if (process.env.SEO_SCREENSHOTS) {
         await app.setViewportSize({ width: 1280, height: 900 });
         await app.goto(base + '/guide/');

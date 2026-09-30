@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "updatedAt": "2026-09-29T00:00:00.000Z",
+  "settings": {},
+  "projects": [{
+    "id": "proj_11111111111111111111111111111111",
+    "name": "Start here",
+    "seed": "Start here",
+    "standby": false,
+    "hue": 0,
+    "order": 0,
+    "plantType": "plant_1",
+    "flowers": [{ "id": "item_00000000000000000000000000000001", "content": "Small wins bloom here. Make this garden your own.", "isComplete": true }],
+    "stem": [{ "id": "item_00000000000000000000000000000002", "content": "Move a cell between layers: drag it, or use its Move to menu.", "isComplete": false }],
+    "roots": [
+      { "id": "item_00000000000000000000000000000003", "content": "Double-click a cell to edit. On a phone, tap it twice.", "isComplete": false },
+      { "id": "item_00000000000000000000000000000004", "content": "Right-click or press and hold a cell for its menu.", "isComplete": false }
+    ],
+    "minerals": [
+      { "id": "item_00000000000000000000000000000005", "content": "Add your first idea with + in any layer.", "isComplete": false },
+      { "id": "item_00000000000000000000000000000006", "content": "Add a project with + beside the board. The seed is its name.", "isComplete": false },
+      { "id": "item_00000000000000000000000000000007", "content": "This is an example plant. Edit it or use Recycle plant in its seed menu.", "isComplete": false }
+    ]
+  }]
+}

@@ -34,6 +34,8 @@ These are the sitemap entries in this branch. See [the release log](seo-log.md)
 for what is live versus awaiting release. Keep canonical tags, internal links and the
 sitemap consistent. OAuth and refresh utility pages are noindex. Never add
 private gardens, invitations, user content or authentication parameters.
+The unfinished `/about/` placeholder is also noindex and excluded from the
+sitemap until it contains substantive information.
 The homepage introduction is a loading/no-JavaScript fallback; normal app use
 still starts in the garden. The guide is a separate, permanently readable page.
 The service worker uses the app fallback only at the root, including query strings.
