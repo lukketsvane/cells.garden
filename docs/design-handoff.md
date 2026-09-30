@@ -9,6 +9,46 @@ in Figma and keep the application's existing layout and behaviour. Local artwork
 updates use the direct development connection; Git delivery uses the repository's
 normal checks and review.
 
+## Automatic shared publisher
+
+Artists edit the shared master Figma file. The publishing machine receives local
+and remote artwork edits, updates its normal local garden immediately, batches
+the changes, runs checks in an isolated checkout, commits only mapped artwork
+and its index, and pushes `dev`. Vercel then deploys
+[dev.cells.garden](https://dev.cells.garden/). Artists do not export files, run
+commands, review Git changes or push. Hosted updates follow verification and
+deployment; the local garden updates first.
+An open dev-site tab checks for new deployments every 15 seconds while visible
+and applies them when no garden modal or inline edit is open.
+
+An operator sets up one publishing machine on `dev` with Node.js, Git access to
+the repository and Figma desktop. After `npm ci`, run:
+
+```sh
+npm run dev:design:publish
+```
+
+On Windows, `npm run design:background` starts the publisher hidden and installs
+its login startup. Its logs and saved pending changes are in
+`.design-staging/figma-live/`. Stop any ordinary server on port 5173 first.
+Remove login startup with
+`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/design-start.ps1 -RemoveStartup`.
+
+Import the generated manifest and run **cells.garden live artwork** once on that
+publishing machine. Leave the shared file and plugin open there. Other artists
+only need edit access to the Figma file and a browser. Figma plugins cannot start
+themselves or continue after their file closes, so restarting Figma requires the
+operator to run the plugin again. On connection, publishing mode resynchronizes
+all mapped PNGs; temporary server interruptions retry automatically.
+
+Publication waits for 15 seconds without another artwork import. An isolated
+snapshot must pass typecheck, lint, the full build, web tests and design tests.
+Newer edits replace stale batches. Pending publication survives server restarts.
+The publisher preserves unrelated local and staged work, never force-pushes, and
+stops publication when `dev` has advanced elsewhere or checks fail. The operator
+resolves those errors through the logs; the artist's local preview stays usable.
+Automatic publication targets `dev`; release promotion remains separate.
+
 ## Direct local development
 
 Run `npm run dev:design` on `dev` or a feature branch and open
@@ -37,7 +77,8 @@ export and the normal local garden reloads automatically after the import saves.
 The gnome is native editable pixel artwork; other image-filled sprites remain
 flattened images unless their source has been made editable too.
 
-In your editor's Git Source Control view, confirm the branch is `dev`, review
+Without the shared publisher, use your editor's Git Source Control view: confirm
+the branch is `dev`, review
 the changed artwork and `design/asset-map.json`, run the required checks below,
 then stage those files, commit and push. Figma editing updates the local checkout;
 Git commit and push are separate actions.
@@ -57,6 +98,10 @@ procedural sky and vector UI remain in their existing implementation. See
 The older review commands below are optional and are not part of local editing.
 
 ## Setup for contributors
+
+Graphic contributors use the master Figma file and the shared publisher above.
+They do not need a clone, Node.js, a local plugin or Git access. The following
+setup is for developers who want their own local preview.
 
 Install Node.js and Figma desktop, and obtain edit access to the master file.
 Start from the shared `dev` branch:

@@ -6,7 +6,7 @@ import { ROOT, assetKey, coverage, manifest, validatePng } from './design-assets
 const ENDPOINT = '/__figma/assets';
 const MAX_PNG = 1024 * 1024;
 
-async function runFigmaBridge({ assets, fileKey, pageNodeId, token }) {
+async function runFigmaBridge({ assets, fileKey, pageNodeId, token, syncAll }) {
     if (figma.fileKey !== fileKey) throw new Error('Open the cells.garden master file to connect artwork.');
     const page = await figma.getNodeByIdAsync(pageNodeId);
     if (!page || page.type !== 'PAGE') throw new Error('The mapped ASSETS page is missing.');
@@ -25,7 +25,7 @@ async function runFigmaBridge({ assets, fileKey, pageNodeId, token }) {
         remember(await figma.getNodeByIdAsync(asset.exportNodeId), asset.name);
     }
     const pending = new Set();
-    let timer, running = false, closed = false, collecting = Promise.resolve(), lastError = '';
+    let timer, retryTimer, retryDelay = 1000, running = false, closed = false, collecting = Promise.resolve(), lastError = '';
     const fail = error => {
         const message = String(error.message || error);
         if (!closed && message !== lastError) figma.notify(`Live artwork stopped: ${message}`, { error: true });
@@ -46,6 +46,7 @@ async function runFigmaBridge({ assets, fileKey, pageNodeId, token }) {
     }
     async function flush() {
         if (running || closed) return;
+        clearTimeout(retryTimer);
         running = true;
         try {
             while (pending.size && !closed) {
@@ -60,10 +61,23 @@ async function runFigmaBridge({ assets, fileKey, pageNodeId, token }) {
                     if (closed) return;
                     const response = await fetch('http://localhost:5173/__figma/assets', {
                         method: 'POST', headers: { 'Content-Type': 'image/png', 'X-Figma-Token': token, 'X-Figma-Asset': name, 'X-Figma-File': fileKey }, body: bytes,
-                    });
-                    if (!response.ok) throw new Error((await response.json()).error || `Local server returned ${response.status}.`);
+                    }).catch(error => { error.retryable = true; throw error; });
+                    if (!response.ok) {
+                        const error = new Error((await response.json().catch(() => ({}))).error || `Local server returned ${response.status}.`);
+                        error.retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+                        throw error;
+                    }
                     lastError = '';
-                } catch (error) { fail(error); }
+                    retryDelay = 1000;
+                } catch (error) {
+                    fail(error);
+                    if (error.retryable) {
+                        pending.add(name);
+                        retryTimer = setTimeout(() => { void flush(); }, retryDelay);
+                        retryDelay = Math.min(retryDelay * 2, 30000);
+                        return;
+                    }
+                }
             }
         } finally { running = false; }
     }
@@ -80,9 +94,9 @@ async function runFigmaBridge({ assets, fileKey, pageNodeId, token }) {
     }
     figma.on('documentchange', event => collect(event.documentChanges.filter(change => ['CREATE', 'DELETE', 'PROPERTY_CHANGE'].includes(change.type)
         && !(change.type === 'PROPERTY_CHANGE' && (bySource.has(change.id) || byExport.has(change.id)) && change.properties?.every(property => property === 'x' || property === 'y'))).map(change => change.id)));
-    figma.on('close', () => { closed = true; clearTimeout(timer); });
+    figma.on('close', () => { closed = true; clearTimeout(timer); clearTimeout(retryTimer); });
     figma.notify('Live artwork connected to the local garden. Keep this plugin running while editing.');
-    collect(figma.currentPage.selection.map(node => node.id));
+    collect(syncAll ? assets.map(asset => asset.sourceNodeId) : figma.currentPage.selection.map(node => node.id));
 }
 
 function readPng(request) {
@@ -103,7 +117,7 @@ function readPng(request) {
     });
 }
 
-export function createDesignBridge({ root = ROOT, token, sync } = {}) {
+export function createDesignBridge({ root = ROOT, token, sync, syncAll = false } = {}) {
     if (typeof sync !== 'function') throw new Error('Provide the direct native-export sync helper.');
     const assets = [...new Map([
         ...coverage.assets.filter(asset => asset.format === 'png' && asset.sourceNodeId && asset.exportNodeId),
@@ -122,7 +136,7 @@ export function createDesignBridge({ root = ROOT, token, sync } = {}) {
         id: 'cells-garden-live-artwork', name: 'cells.garden live artwork', api: '1.0.0', main: 'code.js', editorType: ['figma'], documentAccess: 'dynamic-page', enablePrivatePluginApi: true,
         networkAccess: { allowedDomains: ['none'], devAllowedDomains: ['http://localhost:5173'] },
     }, null, 2) + '\n');
-    writeFileSync(resolve(pluginDirectory, 'code.js'), `(${runFigmaBridge.toString()})(${JSON.stringify({ assets, fileKey: manifest.fileKey, pageNodeId: manifest.pageNodeId, token })}).catch(error => figma.closePlugin(String(error.message || error)));\n`);
+    writeFileSync(resolve(pluginDirectory, 'code.js'), `(${runFigmaBridge.toString()})(${JSON.stringify({ assets, fileKey: manifest.fileKey, pageNodeId: manifest.pageNodeId, token, syncAll })}).catch(error => figma.closePlugin(String(error.message || error)));\n`);
     const expectedToken = Buffer.from(token);
     const middleware = async (request, response, next) => {
         if (request.url?.split('?')[0] !== ENDPOINT) { next(); return; }

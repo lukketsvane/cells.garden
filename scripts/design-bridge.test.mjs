@@ -125,7 +125,7 @@ test('generated plugin exports selected and edited mapped sources serially witho
         exportAsync: async settings => { assert.equal(settings.format, 'PNG'); assert.equal(settings.constraint.value, 1); exported.push(asset.path); return candidate; },
     }));
     const events = new Map(), timers = new Map(), notices = [], sent = [];
-    let loaded = false, active = 0, maximum = 0, nextTimer = 0;
+    let loaded = false, active = 0, maximum = 0, nextTimer = 0, disconnected = false;
     const figma = Object.freeze({
         fileKey: manifest.fileKey, currentPage: Object.freeze({ selection: Object.freeze([child]) }),
         getNodeByIdAsync: async id => nodes.get(id), loadAllPagesAsync: async () => { loaded = true; },
@@ -139,6 +139,7 @@ test('generated plugin exports selected and edited mapped sources serially witho
             assert.equal(options.headers['X-Figma-File'], manifest.fileKey);
             active++; maximum = Math.max(maximum, active); sent.push(options.headers['X-Figma-Asset']);
             await new Promise(done => setImmediate(done)); active--;
+            if (disconnected) throw new Error('Local server is restarting.');
             return { ok: true };
         },
     };
@@ -175,6 +176,20 @@ test('generated plugin exports selected and edited mapped sources serially witho
     for (const callback of [...timers.values()]) callback(); timers.clear();
     await new Promise(done => setImmediate(done));
     assert.equal(sent.length, beforeMove);
+    disconnected = true;
+    events.get('documentchange')({ documentChanges: [{ type: 'PROPERTY_CHANGE', id: roots.id, properties: ['fills'] }] });
+    await new Promise(done => setImmediate(done));
+    for (const callback of [...timers.values()]) callback(); timers.clear();
+    for (let i = 0; i < 3; i++) await new Promise(done => setImmediate(done));
+    assert.equal(sent.at(-1), 'roots-icon');
+    assert.equal(timers.size, 1);
+    disconnected = false;
+    const beforeRetry = sent.length;
+    for (const callback of [...timers.values()]) callback(); timers.clear();
+    for (let i = 0; i < 3; i++) await new Promise(done => setImmediate(done));
+    assert.equal(sent.length, beforeRetry + 1);
+    assert.equal(sent.at(-1), 'roots-icon');
+    assert.equal(maximum, 1);
     events.get('close')();
     events.get('documentchange')({ documentChanges: [{ type: 'PROPERTY_CHANGE', id: child.id }] });
     await new Promise(done => setImmediate(done));

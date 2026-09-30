@@ -69,6 +69,15 @@ if (!extensionOAuthHandoff) {
         // time. Explicitly ask for an update on every app boot.
         onRegisteredSW(_swUrl, registration) {
             void registration?.update();
+            if (registration && location.hostname === 'dev.cells.garden') {
+                const check = () => {
+                    if (document.visibilityState === 'visible' && navigator.onLine) {
+                        void registration.update().catch(error => console.warn('Development update check failed.', error));
+                    }
+                };
+                window.setInterval(check, 15000);
+                document.addEventListener('visibilitychange', check);
+            }
         },
         onNeedRefresh() {
             const busy = () => document.querySelector('.modal-container, .is-editing') !== null;

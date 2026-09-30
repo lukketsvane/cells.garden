@@ -47,6 +47,30 @@ test('direct export sync preserves native bytes, updates only its index entry an
     assert.deepEqual(readFileSync(indexPath), savedIndex);
 });
 
+test('publication captures each successful import before another import changes its bytes', async t => {
+    const { root, asset, target, baseline, candidate, indexPath, exported } = fixture(t);
+    const restored = resolve(root, 'restored.png');
+    writeFileSync(restored, baseline);
+    let release, reached;
+    const capture = new Promise(done => { reached = done; });
+    const held = new Promise(done => { release = done; });
+    const snapshots = [];
+    const onChange = async paths => {
+        snapshots.push({ paths, bytes: readFileSync(target), hash: JSON.parse(readFileSync(indexPath)).assets[0].sha256 });
+        if (snapshots.length === 1) { reached(); await held; }
+    };
+    const first = syncDesignExport(exported, { root, asset: 'roots-icon', onChange });
+    await capture;
+    const second = syncDesignExport(restored, { root, asset: 'roots-icon', onChange });
+    await new Promise(done => setImmediate(done));
+    assert.deepEqual(readFileSync(target), candidate);
+    release();
+    await Promise.all([first, second]);
+    assert.deepEqual(snapshots.map(snapshot => snapshot.paths), [[asset.path], [asset.path]]);
+    assert.deepEqual(snapshots.map(snapshot => snapshot.bytes), [candidate, baseline]);
+    assert.deepEqual(snapshots.map(snapshot => snapshot.hash), [sha256(candidate), sha256(baseline)]);
+});
+
 test('temporary Windows index locks retry without blocking and remove save files', async t => {
     const { root, asset, target, candidate, indexPath, exported } = fixture(t);
     let attempts = 0, ticked = false;

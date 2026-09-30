@@ -8,6 +8,7 @@ import { createServer } from 'vite';
 import { ROOT, sha256 } from './design-assets.mjs';
 import { readDesignExport } from './design-export.mjs';
 import { createDesignBridge } from './design-bridge.mjs';
+import { createDesignPublisher } from './design-publish.mjs';
 
 let syncing = Promise.resolve();
 
@@ -17,7 +18,7 @@ export function syncDesignExport(path, options = {}) {
     return operation;
 }
 
-async function syncExport(path, { root = ROOT, asset = 'gnome', rename = renameFile } = {}) {
+async function syncExport(path, { root = ROOT, asset = 'gnome', rename = renameFile, onChange } = {}) {
     const exports = readDesignExport(path, asset);
     const indexPath = resolve(root, 'design/asset-map.json');
     const indexBytes = readFileSync(indexPath);
@@ -64,26 +65,31 @@ async function syncExport(path, { root = ROOT, asset = 'gnome', rename = renameF
         if (failures.length) throw new AggregateError([error, ...failures], `${error.message}; rollback failed: ${failures.map(failure => failure.message).join('; ')}`);
         throw error;
     }
-    return changes.map(item => item.path);
+    const paths = changes.map(item => item.path);
+    if (paths.length && onChange) await onChange(paths);
+    return paths;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    const args = process.argv.slice(2);
-    if (args.length > 2) throw new Error('Usage: npm run dev:design -- [export.png|export.zip] [asset]');
+    const publish = process.argv.includes('--publish');
+    const args = process.argv.slice(2).filter(arg => arg !== '--publish');
+    if (args.length > 2) throw new Error('Usage: npm run dev:design -- [--publish] [export.png|export.zip] [asset]');
     const path = resolve(args[0] ?? resolve(homedir(), 'Downloads/cells.garden.zip'));
     const asset = args[1] ?? 'gnome';
     const branch = (await import('node:child_process')).execFileSync('git', ['branch', '--show-current'], { cwd: ROOT, encoding: 'utf8' }).trim();
     if (!branch || ['main', 'original'].includes(branch)) throw new Error('Run the design dev server on dev or a feature branch.');
+    if (publish && branch !== 'dev') throw new Error('Automatic artwork publication runs only on dev.');
+    const publisher = publish ? createDesignPublisher() : null;
     let server;
     const applyExport = async (path, options) => {
-        const changed = await syncDesignExport(path, options);
+        const changed = await syncDesignExport(path, { ...options, onChange: paths => publisher?.enqueue(paths) });
         if (changed.length && server) {
             server.moduleGraph.invalidateAll();
             server.ws.send({ type: 'full-reload' });
         }
         return changed;
     };
-    const bridge = createDesignBridge({ sync: applyExport });
+    const bridge = createDesignBridge({ sync: applyExport, syncAll: publish });
     mkdirSync(dirname(path), { recursive: true });
     const version = () => {
         if (!existsSync(path)) return null;
@@ -121,7 +127,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     server.watcher.on('add', resync);
     server.watcher.on('change', resync);
     await sync();
-    const close = async () => { clearTimeout(timer); await syncing.catch(() => {}); await server.close(); process.exit(0); };
+    const close = async () => { clearTimeout(timer); await server.close(); await syncing.catch(() => {}); await publisher?.close(); process.exit(0); };
     process.once('SIGINT', close);
     process.once('SIGTERM', close);
 }
