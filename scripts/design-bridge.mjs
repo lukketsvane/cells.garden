@@ -28,7 +28,8 @@ async function runFigmaBridge({ assets, fileKey, pageNodeId, token, syncAll }) {
     let timer, retryTimer, retryDelay = 1000, running = false, closed = false, collecting = Promise.resolve(), lastError = '';
     const fail = error => {
         const message = String(error.message || error);
-        if (!closed && message !== lastError) figma.notify(`Live artwork stopped: ${message}`, { error: true });
+        const notice = error.retryable ? `Live artwork reconnecting: ${message}. Retrying automatically.` : `Artwork export failed: ${message}`;
+        if (!closed && message !== lastError) figma.notify(notice, { error: !error.retryable });
         lastError = message;
     };
     async function related(node, seen = new Set()) {

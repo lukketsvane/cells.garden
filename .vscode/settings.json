@@ -1,0 +1,10 @@
+{
+    "chat.mcp.serverSampling": {
+        "cells.garden-dev/.vscode/mcp.json: com.figma.mcp/mcp": {
+            "allowedModels": [
+                "copilotcli/auto",
+                "copilot/auto"
+            ]
+        }
+    }
+}

@@ -62,6 +62,7 @@ try {
 
     const browser = await chromium.launch({ headless: true });
     let synthetic;
+    let syntheticGnome;
     try {
         const page = await browser.newPage();
         synthetic = Buffer.from(await page.evaluate(() => {
@@ -71,6 +72,12 @@ try {
             ctx.fillStyle = '#20fa70'; ctx.fillRect(0, 0, 16, 16); ctx.fillRect(16, 16, 16, 16);
             return canvas.toDataURL('image/png').split(',')[1];
         }), 'base64');
+        syntheticGnome = Buffer.from(await page.evaluate(({ width, height }) => {
+            const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fa2070'; ctx.fillRect(0, 0, width, height);
+            return canvas.toDataURL('image/png').split(',')[1];
+        }, manifest.assets.gnome), 'base64');
     } finally { await browser.close(); }
     const exported = resolve(temporary, 'synthetic-export.png');
     writeFileSync(exported, synthetic);
@@ -82,6 +89,19 @@ try {
     assert(changed.comparisons.every(comparison => comparison.changedPixels > 0), 'A changed void must change both actual desktop and mobile garden screenshots.');
     assert.deepEqual(readFileSync(resolve(temporary, asset.path)), productionBytes, 'Review must never apply candidate artwork.');
     assert.equal(readFileSync(resolve(temporary, 'dist/sentinel.txt'), 'utf8'), 'untouched build');
+
+    const gnome = manifest.assets.gnome;
+    const gnomeBytes = readFileSync(resolve(ROOT, gnome.path));
+    stageAsset('gnome', syntheticGnome, temporary);
+    console.log('Review integration: building changed gnome gardens.');
+    const gnomeReview = await buildGardenReview('gnome', { root: temporary });
+    assert.equal(gnomeReview.sourceExercised, true, 'Gnome must be visible in both actual garden viewports.');
+    assert(gnomeReview.comparisons.every(comparison => comparison.changedPixels > 0), 'Changed gnome artwork must change both garden screenshots.');
+    const gnomeFixture = JSON.parse(readFileSync(resolve(temporary, '.design-staging/gnome', gnomeReview.files.find(file => file.kind === 'fixture').path), 'utf8'));
+    assert.deepEqual(gnomeFixture.settings.items, [{ id: 'review_gnome', kind: 'gnome', x: -0.5 }]);
+    assert.equal(approveAsset('gnome', { sha256: sha256(syntheticGnome), note: 'Synthetic gnome reviewed in both garden viewports.' }, temporary).candidateSha256, sha256(syntheticGnome));
+    assert.deepEqual(readFileSync(resolve(temporary, gnome.path)), gnomeBytes);
+    assert.deepEqual(readFileSync(resolve(ROOT, gnome.path)), gnomeBytes);
 
     const stage = resolve(temporary, '.design-staging/void-tile');
     const evidence = resolve(stage, changed.files.find(file => file.kind === 'after').path);

@@ -53,15 +53,16 @@ function fixtureFor(asset, root) {
         return Array.from({ length: count }, (_, index) => ({ id: `review_${layer}_${index}`, content: `${layer} ${index + 1}`, isComplete: false,
             imagePath: index === 0 && chosen.startsWith(`${folder}/`) ? chosen : available[index % available.length] }));
     };
-    return { version: 1, updatedAt: FIXED_TIME, settings: { fireflies: 0, mobileFireflies: 0, skyMode: 'static', skyNodes: [{ color: '#87ceeb', hour: 12 }], petCrow: false, petGnome: false, petPumpkin: false, items: [] },
+    const items = asset.path === 'src/assets/pets/gnome.png' ? [{ id: 'review_gnome', kind: 'gnome', x: -0.5 }] : [];
+    return { version: 1, updatedAt: FIXED_TIME, settings: { fireflies: 0, mobileFireflies: 0, skyMode: 'static', skyNodes: [{ color: '#87ceeb', hour: 12 }], petCrow: false, petGnome: false, petPumpkin: false, items },
         projects: [{ id: 'review_plant', name: 'Asset review', seed: 'Asset review', seedImagePath: /^seeds\/seed\d+\.png$/.test(chosen) ? chosen : 'seeds/seed1.png',
             standby: false, hue: 0, order: 0, plantType: type, stem: cells('stem', `${type}/stem`, 8), flowers: cells('flowers', `${type}/flowers`, 4),
             roots: cells('roots', 'roots', 3), minerals: cells('minerals', 'minerals', 5) }] };
 }
 
-async function buildCopy(workspace) {
+async function buildCopy(workspace, extras) {
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(VITE_|SUPABASE_|CELLS_|VERCEL_)/.test(key)));
-    Object.assign(env, { CELLS_EXTRAS: '0', VITE_SUPABASE_URL: '', VITE_SUPABASE_PUBLISHABLE_KEY: '', SUPABASE_URL: '', SUPABASE_PUBLISHABLE_KEY: '' });
+    Object.assign(env, { CELLS_EXTRAS: extras ? '1' : '0', VITE_SUPABASE_URL: '', VITE_SUPABASE_PUBLISHABLE_KEY: '', SUPABASE_URL: '', SUPABASE_PUBLISHABLE_KEY: '' });
     await new Promise((resolveBuild, reject) => {
         const child = spawn(process.execPath, [resolve(ROOT, 'node_modules/vite/bin/vite.js'), 'build', '--config', resolve(workspace, 'vite.config.ts'), '--mode', 'design-review'],
             { cwd: workspace, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000 });
@@ -200,6 +201,7 @@ export async function buildGardenReview(name, { root = ROOT } = {}) {
     const output = mkdtempSync(resolve(stage, 'garden-review-'));
     const baseline = readFileSync(resolve(root, asset.path));
     const fixture = fixtureFor(asset, root);
+    const extras = fixture.settings.items.length > 0;
     let browser;
     const servers = [];
     try {
@@ -212,7 +214,7 @@ export async function buildGardenReview(name, { root = ROOT } = {}) {
             for (const input of INPUTS) cpSync(resolve(root, input), resolve(copy, input), { recursive: true, dereference: false });
             symlinkSync(resolve(ROOT, 'node_modules'), resolve(copy, 'node_modules'), 'junction');
             if (variant === 'after') writeFileSync(resolve(copy, asset.path), bytes);
-            await buildCopy(copy);
+            await buildCopy(copy, extras);
             servers.push(await serverFor(resolve(copy, 'dist')));
         }
         const files = [];
@@ -232,7 +234,7 @@ export async function buildGardenReview(name, { root = ROOT } = {}) {
         requireThat(current.report.baselineSha256 === report.baselineSha256 && current.report.candidateSha256 === report.candidateSha256, 'Artwork changed during review. Build the review again.');
         const sourceExercised = comparisons.every(comparison => comparison.beforeScene.sourceExercised && comparison.afterScene.sourceExercised);
         const review = { version: 1, asset: name, path: asset.path, baselineSha256: report.baselineSha256, candidateSha256: report.candidateSha256, rendererSha256,
-            createdAt: new Date().toISOString(), renderer: 'isolated current web production build', browserVersion: browser.version(), network: 'loopback only; accounts, service workers and extras disabled', sourceExercised, decodedImages,
+            createdAt: new Date().toISOString(), renderer: 'isolated current web production build', browserVersion: browser.version(), network: extras ? 'loopback only; accounts and service workers disabled; gnome review enabled' : 'loopback only; accounts, service workers and extras disabled', sourceExercised, decodedImages,
             limitations: sourceExercised ? ['Static local fixture; does not test animation or every possible garden.'] : ['Selected artwork was not visible in every production garden viewport; this review cannot approve that artwork.'], files, comparisons };
         writeFileSync(resolve(stage, 'review.json'), JSON.stringify(review, null, 2) + '\n');
         return review;

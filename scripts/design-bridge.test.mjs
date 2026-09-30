@@ -129,7 +129,7 @@ test('generated plugin exports selected and edited mapped sources serially witho
     const figma = Object.freeze({
         fileKey: manifest.fileKey, currentPage: Object.freeze({ selection: Object.freeze([child]) }),
         getNodeByIdAsync: async id => nodes.get(id), loadAllPagesAsync: async () => { loaded = true; },
-        on: (event, handler) => { assert(loaded); events.set(event, handler); }, notify: message => notices.push(message), closePlugin: message => assert.fail(message),
+        on: (event, handler) => { assert(loaded); events.set(event, handler); }, notify: (message, options) => notices.push({ message, error: options?.error ?? false }), closePlugin: message => assert.fail(message),
     });
     const context = {
         figma, setTimeout: callback => { timers.set(++nextTimer, callback); return nextTimer; }, clearTimeout: id => timers.delete(id),
@@ -183,6 +183,8 @@ test('generated plugin exports selected and edited mapped sources serially witho
     for (let i = 0; i < 3; i++) await new Promise(done => setImmediate(done));
     assert.equal(sent.at(-1), 'roots-icon');
     assert.equal(timers.size, 1);
+    assert.match(notices.at(-1).message, /Live artwork reconnecting/);
+    assert.equal(notices.at(-1).error, false);
     disconnected = false;
     const beforeRetry = sent.length;
     for (const callback of [...timers.values()]) callback(); timers.clear();
