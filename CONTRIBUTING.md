@@ -26,6 +26,16 @@ Also run `npm run test:ext` when you touch `ext/`, and `npm run test:obsidian` w
 
 ## Where things live
 
+For Figma artwork, start `npm run design:studio` and open its local review screen.
+Choose artwork, preview it in the garden, approve it and submit a review request
+to `dev`. See the [master design handoff](docs/design-handoff.md) and
+[void background workflow](docs/void-tile.md) for setup and advanced commands.
+`npm run test:design` checks the asset contracts without requiring Figma.
+The current build is visually authoritative. The complete source index and
+renderer references live in `design/asset-map.json` and `design/render-map.json`.
+Different imports require an exact before/after approval. Stale placeholders
+remain blocked; nothing is merged or deployed automatically.
+
 - `src/core/`: the app itself, shared by every surface.
 - `src/web/`: the web app and PWA shell.
 - `ext/`: the Chrome extension, see `ext/README.md`.

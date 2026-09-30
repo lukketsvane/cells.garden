@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Artwork staging | cells.garden</title>
+  <link rel="stylesheet" href="/preview.css">
+  <script src="/preview.js" defer></script>
+</head>
+<body>
+  <main>
+    <p>cells.garden / local design staging</p>
+    <h1>Review artwork changes</h1>
+    <p id="status" role="status">Loading staged artwork…</p>
+    <p id="details"></p>
+    <div class="comparison">
+      <section><h2>Current repository</h2><img id="current" src="/current.png" alt="Current artwork at native size"><div class="pattern current"></div></section>
+      <section><h2>Figma candidate</h2><img id="candidate" src="/candidate.png" alt="Candidate artwork at native size"><div class="pattern candidate"></div></section>
+    </div>
+    <p id="next"></p>
+    <section id="garden-review"><h2>In the garden</h2><p id="review-status">Checking visual evidence…</p><div id="review-gallery"></div></section>
+    <section><h2>Explicit approval</h2><p id="approval-help"></p><pre id="approval-command"></pre></section>
+    <p>This page cannot approve, publish or modify files. No uploads, recolouring or resampling. Repeat previews use the native pixel size. Approval is a separate command for the exact reviewed hash.</p>
+    <a id="source">Open the Figma export</a>
+  </main>
+</body>
+</html>
