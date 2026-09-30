@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve, sep } from 'node:path';
 import { test } from 'node:test';
@@ -125,6 +125,26 @@ test('failed validation never pushes and immutable pending artwork survives a pu
     await resumed.waitForIdle();
     assert.notEqual(f.published(), f.base);
     assert.equal(resumed.status.pending, 0);
+});
+
+test('Windows-length dependency paths are cleaned without masking the validation failure', async t => {
+    const f = fixture(t);
+    let snapshot;
+    const publisher = f.start(async worktree => {
+        snapshot = worktree;
+        assert.equal(dirname(worktree), resolve(f.root, '.design-staging/p'));
+        const dependency = resolve(worktree, 'node_modules', ...Array.from({ length: 20 }, (_, i) => `nested-dependency-${i}`), 'file.js');
+        assert(dependency.length > 260);
+        mkdirSync(dirname(dependency), { recursive: true });
+        writeFileSync(dependency, 'dependency');
+        throw new Error('underlying validation failure');
+    });
+    f.apply(f.candidate);
+    await publisher.enqueue([f.asset.path]);
+    await assert.rejects(publisher.waitForIdle(), error => error.message === 'underlying validation failure');
+    assert.equal(existsSync(snapshot), false);
+    assert.equal(f.published(), f.base);
+    assert.equal(publisher.status.pending, 1);
 });
 
 test('a newer import during checks discards the stale snapshot and publishes only the newest batch', async t => {

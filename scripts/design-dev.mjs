@@ -110,7 +110,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     await sync();
     server = await createServer({
         configFile: resolve(ROOT, 'vite.config.ts'),
-        server: { host: '127.0.0.1', port: 5173, strictPort: true },
+        server: { host: '127.0.0.1', port: 5173, strictPort: true, watch: { ignored: ['**/.design-staging/**'] } },
         plugins: [{ name: 'figma-live', configureServer(server) { server.middlewares.use(bridge.middleware); } }],
     });
     await server.listen();

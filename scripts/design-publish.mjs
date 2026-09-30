@@ -18,12 +18,13 @@ const fixed = entry => Object.fromEntries(Object.entries(entry).filter(([key]) =
 
 export function createDesignPublisher({ root = ROOT, delayMs = 15000, retryMs = 60000, validate, allowTestRemote = false } = {}) {
     const directory = resolve(root, '.design-staging/figma-live');
+    const worktreeDirectory = resolve(root, '.design-staging/p');
     const pendingPath = resolve(directory, 'pending.json');
     const pending = new Map();
     let revision = 0, timer, active, closed = false, installed = false, lastError, lastLogged, lastCommit, saving = Promise.resolve();
     let phase = 'idle', retrying = false;
     const run = (command, args, cwd = root, env = {}, options = {}) => execute(command, args, { cwd, encoding: 'utf8', windowsHide: true, maxBuffer: 16 * 1024 * 1024, env: { ...process.env, PATH: `${dirname(process.execPath)}${delimiter}${process.env.PATH || ''}`, GIT_TERMINAL_PROMPT: '0', ...env }, ...options });
-    const git = async (args, cwd = root, env) => (await run('git', args, cwd, env)).stdout.trim();
+    const git = async (args, cwd = root, env) => (await run('git', ['-c', 'core.longpaths=true', ...args], cwd, env)).stdout.trim();
     const blob = async (ref, path) => (await run('git', ['cat-file', 'blob', `${ref}:${path}`], root, { })).stdout;
     const readIndex = () => JSON.parse(readFileSync(resolve(root, MAP), 'utf8'));
     const checkRecord = record => {
@@ -127,8 +128,8 @@ export function createDesignPublisher({ root = ROOT, delayMs = 15000, retryMs = 
         await persist();
         if (!batch.length) return;
         await guard(base, batch, version);
-        const worktree = resolve(directory, `publish-${randomUUID()}`);
-        let added = false, indexLock;
+        const worktree = resolve(worktreeDirectory, randomUUID().slice(0, 8));
+        let added = false, indexLock, failure;
         try {
             await git(['worktree', 'add', '--detach', worktree, base]);
             added = true;
@@ -161,11 +162,17 @@ export function createDesignPublisher({ root = ROOT, delayMs = 15000, retryMs = 
             for (const record of batch) if (pending.get(record.path) === record) pending.delete(record.path);
             await persist();
             console.log(`Figma artwork published to dev: ${commit.slice(0, 12)}`);
-        } finally {
-            if (indexLock && existsSync(indexLock)) unlinkSync(indexLock);
-            if (added) {
-                requireThat(dirname(resolve(worktree)) === directory, 'The publication worktree must remain inside its ignored directory.');
-                await git(['worktree', 'remove', '--force', worktree]);
+        } catch (error) { failure = error; throw error; }
+        finally {
+            try {
+                if (indexLock && existsSync(indexLock)) unlinkSync(indexLock);
+                if (added) {
+                    requireThat(dirname(resolve(worktree)) === worktreeDirectory, 'The publication worktree must remain inside its ignored directory.');
+                    await git(['worktree', 'remove', '--force', worktree]);
+                }
+            } catch (error) {
+                if (failure) throw new AggregateError([failure, error], `${failure.message}\nPublication cleanup failed: ${error.message}`);
+                throw error;
             }
         }
     };

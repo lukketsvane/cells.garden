@@ -145,7 +145,7 @@ test('animated stars and ambiguous logos stay protected while Plume uses its rec
     const plume = coverage.assets.filter(a => a.path.includes('/plant_9/'));
     assert.equal(plume.length, 5);
     assert(plume.every(a => a.sourceNodeId && a.exportNodeId && (a.status === 'source-verified'
-        || (a.status === 'unverified' && a.evidence === 'approved-artwork-review'))));
+        || (a.status === 'unverified' && a.figmaSha256 === null && a.figmaImageSha1 === null))));
     const logos = coverage.assets.filter(a => /CG_logo/.test(a.path));
     assert.equal(logos.length, 2);
     assert(logos.every(a => a.status === 'ambiguous-source' && a.sourceNodeId === null));
