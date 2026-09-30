@@ -30,6 +30,9 @@ For Figma artwork, see the [master design handoff](docs/design-handoff.md) and
 [void background workflow](docs/void-tile.md). Pull, preview and apply native
 image fills with the `design:*` commands; `npm run test:design` checks their
 contracts without requiring Figma.
+The current build is visually authoritative. The complete source index and
+renderer references live in `design/asset-map.json` and `design/render-map.json`.
+Different imports are blocked by default; correct the Figma source first.
 
 - `src/core/`: the app itself, shared by every surface.
 - `src/web/`: the web app and PWA shell.

@@ -8,7 +8,7 @@ Web, Chrome and Obsidian share this asset; no separate exports are needed.
 ## Design and review
 
 Open the [master Void Tile component](https://www.figma.com/design/WJgKfsKcxUpuNkDvxI9gEx/cells.garden?node-id=253-410).
-Replace its image fill with a native 32 × 32 PNG, without resizing, effects,
+Use the approved repository PNG as its image fill, without resizing, effects,
 cropping or recolouring. Its linked export frame is `253:411`; the repeated
 preview is `253:413`. Edit the source, not individual preview instances.
 
@@ -21,16 +21,17 @@ npm run design:preview -- void-tile
 
 Open the local URL printed by the preview command. Compare the candidate to
 the current repository at native size and as a repeating background. Stop the
-preview with Ctrl+C. After the artwork is approved:
+preview with Ctrl+C. To confirm that it matches:
 
 ```sh
 npm run design:apply -- void-tile
 ```
 
-Applying copies the original image bytes, with no resampling. It refuses to
-overwrite artwork that changed after the pull. Nothing commits, pushes or
-deploys automatically. Run the normal checks, review on `dev`, and promote the
-reviewed asset to `main` without replacing unrelated changes.
+Visual preservation is enabled: applying accepts only byte-identical artwork
+and makes no file changes. A differing candidate is blocked, as is any artwork
+that changed in the repository after the pull. Correct the Figma source instead
+of replacing the shipped PNG. Nothing commits, pushes or deploys automatically.
+Future intentional artwork changes require a separate explicit review.
 
 The old white dash placeholder is explicitly blocked from applying: it predates
 Max's current coloured tile. If it appears in the preview, update the existing

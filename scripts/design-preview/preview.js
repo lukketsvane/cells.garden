@@ -10,10 +10,10 @@ async function showPreview() {
     document.querySelector('#details').textContent = `${report.path} · ${report.width} × ${report.height} px · pulled ${report.stagedAt}`;
     const status = document.querySelector('#status');
     status.dataset.blocked = String(report.blocked);
-    status.textContent = report.blocked ? 'Blocked: this is the obsolete Figma placeholder. Keep the current repository artwork.'
+    status.textContent = report.blocked ? 'Blocked: Figma differs from the current repository. Keep the shipped artwork and correct Figma.'
         : report.identical ? 'Byte-identical: the Figma source matches the current repository.' : 'New artwork staged. Review the pixels and repeat seams before applying.';
     document.querySelectorAll('.pattern').forEach(element => { element.style.backgroundSize = `${report.width}px ${report.height}px`; });
-    document.querySelector('#next').textContent = report.blocked ? 'Update the existing Figma source component, then pull again.' : `After approval: npm run design:apply -- ${report.asset}. Then run the checks and publish through the normal Git workflow.`;
+    document.querySelector('#next').textContent = report.blocked ? 'Update the existing Figma source component, then pull again. Imports cannot change the current appearance.' : `Verify the match: npm run design:apply -- ${report.asset}. Identical artwork needs no file changes.`;
     document.querySelector('#source').href = `https://www.figma.com/design/${report.fileKey}/cells.garden?node-id=${report.exportNodeId.replace(':', '-')}`;
 }
 showPreview().catch(error => { document.querySelector('#status').textContent = error.message; });

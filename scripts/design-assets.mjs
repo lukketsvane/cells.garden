@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const manifest = JSON.parse(readFileSync(resolve(ROOT, 'design/figma-assets.json'), 'utf8'));
+export const coverage = JSON.parse(readFileSync(resolve(ROOT, 'design/asset-map.json'), 'utf8'));
 const ENDPOINT = 'http://127.0.0.1:3845/mcp';
 const MAX_PNG = 1024 * 1024;
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -52,9 +53,17 @@ export function validatePng(bytes, asset) {
     return sha256(bytes);
 }
 
+export function assetKey(path) {
+    return Object.entries(manifest.assets).find(([, asset]) => asset.path === path)?.[0]
+        ?? path.replace(/^src\/assets\//, '').replace(/\.[^.]+$/, '').replaceAll('/', '-');
+}
+
 export function assetByName(name) {
-    requireThat(Object.hasOwn(manifest.assets, name), `Unknown asset: ${name}. Run npm run design:list.`);
-    return manifest.assets[name];
+    if (Object.hasOwn(manifest.assets, name)) return manifest.assets[name];
+    const entry = coverage.assets.find(asset => assetKey(asset.path) === name);
+    requireThat(entry, `Unknown asset: ${name}. Run npm run design:list.`);
+    // Source-only links are intentionally not guessed EXPORTS instances.
+    return { ...entry, exportNodeId: entry.sourceNodeId, exportName: entry.sourceName };
 }
 
 export function parseRpc(body, id) {
@@ -121,7 +130,7 @@ export function imageUrl(context) {
 export function validateExport(metadata, asset) {
     const xml = metadata.content?.filter(item => item.type === 'text').map(item => item.text).join('\n') || '';
     const tag = xml.match(/<(?:frame|instance|symbol)\b[^>]*>/)?.[0] || '';
-    for (const [key, value] of Object.entries({ id: asset.exportNodeId, name: asset.path, width: asset.width, height: asset.height })) {
+    for (const [key, value] of Object.entries({ id: asset.exportNodeId, name: asset.exportName ?? asset.path, width: asset.width, height: asset.height })) {
         requireThat(tag.includes(`${key}="${value}"`), `Export ${key} does not match the manifest. Open the correct master file; do not remap by guesswork.`);
     }
 }
@@ -136,6 +145,7 @@ export function stageAsset(name, bytes, root = ROOT) {
         baselineSha256: sha256(current), candidateSha256,
         identical: current.equals(bytes), blocked: !!asset.blockedSha256?.includes(candidateSha256),
     };
+    report.blocked = report.blocked || !report.identical;
     const directory = resolve(root, '.design-staging', name);
     mkdirSync(directory, { recursive: true });
     writeFileSync(resolve(directory, 'candidate.png'), bytes);
@@ -145,6 +155,8 @@ export function stageAsset(name, bytes, root = ROOT) {
 
 export async function pullAsset(name) {
     const asset = assetByName(name);
+    requireThat(asset.exportNodeId, 'No unambiguous Figma source is mapped. Correct the Figma source first.');
+    requireThat(!asset.format || asset.format === 'png', 'Animated assets are reference-only. Keep the original file and timing.');
     const client = createFigmaClient();
     try {
         await client.initialize();
@@ -172,7 +184,9 @@ export function stagedAsset(name, root = ROOT) {
 export function applyAsset(name, root = ROOT) {
     const { asset, bytes } = stagedAsset(name, root);
     requireThat(!asset.blockedSha256?.includes(sha256(bytes)), 'This is the obsolete placeholder. Update the Figma source to the current artwork before applying.');
-    writeFileSync(resolve(root, asset.path), bytes);
+    requireThat(bytes.equals(readFileSync(resolve(root, asset.path))),
+        'Visual preservation is enabled: Figma differs from the repository. Correct Figma; do not replace the shipped artwork.');
+    // An identical candidate requires no file write, keeping timestamps intact.
     return asset.path;
 }
 
@@ -201,11 +215,11 @@ async function main() {
     const [command = 'list', name = 'void-tile', ...extra] = process.argv.slice(2);
     requireThat(extra.length === 0, 'Usage: design-assets.mjs list|pull|preview|apply [asset]');
     if (command === 'list') {
-        for (const [key, asset] of Object.entries(manifest.assets)) console.log(`${key}: ${asset.width} × ${asset.height} → ${asset.path}`);
+        for (const asset of coverage.assets) console.log(`${assetKey(asset.path)}: ${asset.width} × ${asset.height} [${asset.status}] → ${asset.path}`);
     } else if (command === 'pull') {
         console.log('Reading the open Figma master file. Repository artwork will not be changed.');
         const report = await pullAsset(name);
-        console.log(report.blocked ? 'Staged obsolete placeholder. Applying is blocked.' : report.identical ? 'Staged image is byte-identical to the repository.' : 'Staged new artwork for review.');
+        console.log(report.blocked ? 'Staged different artwork. Applying is blocked to preserve the current appearance.' : 'Staged image is byte-identical to the repository.');
         console.log(`Preview: npm run design:preview -- ${name}`);
     } else if (command === 'preview') {
         const port = Number(process.env.DESIGN_PREVIEW_PORT || 5180);
@@ -214,7 +228,7 @@ async function main() {
         server.on('error', error => { console.error(error.message); process.exitCode = 1; });
         server.listen(port, '127.0.0.1', () => console.log(`Preview only: http://127.0.0.1:${server.address().port}/ (Ctrl+C to stop)`));
     } else if (command === 'apply') {
-        console.log(`Applied original PNG bytes to ${applyAsset(name)}. Review the diff and run the normal checks before publishing.`);
+        console.log(`Confirmed identical artwork at ${applyAsset(name)}. No files changed.`);
     } else throw new Error('Use list, pull, preview, or apply.');
 }
 

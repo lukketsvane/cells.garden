@@ -106,6 +106,17 @@ test('changed repository artwork and changed candidates cannot be overwritten', 
     assert.throws(() => applyAsset('void-tile', root), /PNG/);
 });
 
+test('different artwork is blocked by default even after staging against the current baseline', t => {
+    const { root, path } = fixture(t);
+    const current = readFileSync(resolve(ROOT, 'src/assets/ground_tile.png'));
+    writeFileSync(path, current);
+    const report = stageAsset('void-tile', tile, root);
+    assert.equal(report.blocked, true);
+    assert.equal(report.identical, false);
+    assert.throws(() => applyAsset('void-tile', root), /Visual preservation/);
+    assert.deepEqual(readFileSync(path), current);
+});
+
 test('blocked artwork cannot be applied even if the report is tampered with', t => {
     const { root } = fixture(t);
     const asset = assetByName('void-tile');
