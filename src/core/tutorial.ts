@@ -16,7 +16,6 @@ export function tutorialPlant(id = `tutorial_${Array.from(crypto.getRandomValues
         id, name: 'Tutorial plant', seed: 'Tutorial plant',
         seedImagePath: 'seeds/seed1.png', plantType: 'plant_1', hue: 304, order: 0, standby: false,
         minerals: cells('minerals', [
-            "And there's a button next to it to share a plant with someone and let them edit it with you",
             'This is a mineral',
             'Minerals are basically meant as your to-do list for the project',
             'So each mineral is a task',
@@ -47,7 +46,8 @@ export function tutorialPlant(id = `tutorial_${Array.from(crypto.getRandomValues
             'Right below the stem section is the seed',
             'The seed is the name of the project',
             'Click the plus signs on the far left and right of the lower section to plant a new seed',
-            'You can also right click it or click the ⠇menu next to its name to change things about the plant',
+            'You can also right click its name or click the ⠇menu button next to it to change things about the plant',
+            "next to the menu there's a button for sharing the plant, so others can view and edit with you",
         ]),
         flowers: cells('flowers', [
             'Welcome to the garden! ☘️',
