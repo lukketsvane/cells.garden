@@ -7,7 +7,7 @@ import { parseRoute } from './routes';
 
 const TOKEN = '3f2c9a1e-5b7d-4c8e-9f10-2a3b4c5d6e7f';
 
-test('each new garden space is created with its own original 39-cell tutorial', async () => {
+test('each new garden space is created with its own original 41-cell tutorial', async () => {
     type Row = { owner_id: string; user_id: null; name: string; data: Garden; updated_at: string };
     const inserted: Row[] = [];
     const client = {
