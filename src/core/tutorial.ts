@@ -51,7 +51,8 @@ export function tutorialPlant(id = `tutorial_${Array.from(crypto.getRandomValues
         ]),
         flowers: cells('flowers', [
             'Welcome to the garden! ☘️',
-            'Plants here represent projects',
+            'This is the tutorial plant',
+            'Plants in cells.garden represent projects',
             'A plant consists of a column of cells(text boxes) in the lower section',
             'And a corresponding plant image in the upper section',
             'Each cell in the lower section is represented as part of a plant based on where it is in the column',
