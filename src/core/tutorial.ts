@@ -25,9 +25,9 @@ export function tutorialPlant(id = `tutorial_${Array.from(crypto.getRandomValues
             'You do this either by dragging the cell/text box up to the stem section of the column,',
             'or by right clicking the cell or its image and choosing "convert to stem"',
             'Click the + sign at the top of each category to make a new cell',
-            "Oh, also there's a menu up in the top left and a button in the top right to hide and show the lower section",
+            "There's also a menu up in the top left corner and a button to hide and show the lower section in the top right",
             'I hope you enjoy the garden as much as I do! ☆',
-            'You can delete this plant via the seed ⠇menu, or just delete its cells and change the name if you want to repurpose it',
+            'You can delete this plant via the seed ⠇menu button, or just delete its cells and change the name if you want to repurpose it',
         ]),
         roots: cells('roots', [
             'This is a root',
