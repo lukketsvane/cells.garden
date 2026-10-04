@@ -95,7 +95,7 @@ test('the untouched small starter becomes the original tall tutorial without cha
     assert.equal(plant.order, 4);
     assert.equal(plant.seed, 'Tutorial plant');
     assert.equal(plant.stem.length, 9);
-    assert.equal(plant.flowers.length, 11);
+    assert.equal(plant.flowers.length, 13);
     assert.equal(plant.roots.length, 6);
     assert.equal(plant.minerals.length, 14);
     assert.equal(plant.hue, 304);
