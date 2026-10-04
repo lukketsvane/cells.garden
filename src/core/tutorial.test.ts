@@ -38,7 +38,7 @@ test('the tutorial is a normal plant with a cell in every layer and no shared ID
         assert(!p.sharedPlantId);
     }
     a.projects[0].minerals.pop();
-    assert.equal(b.projects[0].minerals.length, 14);
+    assert.equal(b.projects[0].minerals.length, 12);
 });
 
 test('the first local garden is saved once and survives another instance', async () => {
@@ -80,7 +80,7 @@ test('onboarding works in an embedded host without randomUUID', () => {
         Object.defineProperty(globalThis, 'crypto', { configurable: true, value: { getRandomValues } });
         const garden = tutorialGarden();
         assert.match(garden.projects[0].id, /^tutorial_[a-f0-9]{32}$/);
-        assert.equal(garden.projects[0].minerals.length, 14);
+        assert.equal(garden.projects[0].minerals.length, 12);
     } finally {
         if (descriptor) Object.defineProperty(globalThis, 'crypto', descriptor);
     }
@@ -94,7 +94,7 @@ test('the untouched small starter becomes the original tall tutorial without cha
     assert.equal(plant.id, old.projects[0].id);
     assert.equal(plant.order, 4);
     assert.equal(plant.seed, 'Tutorial plant');
-    assert.equal(plant.stem.length, 8);
+    assert.equal(plant.stem.length, 9);
     assert.equal(plant.flowers.length, 11);
     assert.equal(plant.roots.length, 6);
     assert.equal(plant.minerals.length, 14);

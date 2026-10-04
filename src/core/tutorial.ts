@@ -38,7 +38,7 @@ export function tutorialPlant(id = `tutorial_${Array.from(crypto.getRandomValues
             'Example: "I want people to figure out how to use the garden"',
         ]),
         stem: cells('stem', [
-            'This is the stem section',
+            'This is the stem',
             'Minerals down at the bottom bottom are tasks...',
             'When you complete a task, convert its mineral into a stem',
             'Your plants grow as your ideas are turned into actions',
