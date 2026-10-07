@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Export, Back Up &amp; Import Your Garden | cells.garden</title>
+<meta name="description" content="Download your cells.garden projects as a ZIP with Markdown files. Understand Merge versus Replace before restoring a backup or moving between installations.">
+<link rel="canonical" href="https://cells.garden/guide/backups/">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<meta name="theme-color" content="#1e1e1e">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="cells.garden">
+<meta property="og:title" content="Export, Back Up &amp; Import Your Garden | cells.garden">
+<meta property="og:description" content="Download your cells.garden projects as a ZIP with Markdown files. Understand Merge versus Replace before restoring a backup or moving between installations.">
+<meta property="og:url" content="https://cells.garden/guide/backups/">
+<meta property="og:image" content="https://cells.garden/icon-512.png">
+<meta property="og:image:alt" content="cells.garden pixel-art plant icon">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Export, Back Up &amp; Import Your Garden | cells.garden">
+<meta name="twitter:description" content="Download your cells.garden projects as a ZIP with Markdown files. Understand Merge versus Replace before restoring a backup or moving between installations.">
+<meta name="twitter:image" content="https://cells.garden/icon-512.png">
+</head>
+<body>
+<header><nav aria-label="Main navigation"><a class="brand" href="/"><img src="/icon-192.png" width="28" height="28" alt="">cells.garden</a><a href="/guide/">Guide</a><a href="/chrome-extension/">Chrome</a><a href="/obsidian/">Obsidian</a></nav></header>
+<main>
+<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/guide/">Guide</a><span aria-current="page">Backups</span></nav>
+<h1>Keep a copy of your garden</h1>
+
+<p class="lead">Download your projects before moving devices, clearing browser storage or trying an import. A saved copy is useful whether you work locally or use account sync.</p>
+<h2>Download a backup</h2>
+<ol><li>Open the garden you want to copy.</li><li>Open the garden menu and choose <strong>Export or import</strong>.</li><li>Under <strong>Download a copy</strong>, choose <strong>Download .zip</strong>.</li><li>Keep the downloaded file somewhere you can find outside the app.</li></ol>
+<p>The archive contains plants and settings, with one Markdown file per plant. Give your backup a dated filename so you can tell copies apart. If your installation has no account menu, use the garden’s export/import button.</p>
+<h2>Read the Markdown files</h2>
+<p>Unzip a copy of the archive to inspect its files. Markdown is a text format you can open in an editor, including Obsidian. The export is a portable copy; editing an exported file does not automatically update the live garden.</p>
+<p>Inside the <a href="/obsidian/">Obsidian plugin</a>, garden data is normally saved in the plugin’s data file. It is not automatically written into your regular vault notes.</p>
+<h2>Import a copy</h2>
+<ol><li>First download a backup of the garden currently open, especially if it contains work you want to keep.</li><li>Open <strong>Export or import</strong>.</li><li>Drop the garden ZIP, a folder or a compatible Markdown file into the import area. You can also choose <strong>Files…</strong> or <strong>Folder…</strong>.</li><li>Read the import summary before applying it.</li><li>Choose <strong>Merge</strong> or <strong>Replace</strong> deliberately.</li></ol>
+<h2>Merge versus Replace</h2>
+<table><thead><tr><th scope="col">Choice</th><th scope="col">Effect</th></tr></thead><tbody><tr><th scope="row">Merge</th><td>Updates matching plants and keeps the other plants already in the garden. Matching plants can change.</td></tr><tr><th scope="row">Replace</th><td>Discards the open garden’s existing contents and replaces them with the import.</td></tr></tbody></table>
+<p><strong>Replace is destructive.</strong> Keep a backup first. If a garden is shared or synced, its edits can also affect the other people or devices using it.</p>
+<h2>Backup and sync solve different problems</h2>
+<p><a href="/guide/sync-sharing/">Sync</a> carries changes between signed-in installations. It is not a version-history service or a substitute for a saved backup. Download a separate copy before bulk changes or imports.</p>
+<p>Local gardens can be lost if you clear site storage, remove an extension or delete plugin data. Do not clear storage as a troubleshooting step until you have saved a copy.</p>
+<h2>Moving from the original Garden Cells plugin</h2>
+<p>In Obsidian, use <strong>Import this vault’s garden</strong> to bring in plants from the original <code>Garden-Cells/</code> folder. Turn the original plugin off before enabling cells.garden so the two sets of styles do not conflict. See the <a href="/obsidian/">Obsidian setup guide</a>.</p>
+
+<nav class="guide-topics" aria-label="More guides"><a href="/guide/mobile/">Mobile setup</a><a href="/guide/sync-sharing/">Sync and sharing</a><a href="/guide/backups/" aria-current="page">Backups and import</a></nav>
+</main>
+<footer><nav aria-label="Footer navigation"><a href="/">Open garden</a><a href="/privacy.html">Privacy</a><a href="https://github.com/lukketsvane/cells.garden">Source code</a></nav></footer>
+</body>
+</html>

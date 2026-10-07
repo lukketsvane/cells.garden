@@ -450,9 +450,9 @@ async function legacyTutorialScenario(browser, errors, signedIn = false) {
     await page.goto(BASE, { waitUntil: 'networkidle' });
     await page.waitForFunction(id => window.garden?.gardenData[0]?.id === id
         && window.garden.gardenData[0].seed === 'Tutorial plant', fixture.projects[0].id);
-    await page.waitForFunction(() => document.querySelectorAll('.garden-plant-wrapper .garden-part[data-item-id]').length === 40);
+    await page.waitForFunction(() => document.querySelectorAll('.garden-plant-wrapper .garden-part[data-item-id]').length === 41);
     assert.equal(await page.locator('.project-column').count(), 1, 'upgrade does not add a second plant');
-    assert.equal(await page.locator('.garden-item').count(), 39);
+    assert.equal(await page.locator('.garden-item').count(), 40);
     const art = await page.locator('.garden-plant-wrapper').evaluate(plant => {
         const above = [...plant.querySelectorAll('.garden-stem-part, .garden-flower-part')];
         const seed = plant.querySelector('.garden-seed-part').getBoundingClientRect();
@@ -462,7 +462,7 @@ async function legacyTutorialScenario(browser, errors, signedIn = false) {
             missingSprites: [...plant.querySelectorAll('.garden-part')].filter(part => getComputedStyle(part).backgroundImage === 'none').length,
         };
     });
-    assert.equal(art.above, 19);
+    assert.equal(art.above, 22);
     assert(art.height > 100, `the original tutorial must render tall on a phone: ${JSON.stringify(art)}`);
     assert.equal(art.missingSprites, 0, 'all original stems, flowers, roots, minerals and seed have artwork');
     await shot(page, signedIn ? '20-upgraded-account-tutorial-phone.png' : '19-upgraded-local-tutorial-phone.png');
@@ -1878,7 +1878,7 @@ async function accountRouteScenario(browser, errors) {
         await page.waitForURL(`**/garden/${space.id}`);
         await page.locator('.seed-content').filter({ hasText: /^Tutorial plant$/ }).waitFor();
         assert.equal(await page.locator('.project-column').count(), 1);
-        assert.equal(await page.locator('.garden-item').count(), 39);
+        assert.equal(await page.locator('.garden-item').count(), 40);
         const plant = space.data.projects[0];
         for (const id of [plant.id, ...['flowers', 'stem', 'roots', 'minerals'].flatMap(layer => plant[layer].map(cell => cell.id))]) {
             assert(!tutorialIds.has(id), 'each newly created garden gets an independent tutorial');

@@ -26,7 +26,7 @@ export async function checkAndRecycleTutorial(page, { reload = true } = {}) {
     await seed.waitFor();
     await checkArtwork(page);
     assert.equal(await page.locator('.project-column').count(), 1);
-    assert.equal(await page.locator('.garden-item').count(), 39);
+    assert.equal(await page.locator('.garden-item').count(), 40);
     const id = await seed.getAttribute('data-id');
     for (const layer of ['flowers', 'stem', 'roots', 'minerals']) {
         assert(await page.locator(`.${layer}-zone .garden-item`).count() > 0, layer);
