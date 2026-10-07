@@ -212,9 +212,8 @@
 
 - Continued PR #20 instead of creating another SEO batch. Merged current main
   `b57695b4ff2673f5b422363c376157f40629fb38` into the pending branch. The
-  merge was clean and preserves the current 40-cell tutorial, its tests and the
-  generated Obsidian bundle. The diff against main remains limited to the
-  existing SEO files; no feature, artwork or release gate was changed.
+  merge was clean and preserves the current 40-cell tutorial and generated
+  Obsidian bundle. No feature or artwork was changed.
 - Verified production on 7 October. The homepage, robots.txt, six-URL sitemap,
   guide hub, Chrome page, Obsidian page, privacy page and About placeholder all
   return HTTP 200. The homepage is self-canonical but still has the old title
@@ -229,10 +228,24 @@
   aggregate web, extension and Obsidian build, all 166 unit tests, security
   invariants and `git diff --check`. Local `test:seo` and `test:web` could not
   start because this refreshed runtime has no Playwright Chromium executable;
-  the checks were not skipped or weakened. Hosted CI is required before release.
+  the checks were not skipped or weakened.
+- Hosted SEO run 37583143644 passed. Full CI run 37583143722 and one clean retry
+  both reached the Web/PWA smoke test after every earlier check passed, then
+  timed out waiting for the legacy tutorial to render 40 plant parts. Main now
+  ships 40 cells, so the rendered plant has 41 parts including its seed. Updated
+  the stale smoke assertions in `scripts/test-web.mjs` and
+  `scripts/test-tutorial.mjs` to the current 40-cell tutorial: 41 rendered parts,
+  40 board cells and 22 above-ground stem/flower parts. `typecheck:test`, lint,
+  all 166 unit tests and `git diff --check` pass after this correction. Hosted
+  browser confirmation remains required before release.
+- Vercel preview `dpl_8rH5kpXttZJp696M5g211v4z23x8` is READY at
+  https://cellsgarden-rk72urb88-iverfinnes-projects.vercel.app/. The homepage
+  carries the spaced and dotted brand identity, all eight canonical pages plus
+  robots.txt and sitemap.xml return 200, About is `noindex, follow`, and an
+  unknown route returns 404.
 - Production URLs changed this cycle: none. No IndexNow submission was made.
-- Next: obtain passing hosted CI and verify the refreshed preview. Human review
-  and merge of PR #20 remain the release step. After publication, verify the
-  live artifact, submit only materially changed canonical URLs to IndexNow, and
-  use authorized Search Console access for the Google-specific baseline and
-  recrawl.
+- Next: obtain passing hosted browser CI for the corrected tutorial expectations.
+  Human review and merge of PR #20 remain the release step. After publication,
+  verify the live artifact, submit only materially changed canonical URLs to
+  IndexNow, and use authorized Search Console access for the Google-specific
+  baseline and recrawl.
