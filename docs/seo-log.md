@@ -207,3 +207,32 @@
   production artifact, submit only materially changed canonical URLs to
   IndexNow, and use authorized Search Console access for the Google-specific
   baseline and recrawl.
+
+## 2026-10-07 — Refresh after tutorial updates
+
+- Continued PR #20 instead of creating another SEO batch. Merged current main
+  `b57695b4ff2673f5b422363c376157f40629fb38` into the pending branch. The
+  merge was clean and preserves the current 40-cell tutorial, its tests and the
+  generated Obsidian bundle. The diff against main remains limited to the
+  existing SEO files; no feature, artwork or release gate was changed.
+- Verified production on 7 October. The homepage, robots.txt, six-URL sitemap,
+  guide hub, Chrome page, Obsidian page, privacy page and About placeholder all
+  return HTTP 200. The homepage is self-canonical but still has the old title
+  without `Cells Garden`. The placeholder About page remains indexable and in
+  the sitemap. All three pending workflow guides and an unknown route return
+  HTTP 404.
+- General search returned the official Chrome and Obsidian listings. This is
+  useful corroboration only, not a measured Google Norway position. Search
+  Console remains unavailable. Google's public DNS resolver still returns no
+  TXT record for `cells.garden`, so no sitemap or recrawl request was made.
+- Passed locally on the merged tree: `npm run typecheck`, `npm run lint`, the
+  aggregate web, extension and Obsidian build, all 166 unit tests, security
+  invariants and `git diff --check`. Local `test:seo` and `test:web` could not
+  start because this refreshed runtime has no Playwright Chromium executable;
+  the checks were not skipped or weakened. Hosted CI is required before release.
+- Production URLs changed this cycle: none. No IndexNow submission was made.
+- Next: obtain passing hosted CI and verify the refreshed preview. Human review
+  and merge of PR #20 remain the release step. After publication, verify the
+  live artifact, submit only materially changed canonical URLs to IndexNow, and
+  use authorized Search Console access for the Google-specific baseline and
+  recrawl.
